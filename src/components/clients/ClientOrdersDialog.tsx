@@ -68,14 +68,16 @@ export default function ClientOrdersDialog({
       }
       
       // Calcular o valor total de todas as ordens
-      let totalSum = 0;
-      ordersData.forEach(order => {
+      const totalSum = ordersData.reduce((sum, order) => {
         // Garantir que o valor é numérico antes de somar
-        if (order.total_value && typeof order.total_value === 'number') {
-          totalSum += order.total_value;
-        }
-      });
+        const orderValue = order.total_value && typeof order.total_value === 'number' 
+          ? order.total_value 
+          : 0;
+        return sum + orderValue;
+      }, 0);
+      
       setTotalValue(totalSum);
+      console.log('Total value of all orders:', totalSum);
       
       // Buscar itens de serviço para cada ordem
       const orderIds = ordersData.map(order => order.id);

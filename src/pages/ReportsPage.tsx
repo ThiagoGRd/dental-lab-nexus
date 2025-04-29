@@ -95,7 +95,8 @@ export default function ReportsPage() {
       if (financesError) {
         console.error('Erro ao buscar dados financeiros:', financesError);
       } else {
-        // Processar dados financeiros
+        console.log('Dados financeiros obtidos:', financesData);
+        // Processar dados financeiros reais (não mais simulados)
         const processedFinancialData = processFinancialData(financesData || []);
         setFinancialData(processedFinancialData.monthlyData);
         setFinancialSummary(processedFinancialData.summary);
@@ -195,20 +196,8 @@ export default function ReportsPage() {
 
           setTopServices(topServicesData);
         } else {
-          // Se não houver dados reais, usamos os primeiros serviços
-          const defaultTopServices = servicesData.slice(0, 5).map((service, index) => {
-            const quantity = Math.floor(Math.random() * 50) + 20;
-            const total = 297; // Total estimado
-            const percentage = ((quantity / total) * 100).toFixed(1) + '%';
-            
-            return {
-              name: service.name,
-              quantity,
-              percentage
-            };
-          });
-          
-          setTopServices(defaultTopServices);
+          setTopServices([]);
+          console.error('Erro ao buscar itens de ordem:', orderItemsError);
         }
       }
       
@@ -221,26 +210,31 @@ export default function ReportsPage() {
       if (inventoryError) {
         console.error('Erro ao buscar estoque:', inventoryError);
       } else {
-        const processedInventory = (inventoryData || []).map(item => {
-          let status = 'ok';
+        console.log('Dados de inventário obtidos:', inventoryData);
+        if (inventoryData && inventoryData.length > 0) {
+          const processedInventory = inventoryData.map(item => {
+            let status = 'ok';
+            
+            // Garantir que min_quantity é um número e fazer a comparação
+            const minQuantity = typeof item.min_quantity === 'number' ? item.min_quantity : 0;
+            const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+            
+            if (quantity < minQuantity) {
+              status = 'critical';
+            } else if (quantity < minQuantity * 1.5) {
+              status = 'low';
+            }
+            
+            return {
+              ...item,
+              status
+            };
+          }).slice(0, 5); // Limitar a 5 itens
           
-          // Garantir que min_quantity é um número e fazer a comparação
-          const minQuantity = typeof item.min_quantity === 'number' ? item.min_quantity : 0;
-          const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-          
-          if (quantity < minQuantity) {
-            status = 'critical';
-          } else if (quantity < minQuantity * 1.5) {
-            status = 'low';
-          }
-          
-          return {
-            ...item,
-            status
-          };
-        }).slice(0, 5); // Limitar a 5 itens
-        
-        setInventoryData(processedInventory);
+          setInventoryData(processedInventory);
+        } else {
+          setInventoryData([]);
+        }
       }
       
     } catch (error) {
@@ -259,30 +253,19 @@ export default function ReportsPage() {
       urgent: 0
     }));
     
-    // Se não tivermos dados reais, usamos valores simulados
-    if (!orders || orders.length === 0) {
-      return [
-        { month: 'Jan', total: 32, urgent: 5 },
-        { month: 'Fev', total: 40, urgent: 8 },
-        { month: 'Mar', total: 45, urgent: 10 },
-        { month: 'Abr', total: 55, urgent: 7 },
-        { month: 'Mai', total: 65, urgent: 12 },
-        { month: 'Jun', total: 60, urgent: 10 },
-      ];
-    }
-    
     // Processa os dados reais
     orders.forEach(order => {
       const date = new Date(order.created_at);
       const monthIndex = date.getMonth();
       if (monthIndex >= 0 && monthIndex < 6) {
         result[monthIndex].total++;
-        if (order.priority === 'high') {
+        if (order.priority === 'high' || order.priority === 'urgent') {
           result[monthIndex].urgent++;
         }
       }
     });
     
+    // Se não houver dados suficientes, preenche com zeros
     return result;
   };
   
@@ -293,34 +276,6 @@ export default function ReportsPage() {
       receita: 0,
       despesa: 0
     }));
-    
-    // Se não tivermos dados reais, usamos valores simulados
-    if (!finances || finances.length === 0) {
-      return {
-        monthlyData: [
-          { month: 'Jan', receita: 25000, despesa: 18000 },
-          { month: 'Fev', receita: 30000, despesa: 22000 },
-          { month: 'Mar', receita: 32000, despesa: 21000 },
-          { month: 'Abr', receita: 38000, despesa: 25000 },
-          { month: 'Mai', receita: 40000, despesa: 28000 },
-          { month: 'Jun', receita: 45000, despesa: 30000 },
-        ],
-        summary: {
-          totalRevenue: 'R$ 210.000,00',
-          totalExpenses: 'R$ 144.000,00',
-          profit: 'R$ 66.000,00',
-          profitPercentage: '31.4%',
-          previousComparisonRevenue: '+12%',
-          previousComparisonExpenses: '+8%',
-          expenseBreakdown: [
-            { name: 'Materiais', value: 'R$ 72.000,00', percentage: '50%' },
-            { name: 'Salários', value: 'R$ 45.000,00', percentage: '31%' },
-            { name: 'Aluguel', value: 'R$ 18.000,00', percentage: '12.5%' },
-            { name: 'Outros', value: 'R$ 9.000,00', percentage: '6.5%' },
-          ]
-        }
-      };
-    }
     
     // Processa os dados reais
     let totalRevenue = 0;
@@ -351,6 +306,11 @@ export default function ReportsPage() {
         }
       }
     });
+    
+    // Se não temos dados financeiros reais suficientes, retorna os dados vazios
+    if (finances.length === 0) {
+      console.log('Sem dados financeiros, retornando estrutura vazia');
+    }
     
     // Calcular percentuais de despesas
     const expenseBreakdown = Object.entries(expensesByCategory).map(([name, value]) => {
