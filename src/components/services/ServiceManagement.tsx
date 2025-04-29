@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Service {
   id: number;
@@ -43,20 +44,18 @@ interface Service {
   category: string;
 }
 
-const initialServices = [
-  { id: 1, name: 'Prótese Dentária', description: 'Prótese dentária completa', price: 1500, category: 'Protético' },
-  { id: 2, name: 'Coroa de Porcelana', description: 'Coroa unitária de porcelana', price: 800, category: 'Protético' },
-  { id: 3, name: 'Moldagem Digital', description: 'Escaneamento e modelagem 3D', price: 350, category: 'Digital' },
-  { id: 4, name: 'Modelo de Estudo', description: 'Modelo de gesso para análise', price: 120, category: 'Convencional' },
-  { id: 5, name: 'Faceta de Resina', description: 'Faceta estética', price: 400, category: 'Estético' },
-];
+interface ServiceManagementProps {
+  initialServices?: any[];
+  loading?: boolean;
+}
 
-export default function ServiceManagement() {
-  const [services, setServices] = useState<Service[]>(initialServices);
+export default function ServiceManagement({ initialServices = [], loading = false }: ServiceManagementProps) {
+  const [services, setServices] = useState<Service[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentService, setCurrentService] = useState<Service | null>(null);
+  const [isLoading, setIsLoading] = useState(loading);
   const [formData, setFormData] = useState<Omit<Service, 'id'>>({
     name: '',
     description: '',
@@ -64,16 +63,18 @@ export default function ServiceManagement() {
     category: '',
   });
 
-  // Carregando serviços do localStorage ao iniciar
+  // Use initialServices if provided, otherwise load from localStorage
   useEffect(() => {
-    const savedServices = localStorage.getItem('services');
-    if (savedServices) {
-      setServices(JSON.parse(savedServices));
+    if (initialServices && initialServices.length > 0) {
+      setServices(initialServices);
     } else {
-      // Se não houver serviços salvos, use os iniciais e salve-os
-      localStorage.setItem('services', JSON.stringify(initialServices));
+      const savedServices = localStorage.getItem('services');
+      if (savedServices) {
+        setServices(JSON.parse(savedServices));
+      }
     }
-  }, []);
+    setIsLoading(false);
+  }, [initialServices]);
 
   // Atualizando localStorage sempre que os serviços forem alterados
   useEffect(() => {
@@ -98,20 +99,36 @@ export default function ServiceManagement() {
   };
 
   // Add new service
-  const handleAddService = () => {
-    const newId = Math.max(...services.map((service) => service.id), 0) + 1;
-    const newService = {
-      id: newId,
-      ...formData,
-    };
-    const updatedServices = [...services, newService];
-    setServices(updatedServices);
-    setIsAddDialogOpen(false);
-    toast.success('Serviço adicionado com sucesso!');
-    resetForm();
-    
-    // Atualiza o localStorage
-    localStorage.setItem('services', JSON.stringify(updatedServices));
+  const handleAddService = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          price: formData.price,
+          category: formData.category
+        })
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        const newService = data[0];
+        setServices([...services, newService]);
+        setIsAddDialogOpen(false);
+        toast.success('Serviço adicionado com sucesso!');
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar serviço:', error);
+      toast.error('Erro ao adicionar serviço. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // View service details
@@ -133,32 +150,69 @@ export default function ServiceManagement() {
   };
 
   // Submit edit service
-  const handleEditService = () => {
+  const handleEditService = async () => {
     if (!currentService) return;
     
-    const updatedServices = services.map((service) =>
-      service.id === currentService.id
-        ? { ...service, ...formData }
-        : service
-    );
-    
-    setServices(updatedServices);
-    setIsEditDialogOpen(false);
-    toast.success('Serviço atualizado com sucesso!');
-    resetForm();
-    
-    // Atualiza o localStorage
-    localStorage.setItem('services', JSON.stringify(updatedServices));
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('services')
+        .update({
+          name: formData.name,
+          description: formData.description,
+          price: formData.price,
+          category: formData.category
+        })
+        .eq('id', currentService.id)
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        const updatedService = data[0];
+        setServices(services.map((service) =>
+          service.id === currentService.id ? updatedService : service
+        ));
+        
+        setIsEditDialogOpen(false);
+        toast.success('Serviço atualizado com sucesso!');
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar serviço:', error);
+      toast.error('Erro ao atualizar serviço. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Delete service
-  const handleDeleteService = (id: number) => {
-    const updatedServices = services.filter((service) => service.id !== id);
-    setServices(updatedServices);
-    toast.success('Serviço excluído com sucesso!');
-    
-    // Atualiza o localStorage
-    localStorage.setItem('services', JSON.stringify(updatedServices));
+  const handleDeleteService = async (id: number) => {
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      const updatedServices = services.filter((service) => service.id !== id);
+      setServices(updatedServices);
+      toast.success('Serviço excluído com sucesso!');
+      
+    } catch (error) {
+      console.error('Erro ao excluir serviço:', error);
+      toast.error('Erro ao excluir serviço. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Reset form
@@ -234,7 +288,9 @@ export default function ServiceManagement() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleAddService}>Salvar</Button>
+              <Button onClick={handleAddService} disabled={isLoading}>
+                {isLoading ? 'Salvando...' : 'Salvar'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -251,56 +307,66 @@ export default function ServiceManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {services.map((service) => (
-              <TableRow key={service.id}>
-                <TableCell className="font-medium">{service.name}</TableCell>
-                <TableCell>{service.category}</TableCell>
-                <TableCell>{formatCurrency(service.price)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleViewService(service)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditSetup(service)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir Serviço</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir o serviço "{service.name}"?
-                            Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={() => handleDeleteService(service.id)}
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </TableCell>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-4">Carregando serviços...</TableCell>
               </TableRow>
-            ))}
+            ) : services.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-4">Nenhum serviço cadastrado</TableCell>
+              </TableRow>
+            ) : (
+              services.map((service) => (
+                <TableRow key={service.id}>
+                  <TableCell className="font-medium">{service.name}</TableCell>
+                  <TableCell>{service.category}</TableCell>
+                  <TableCell>{formatCurrency(service.price)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewService(service)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditSetup(service)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Serviço</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir o serviço "{service.name}"?
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-red-600 hover:bg-red-700"
+                              onClick={() => handleDeleteService(service.id)}
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -387,7 +453,9 @@ export default function ServiceManagement() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleEditService}>Salvar Alterações</Button>
+            <Button onClick={handleEditService} disabled={isLoading}>
+              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
