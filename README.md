@@ -1,5 +1,5 @@
 
-# DentalLab Nexus - Sistema de Gestão para Laboratórios Dentais
+# Protech Lab Nexus - Sistema de Gestão para Laboratórios Dentais
 
 Sistema completo para gerenciar laboratórios de próteses dentárias, incluindo ordens de serviço, clientes, produção, finanças e muito mais.
 
@@ -26,8 +26,8 @@ Sistema completo para gerenciar laboratórios de próteses dentárias, incluindo
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/dentallab-nexus.git
-cd dentallab-nexus
+git clone https://github.com/seu-usuario/protech-lab-nexus.git
+cd protech-lab-nexus
 ```
 
 ### 2. Instale as dependências
@@ -54,13 +54,13 @@ Os arquivos otimizados serão gerados na pasta `dist`.
 
 ## Configuração do Banco de Dados
 
-O sistema atualmente utiliza armazenamento local (localStorage) para demonstração. Para uma implementação completa, recomendamos as seguintes opções:
+O sistema atualmente utiliza Supabase como banco de dados principal.
 
-### Opção 1: Supabase (Recomendado)
+### Configuração do Supabase
 
 1. Crie uma conta no [Supabase](https://supabase.com/)
 2. Crie um novo projeto
-3. Configure as seguintes tabelas no seu projeto Supabase:
+3. Utilize o seguinte script SQL para criar as tabelas necessárias:
    - clients
    - orders
    - services
@@ -68,12 +68,6 @@ O sistema atualmente utiliza armazenamento local (localStorage) para demonstraç
    - finances
    - users
 4. Ajuste as configurações de conexão no arquivo `src/lib/supabase.ts`
-
-### Opção 2: Banco de Dados SQL Local
-
-1. Instale PostgreSQL, MySQL ou SQLite
-2. Execute os scripts de criação de tabelas disponíveis na pasta `db/scripts`
-3. Configure a conexão no arquivo `src/lib/database.ts`
 
 ## Estrutura do Projeto
 
@@ -87,14 +81,7 @@ src/
 └── App.tsx         # Componente raiz
 ```
 
-## Personalizações
-
-### Logo e Identidade Visual
-
-Para personalizar a identidade visual:
-
-1. Substitua a logo em `public/logo.png`
-2. Ajuste as cores no arquivo `tailwind.config.ts`
+## Personalização
 
 ### Configurações do Sistema
 
@@ -106,7 +93,7 @@ Acesse a seção de Configurações para personalizar:
 
 ## Suporte
 
-Para dúvidas ou problemas, entre em contato em suporte@dentallabnexus.com
+Para dúvidas ou problemas, entre em contato em suporte@protechlab.com
 
 ## Licença
 
