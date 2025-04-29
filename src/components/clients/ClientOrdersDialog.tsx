@@ -14,6 +14,18 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { statusLabels, OrderStatus } from '@/data/mockData';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { X } from 'lucide-react';
 
 interface ClientOrdersDialogProps {
   open: boolean;
@@ -33,6 +45,8 @@ export default function ClientOrdersDialog({
   const [loading, setLoading] = useState(true);
   const [clientOrders, setClientOrders] = useState<any[]>([]);
   const [totalValue, setTotalValue] = useState<number>(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<any>(null);
   
   useEffect(() => {
     // Só carrega os dados quando o diálogo estiver aberto
@@ -191,6 +205,60 @@ export default function ClientOrdersDialog({
     setShowOrderDetails(true);
   };
   
+  const handleDeleteOrder = (order: any) => {
+    setOrderToDelete(order);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    
+    try {
+      setLoading(true);
+      
+      // Primeiro excluir os itens da ordem
+      const { error: deleteItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderToDelete.originalData.orderId);
+        
+      if (deleteItemsError) {
+        console.error('Erro ao excluir itens da ordem:', deleteItemsError);
+        toast.error('Erro ao excluir a ordem de serviço.');
+        return;
+      }
+      
+      // Depois excluir a ordem em si
+      const { error: deleteOrderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderToDelete.originalData.orderId);
+        
+      if (deleteOrderError) {
+        console.error('Erro ao excluir ordem:', deleteOrderError);
+        toast.error('Erro ao excluir a ordem de serviço.');
+        return;
+      }
+      
+      // Atualizar a lista localmente
+      const updatedOrders = clientOrders.filter(o => o.id !== orderToDelete.id);
+      setClientOrders(updatedOrders);
+      
+      // Recalcular o valor total
+      const newTotalValue = updatedOrders.reduce((acc, order) => acc + Number(order.value || 0), 0);
+      setTotalValue(newTotalValue);
+      
+      toast.success('Ordem de serviço excluída com sucesso.');
+    } catch (error) {
+      console.error('Erro ao processar exclusão:', error);
+      toast.error('Ocorreu um erro ao excluir a ordem.');
+    } finally {
+      setLoading(false);
+      setDeleteDialogOpen(false);
+      setOrderToDelete(null);
+    }
+  };
+  
   // Formatar valor em reais
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -258,6 +326,15 @@ export default function ClientOrdersDialog({
                         <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)}>
                           Ver Detalhes
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => handleDeleteOrder(order)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Excluir
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -278,6 +355,26 @@ export default function ClientOrdersDialog({
         order={selectedOrder}
         clientMode={true}
       />
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Ordem de Serviço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteOrder}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
