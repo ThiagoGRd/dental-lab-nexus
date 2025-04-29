@@ -68,19 +68,58 @@ export default function ClientOrdersDialog({
       }
       
       // Calcular o valor total de todas as ordens
-      const totalSum = ordersData.reduce((sum, order) => {
-        // Garantir que o valor é numérico antes de somar
-        const orderValue = order.total_value && typeof order.total_value === 'number' 
-          ? order.total_value 
-          : 0;
-        return sum + orderValue;
-      }, 0);
+      let calculatedTotal = 0;
       
-      setTotalValue(totalSum);
-      console.log('Total value of all orders:', totalSum);
+      // Buscar itens de serviço para cada ordem para calcular o valor total corretamente
+      if (ordersData && ordersData.length > 0) {
+        // Obter todos os IDs de ordem
+        const orderIds = ordersData.map(order => order.id);
+        
+        // Buscar detalhes dos itens para calcular o valor total
+        const { data: orderItemsData, error: orderItemsError } = await supabase
+          .from('order_items')
+          .select(`order_id, price, quantity, total`)
+          .in('order_id', orderIds);
+          
+        if (orderItemsError) {
+          console.error('Erro ao buscar itens das ordens:', orderItemsError);
+        } else if (orderItemsData) {
+          // Agrupar o valor total por ordem
+          const orderTotals: Record<string, number> = {};
+          
+          // Calcular o total para cada ordem
+          orderItemsData.forEach(item => {
+            if (!orderTotals[item.order_id]) {
+              orderTotals[item.order_id] = 0;
+            }
+            // Usar o item.total registrado ou calcular a partir do preço e quantidade
+            const itemValue = item.total || (item.price * item.quantity);
+            orderTotals[item.order_id] += Number(itemValue);
+          });
+          
+          // Atualizar os dados da ordem com os totais calculados
+          const updatedOrdersData = ordersData.map(order => {
+            const calculatedOrderTotal = orderTotals[order.id] || 0;
+            calculatedTotal += Number(calculatedOrderTotal);
+            
+            // Também atualiza o total_value no objeto da ordem
+            return {
+              ...order,
+              total_value: calculatedOrderTotal
+            };
+          });
+          
+          setClientOrders(updatedOrdersData);
+          setTotalValue(calculatedTotal);
+          console.log('Total calculated from order items:', calculatedTotal);
+        }
+      } else {
+        setClientOrders([]);
+        setTotalValue(0);
+      }
       
       // Buscar itens de serviço para cada ordem
-      const orderIds = ordersData.map(order => order.id);
+      const orderIds = ordersData?.map(order => order.id) || [];
       const { data: orderItemsData, error: orderItemsError } = await supabase
         .from('order_items')
         .select(`
@@ -109,30 +148,37 @@ export default function ClientOrdersDialog({
       }
 
       // Formatar dados das ordens
-      const formattedOrders = ordersData.map(order => {
-        const orderItem = orderItemsData?.find(item => item.order_id === order.id);
-        const service = orderItem 
-          ? servicesData?.find(s => s.id === orderItem.service_id)
-          : null;
+      if (ordersData) {
+        const formattedOrders = ordersData.map(order => {
+          const orderItem = orderItemsData?.find(item => item.order_id === order.id);
+          const service = orderItem 
+            ? servicesData?.find(s => s.id === orderItem.service_id)
+            : null;
           
-        return {
-          id: order.id,
-          client: clientName,
-          service: service?.name || 'Serviço não especificado',
-          createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
-          dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
-          status: order.status as OrderStatus,
-          isUrgent: order.priority === 'urgent',
-          notes: order.notes || '',
-          value: order.total_value || 0,
-          originalData: {
-            orderId: order.id,
-            clientId: clientId
-          }
-        };
-      });
+          // Use the total_value that might have been updated above
+          const orderValue = order.total_value !== null && order.total_value !== undefined 
+            ? Number(order.total_value) 
+            : 0;
+            
+          return {
+            id: order.id,
+            client: clientName,
+            service: service?.name || 'Serviço não especificado',
+            createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
+            dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
+            status: order.status as OrderStatus,
+            isUrgent: order.priority === 'urgent',
+            notes: order.notes || '',
+            value: orderValue,
+            originalData: {
+              orderId: order.id,
+              clientId: clientId
+            }
+          };
+        });
 
-      setClientOrders(formattedOrders);
+        setClientOrders(formattedOrders);
+      }
     } catch (error) {
       console.error('Erro ao carregar ordens do cliente:', error);
     } finally {

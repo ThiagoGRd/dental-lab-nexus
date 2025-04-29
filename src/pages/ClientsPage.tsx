@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,8 @@ type Client = {
   updated_at: string;
   // Campos calculados (não existem no banco)
   ordersCount?: number;
-  totalValue?: string;
+  totalValue?: number;
+  totalValueFormatted?: string;
   status?: string;
 };
 
@@ -113,29 +113,15 @@ export default function ClientsPage() {
           const clientsWithMetadata = data.map(client => ({
             ...client,
             ordersCount: 0, // Valor padrão, será atualizado abaixo
-            totalValue: 'R$ 0,00',
+            totalValue: 0,
+            totalValueFormatted: formatCurrency(0),
             status: 'active' // Assumimos todos ativos por enquanto
           }));
           
           setClients(clientsWithMetadata);
           
-          // Buscar contagens de pedidos para cada cliente
-          for (const client of clientsWithMetadata) {
-            const { count } = await supabase
-              .from('orders')
-              .select('*', { count: 'exact', head: true })
-              .eq('client_id', client.id);
-              
-            if (count !== null) {
-              setClients(prevClients => 
-                prevClients.map(c => 
-                  c.id === client.id 
-                    ? {...c, ordersCount: count} 
-                    : c
-                )
-              );
-            }
-          }
+          // Buscar dados adicionais para cada cliente
+          fetchClientsAdditionalData(clientsWithMetadata);
         }
       } catch (error) {
         console.error('Erro inesperado:', error);
@@ -147,6 +133,80 @@ export default function ClientsPage() {
     
     fetchClients();
   }, []);
+
+  // Função para buscar dados adicionais de cada cliente
+  const fetchClientsAdditionalData = async (clientsList: Client[]) => {
+    try {
+      // Para cada cliente, buscar contagens de pedidos e valores totais
+      for (const client of clientsList) {
+        // Buscar contagem de ordens
+        const { count } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', client.id);
+        
+        // Buscar ordens com itens para calcular valor total
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('client_id', client.id);
+        
+        if (ordersData && ordersData.length > 0) {
+          // Obter IDs de todas as ordens
+          const orderIds = ordersData.map(order => order.id);
+          
+          // Buscar itens das ordens para calcular valor total
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('order_id, total, price, quantity')
+            .in('order_id', orderIds);
+          
+          // Calcular valor total
+          let totalValue = 0;
+          if (orderItems && orderItems.length > 0) {
+            orderItems.forEach(item => {
+              // Usar total se disponível, ou calcular a partir de preço e quantidade
+              const itemValue = item.total || (item.price * item.quantity);
+              totalValue += Number(itemValue);
+            });
+          }
+          
+          // Atualizar cliente com os dados calculados
+          setClients(prevClients => 
+            prevClients.map(c => 
+              c.id === client.id 
+                ? {
+                    ...c, 
+                    ordersCount: count || 0,
+                    totalValue,
+                    totalValueFormatted: formatCurrency(totalValue)
+                  } 
+                : c
+            )
+          );
+        } else {
+          // Caso não tenha ordens, apenas atualiza a contagem
+          setClients(prevClients => 
+            prevClients.map(c => 
+              c.id === client.id 
+                ? {...c, ordersCount: count || 0} 
+                : c
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados adicionais dos clientes:', error);
+    }
+  };
+
+  // Formatar moeda
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   // Cliente forms using react-hook-form
   const addForm = useForm<ClientFormValues>({
@@ -211,7 +271,8 @@ export default function ClientsPage() {
         const newClient: Client = {
           ...data[0],
           ordersCount: 0,
-          totalValue: 'R$ 0,00',
+          totalValue: 0,
+          totalValueFormatted: formatCurrency(0),
           status: 'active',
         };
         
@@ -260,6 +321,7 @@ export default function ClientsPage() {
           ...data[0],
           ordersCount: selectedClient.ordersCount,
           totalValue: selectedClient.totalValue,
+          totalValueFormatted: selectedClient.totalValueFormatted,
           status: selectedClient.status,
         };
         
@@ -621,7 +683,7 @@ export default function ClientsPage() {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <span className="text-sm font-medium">Valor Total:</span>
-                        <span className="text-sm font-bold">{client.totalValue}</span>
+                        <span className="text-sm font-bold">{client.totalValueFormatted}</span>
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
