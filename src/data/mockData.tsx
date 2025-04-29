@@ -67,3 +67,70 @@ export const mockRecentOrders = [
     status: 'delivered' as OrderStatus,
   },
 ];
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  min_quantity: number | null;
+  price: number | null;
+  category: string | null;
+  supplier: string | null;
+  unit: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientType {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  document: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceEntry {
+  id: string;
+  type: 'revenue' | 'expense';
+  description: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  category: string | null;
+  due_date: string | null;
+  payment_date: string | null;
+  related_order_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Status para finanças
+export const financeStatusLabels: Record<string, { label: string, className: string }> = {
+  'pending': { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  'paid': { label: 'Pago', className: 'bg-green-100 text-green-800 border-green-300' },
+  'cancelled': { label: 'Cancelado', className: 'bg-red-100 text-red-800 border-red-300' },
+};
+
+// Categorias comuns de finanças
+export const financeCategories = [
+  'Material',
+  'Equipamento',
+  'Folha de Pagamento',
+  'Serviços',
+  'Aluguel',
+  'Manutenção',
+  'Impostos',
+  'Marketing',
+  'Transporte',
+  'Utilidades',
+  'Outros',
+];

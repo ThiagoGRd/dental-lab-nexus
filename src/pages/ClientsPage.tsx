@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -46,36 +46,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 
-// Definição explícita do tipo Client
+// Definição explícita do tipo Client adaptado para o formato do Supabase
 type Client = {
   id: string;
   name: string;
-  contactName: string;
-  phone: string;
-  email: string;
-  address: string;
-  document: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  notes: string;
-  ordersCount: number;
-  totalValue: string;
-  status: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  document: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Campos calculados (não existem no banco)
+  ordersCount?: number;
+  totalValue?: string;
+  status?: string;
 };
 
 // Schema para validação do formulário de cliente
 const clientSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
-  contactName: z.string().min(3, { message: "Nome do contato deve ter no mínimo 3 caracteres" }),
+  contact_name: z.string().min(3, { message: "Nome do contato deve ter no mínimo 3 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
   phone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos" }),
   document: z.string().optional(),
   address: z.string().min(5, { message: "Endereço deve ter no mínimo 5 caracteres" }),
   city: z.string().min(2, { message: "Cidade deve ter no mínimo 2 caracteres" }),
   state: z.string().min(2, { message: "Estado deve ter no mínimo 2 caracteres" }),
-  zipCode: z.string().min(5, { message: "CEP deve ter no mínimo 5 caracteres" }),
+  zip_code: z.string().min(5, { message: "CEP deve ter no mínimo 5 caracteres" }),
   notes: z.string().optional(),
 });
 
@@ -88,104 +92,75 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Mock clients data
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: 'CLI001',
-      name: 'Clínica Dental Care',
-      contactName: 'Dr. Carlos Silva',
-      phone: '(11) 98765-4321',
-      email: 'contato@dentalcare.com',
-      address: 'Av. Paulista, 1000 - São Paulo, SP',
-      document: '12.345.678/0001-90',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01310-100',
-      notes: 'Cliente referência em atendimentos odontológicos de luxo.',
-      ordersCount: 24,
-      totalValue: 'R$ 12.450,00',
-      status: 'active',
-    },
-    {
-      id: 'CLI002',
-      name: 'Dr. Roberto Alves',
-      contactName: 'Roberto Alves',
-      phone: '(11) 91234-5678',
-      email: 'dr.roberto@gmail.com',
-      address: 'Rua Augusta, 500 - São Paulo, SP',
-      document: '123.456.789-10',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01304-000',
-      notes: 'Prefere receber as entregas após as 14h.',
-      ordersCount: 18,
-      totalValue: 'R$ 9.870,00',
-      status: 'active',
-    },
-    {
-      id: 'CLI003',
-      name: 'Odontologia Sorriso',
-      contactName: 'Dra. Ana Beatriz',
-      phone: '(11) 93456-7890',
-      email: 'contato@odontosorriso.com',
-      address: 'Av. Brasil, 200 - Campinas, SP',
-      document: '23.456.789/0001-12',
-      city: 'Campinas',
-      state: 'SP',
-      zipCode: '13010-060',
-      notes: 'Sempre solicita urgência nas ordens.',
-      ordersCount: 32,
-      totalValue: 'R$ 15.750,00',
-      status: 'active',
-    },
-    {
-      id: 'CLI004',
-      name: 'Dra. Márcia Santos',
-      contactName: 'Márcia Santos',
-      phone: '(11) 97890-1234',
-      email: 'dra.marcia@outlook.com',
-      address: 'Rua Itapeva, 300 - São Paulo, SP',
-      document: '234.567.890-12',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01332-000',
-      notes: 'Cliente inativo desde 01/2023.',
-      ordersCount: 15,
-      totalValue: 'R$ 8.320,00',
-      status: 'inactive',
-    },
-    {
-      id: 'CLI005',
-      name: 'Centro Odontológico Bem Estar',
-      contactName: 'Dr. Felipe Souza',
-      phone: '(11) 95678-9012',
-      email: 'contato@bemestar.com',
-      address: 'Av. Brigadeiro Faria Lima, 1500 - São Paulo, SP',
-      document: '34.567.890/0001-23',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01452-002',
-      notes: 'Preferência por contato via WhatsApp.',
-      ordersCount: 27,
-      totalValue: 'R$ 13.980,00',
-      status: 'active',
-    },
-  ]);
+  // Buscar clientes do Supabase quando o componente montar
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('Erro ao buscar clientes:', error);
+          toast.error('Erro ao carregar clientes');
+        } else {
+          console.log('Clientes carregados:', data);
+          const clientsWithMetadata = data.map(client => ({
+            ...client,
+            ordersCount: 0, // Valor padrão, será atualizado abaixo
+            totalValue: 'R$ 0,00',
+            status: 'active' // Assumimos todos ativos por enquanto
+          }));
+          
+          setClients(clientsWithMetadata);
+          
+          // Buscar contagens de pedidos para cada cliente
+          for (const client of clientsWithMetadata) {
+            const { count } = await supabase
+              .from('orders')
+              .select('*', { count: 'exact', head: true })
+              .eq('client_id', client.id);
+              
+            if (count !== null) {
+              setClients(prevClients => 
+                prevClients.map(c => 
+                  c.id === client.id 
+                    ? {...c, ordersCount: count} 
+                    : c
+                )
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro inesperado:', error);
+        toast.error('Erro ao carregar dados');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchClients();
+  }, []);
 
   // Cliente forms using react-hook-form
   const addForm = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "",
-      contactName: "",
+      contact_name: "",
       email: "",
       phone: "",
       document: "",
       address: "",
       city: "",
       state: "",
-      zipCode: "",
+      zip_code: "",
       notes: "",
     },
   });
@@ -194,70 +169,112 @@ export default function ClientsPage() {
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "",
-      contactName: "",
+      contact_name: "",
       email: "",
       phone: "",
       document: "",
       address: "",
       city: "",
       state: "",
-      zipCode: "",
+      zip_code: "",
       notes: "",
     },
   });
 
-  const handleAddClient = (values: ClientFormValues) => {
-    // Corrigido: Forçamos todos os campos a serem obrigatórios ao criar um novo cliente
-    const newClient: Client = {
-      id: `CLI${String(clients.length + 1).padStart(3, '0')}`,
-      name: values.name,
-      contactName: values.contactName,
-      email: values.email,
-      phone: values.phone,
-      document: values.document || "",
-      address: values.address,
-      city: values.city,
-      state: values.state,
-      zipCode: values.zipCode,
-      notes: values.notes || "",
-      ordersCount: 0,
-      totalValue: 'R$ 0,00',
-      status: 'active',
-    };
-    
-    setClients([...clients, newClient]);
-    toast.success("Cliente cadastrado com sucesso!");
-    addForm.reset();
-    setIsAddClientDialogOpen(false);
+  const handleAddClient = async (values: ClientFormValues) => {
+    try {
+      const newClientData = {
+        name: values.name,
+        contact_name: values.contact_name,
+        email: values.email,
+        phone: values.phone,
+        document: values.document || null,
+        address: values.address,
+        city: values.city,
+        state: values.state,
+        zip_code: values.zip_code,
+        notes: values.notes || null,
+      };
+      
+      const { data, error } = await supabase
+        .from('clients')
+        .insert(newClientData)
+        .select();
+        
+      if (error) {
+        console.error('Erro ao inserir cliente:', error);
+        toast.error('Erro ao cadastrar cliente');
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const newClient: Client = {
+          ...data[0],
+          ordersCount: 0,
+          totalValue: 'R$ 0,00',
+          status: 'active',
+        };
+        
+        setClients([...clients, newClient]);
+        toast.success("Cliente cadastrado com sucesso!");
+        addForm.reset();
+        setIsAddClientDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      toast.error('Erro ao cadastrar cliente');
+    }
   };
 
-  const handleEditClient = (values: ClientFormValues) => {
+  const handleEditClient = async (values: ClientFormValues) => {
     if (!selectedClient) return;
 
-    const updatedClients = clients.map(client => {
-      if (client.id === selectedClient.id) {
-        // Corrigido: Garantimos que todos os campos obrigatórios são preenchidos
-        return {
-          ...client,
-          name: values.name,
-          contactName: values.contactName,
-          email: values.email,
-          phone: values.phone,
-          document: values.document || client.document,
-          address: values.address,
-          city: values.city,
-          state: values.state,
-          zipCode: values.zipCode,
-          notes: values.notes || client.notes,
-        };
+    try {
+      const updatedData = {
+        name: values.name,
+        contact_name: values.contact_name,
+        email: values.email,
+        phone: values.phone,
+        document: values.document || null,
+        address: values.address,
+        city: values.city,
+        state: values.state,
+        zip_code: values.zip_code,
+        notes: values.notes || null,
+      };
+      
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updatedData)
+        .eq('id', selectedClient.id)
+        .select();
+        
+      if (error) {
+        console.error('Erro ao atualizar cliente:', error);
+        toast.error('Erro ao atualizar cliente');
+        return;
       }
-      return client;
-    });
-
-    setClients(updatedClients);
-    toast.success("Cliente atualizado com sucesso!");
-    editForm.reset();
-    setIsEditClientDialogOpen(false);
+      
+      if (data && data.length > 0) {
+        const updatedClient = {
+          ...data[0],
+          ordersCount: selectedClient.ordersCount,
+          totalValue: selectedClient.totalValue,
+          status: selectedClient.status,
+        };
+        
+        setClients(clients.map(client => 
+          client.id === selectedClient.id ? updatedClient : client
+        ));
+        
+        toast.success("Cliente atualizado com sucesso!");
+        editForm.reset();
+        setIsEditClientDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      toast.error('Erro ao atualizar cliente');
+    }
   };
 
   const handleEditSetup = (client: Client) => {
@@ -266,15 +283,15 @@ export default function ClientsPage() {
     // Preenche o formulário com os dados do cliente selecionado
     editForm.reset({
       name: client.name,
-      contactName: client.contactName,
-      email: client.email,
-      phone: client.phone,
-      document: client.document,
-      address: client.address,
-      city: client.city,
-      state: client.state,
-      zipCode: client.zipCode,
-      notes: client.notes,
+      contact_name: client.contact_name || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      document: client.document || '',
+      address: client.address || '',
+      city: client.city || '',
+      state: client.state || '',
+      zip_code: client.zip_code || '',
+      notes: client.notes || '',
     });
     
     setIsEditClientDialogOpen(true);
@@ -285,16 +302,22 @@ export default function ClientsPage() {
     setIsClientOrdersDialogOpen(true);
   };
 
-  const handleDeleteClient = (clientId: string) => {
-    const updatedClients = clients.map(client => {
-      if (client.id === clientId) {
-        return { ...client, status: 'inactive' };
-      }
-      return client;
-    });
-    
-    setClients(updatedClients);
-    toast.success("Cliente desativado com sucesso!");
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+      // Em vez de deletar, marcamos como inativo atualizando o objeto local
+      setClients(clients.map(client => {
+        if (client.id === clientId) {
+          return { ...client, status: 'inactive' };
+        }
+        return client;
+      }));
+      
+      toast.success("Cliente desativado com sucesso!");
+      setIsEditClientDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao desativar cliente:', error);
+      toast.error('Erro ao desativar cliente');
+    }
   };
 
   const filteredClients = clients.filter(client => {
@@ -308,15 +331,16 @@ export default function ClientsPage() {
       const query = searchQuery.toLowerCase();
       return (
         client.name.toLowerCase().includes(query) ||
-        client.contactName.toLowerCase().includes(query) ||
-        client.email.toLowerCase().includes(query) ||
-        client.phone.includes(query)
+        (client.contact_name && client.contact_name.toLowerCase().includes(query)) ||
+        (client.email && client.email.toLowerCase().includes(query)) ||
+        (client.phone && client.phone.includes(query))
       );
     }
     
     return true;
   });
 
+  // O restante do JSX permanece igual
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -355,7 +379,7 @@ export default function ClientsPage() {
                   />
                   <FormField
                     control={addForm.control}
-                    name="contactName"
+                    name="contact_name"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nome do Contato Principal</FormLabel>
@@ -447,7 +471,7 @@ export default function ClientsPage() {
                     />
                     <FormField
                       control={addForm.control}
-                      name="zipCode"
+                      name="zip_code"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>CEP</FormLabel>
@@ -524,7 +548,25 @@ export default function ClientsPage() {
       </Card>
 
       <div className="grid gap-6">
-        {filteredClients.length === 0 ? (
+        {loading ? (
+          <Card className="py-8">
+            <CardContent className="flex flex-col items-center justify-center text-center">
+              <div className="animate-pulse flex space-x-4">
+                <div className="rounded-full bg-gray-100 h-10 w-10"></div>
+                <div className="flex-1 space-y-6 py-1">
+                  <div className="h-2 bg-gray-100 rounded"></div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="h-2 bg-gray-100 rounded col-span-2"></div>
+                      <div className="h-2 bg-gray-100 rounded col-span-1"></div>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredClients.length === 0 ? (
           <Card className="py-8">
             <CardContent className="flex flex-col items-center justify-center text-center">
               <div className="rounded-full bg-gray-100 p-3 mb-3">
@@ -558,16 +600,16 @@ export default function ClientsPage() {
                     </div>
                     <div className="mt-2 space-y-1 text-sm">
                       <p className="text-muted-foreground flex items-center">
-                        <Building className="mr-2 h-4 w-4 text-muted-foreground" /> {client.document}
+                        <Building className="mr-2 h-4 w-4 text-muted-foreground" /> {client.document || 'N/A'}
                       </p>
                       <p className="text-muted-foreground flex items-center">
-                        <Phone className="mr-2 h-4 w-4 text-muted-foreground" /> {client.phone}
+                        <Phone className="mr-2 h-4 w-4 text-muted-foreground" /> {client.phone || 'N/A'}
                       </p>
                       <p className="text-muted-foreground flex items-center">
-                        <Mail className="mr-2 h-4 w-4 text-muted-foreground" /> {client.email}
+                        <Mail className="mr-2 h-4 w-4 text-muted-foreground" /> {client.email || 'N/A'}
                       </p>
                       <p className="text-muted-foreground flex items-center">
-                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" /> {client.address}
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" /> {client.address || 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -637,7 +679,7 @@ export default function ClientsPage() {
                 />
                 <FormField
                   control={editForm.control}
-                  name="contactName"
+                  name="contact_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nome do Contato Principal</FormLabel>
@@ -729,7 +771,7 @@ export default function ClientsPage() {
                   />
                   <FormField
                     control={editForm.control}
-                    name="zipCode"
+                    name="zip_code"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>CEP</FormLabel>
@@ -784,7 +826,6 @@ export default function ClientsPage() {
                             onClick={() => {
                               if (selectedClient) {
                                 handleDeleteClient(selectedClient.id);
-                                setIsEditClientDialogOpen(false);
                               }
                             }}
                           >
