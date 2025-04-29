@@ -47,6 +47,24 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Definição explícita do tipo Client
+type Client = {
+  id: string;
+  name: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  address: string;
+  document: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  notes: string;
+  ordersCount: number;
+  totalValue: string;
+  status: string;
+};
+
 // Schema para validação do formulário de cliente
 const clientSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
@@ -69,10 +87,10 @@ export default function ClientsPage() {
   const [isClientOrdersDialogOpen, setIsClientOrdersDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
   // Mock clients data
-  const [clients, setClients] = useState([
+  const [clients, setClients] = useState<Client[]>([
     {
       id: 'CLI001',
       name: 'Clínica Dental Care',
@@ -189,9 +207,19 @@ export default function ClientsPage() {
   });
 
   const handleAddClient = (values: ClientFormValues) => {
-    const newClient = {
+    // Corrigido: Forçamos todos os campos a serem obrigatórios ao criar um novo cliente
+    const newClient: Client = {
       id: `CLI${String(clients.length + 1).padStart(3, '0')}`,
-      ...values,
+      name: values.name,
+      contactName: values.contactName,
+      email: values.email,
+      phone: values.phone,
+      document: values.document || "",
+      address: values.address,
+      city: values.city,
+      state: values.state,
+      zipCode: values.zipCode,
+      notes: values.notes || "",
       ordersCount: 0,
       totalValue: 'R$ 0,00',
       status: 'active',
@@ -208,7 +236,20 @@ export default function ClientsPage() {
 
     const updatedClients = clients.map(client => {
       if (client.id === selectedClient.id) {
-        return { ...client, ...values };
+        // Corrigido: Garantimos que todos os campos obrigatórios são preenchidos
+        return {
+          ...client,
+          name: values.name,
+          contactName: values.contactName,
+          email: values.email,
+          phone: values.phone,
+          document: values.document || client.document,
+          address: values.address,
+          city: values.city,
+          state: values.state,
+          zipCode: values.zipCode,
+          notes: values.notes || client.notes,
+        };
       }
       return client;
     });
@@ -219,7 +260,7 @@ export default function ClientsPage() {
     setIsEditClientDialogOpen(false);
   };
 
-  const handleEditSetup = (client: any) => {
+  const handleEditSetup = (client: Client) => {
     setSelectedClient(client);
     
     // Preenche o formulário com os dados do cliente selecionado
@@ -239,7 +280,7 @@ export default function ClientsPage() {
     setIsEditClientDialogOpen(true);
   };
 
-  const handleViewOrders = (client: any) => {
+  const handleViewOrders = (client: Client) => {
     setSelectedClient(client);
     setIsClientOrdersDialogOpen(true);
   };
