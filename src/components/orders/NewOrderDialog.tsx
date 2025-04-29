@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,9 +52,116 @@ interface NewOrderDialogProps {
   children: React.ReactNode;
 }
 
+interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  email: string;
+  address: string;
+  document: string;
+  ordersCount: number;
+  totalValue: string;
+  status: string;
+}
+
 export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [open, setOpen] = React.useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   
+  // Carrega serviços e clientes do localStorage ou usa dados mockados
+  useEffect(() => {
+    // Carrega serviços do localStorage ou usa dados mockados
+    const storedServices = localStorage.getItem('services');
+    if (storedServices) {
+      setServices(JSON.parse(storedServices));
+    } else {
+      // Dados mockados de serviços
+      const initialServices = [
+        { id: 1, name: 'Prótese Dentária', description: 'Prótese dentária completa', price: 1500, category: 'Protético' },
+        { id: 2, name: 'Coroa de Porcelana', description: 'Coroa unitária de porcelana', price: 800, category: 'Protético' },
+        { id: 3, name: 'Moldagem Digital', description: 'Escaneamento e modelagem 3D', price: 350, category: 'Digital' },
+        { id: 4, name: 'Modelo de Estudo', description: 'Modelo de gesso para análise', price: 120, category: 'Convencional' },
+        { id: 5, name: 'Faceta de Resina', description: 'Faceta estética', price: 400, category: 'Estético' },
+      ];
+      setServices(initialServices);
+    }
+    
+    // Carrega clientes do localStorage ou usa dados mockados
+    const mockClients = [
+      {
+        id: 'CLI001',
+        name: 'Clínica Dental Care',
+        contact: 'Dr. Carlos Silva',
+        phone: '(11) 98765-4321',
+        email: 'contato@dentalcare.com',
+        address: 'Av. Paulista, 1000 - São Paulo, SP',
+        document: '12.345.678/0001-90',
+        ordersCount: 24,
+        totalValue: 'R$ 12.450,00',
+        status: 'active',
+      },
+      {
+        id: 'CLI002',
+        name: 'Dr. Roberto Alves',
+        contact: 'Roberto Alves',
+        phone: '(11) 91234-5678',
+        email: 'dr.roberto@gmail.com',
+        address: 'Rua Augusta, 500 - São Paulo, SP',
+        document: '123.456.789-10',
+        ordersCount: 18,
+        totalValue: 'R$ 9.870,00',
+        status: 'active',
+      },
+      {
+        id: 'CLI003',
+        name: 'Odontologia Sorriso',
+        contact: 'Dra. Ana Beatriz',
+        phone: '(11) 93456-7890',
+        email: 'contato@odontosorriso.com',
+        address: 'Av. Brasil, 200 - Campinas, SP',
+        document: '23.456.789/0001-12',
+        ordersCount: 32,
+        totalValue: 'R$ 15.750,00',
+        status: 'active',
+      },
+      {
+        id: 'CLI004',
+        name: 'Dra. Márcia Santos',
+        contact: 'Márcia Santos',
+        phone: '(11) 97890-1234',
+        email: 'dra.marcia@outlook.com',
+        address: 'Rua Itapeva, 300 - São Paulo, SP',
+        document: '234.567.890-12',
+        ordersCount: 15,
+        totalValue: 'R$ 8.320,00',
+        status: 'inactive',
+      },
+      {
+        id: 'CLI005',
+        name: 'Centro Odontológico Bem Estar',
+        contact: 'Dr. Felipe Souza',
+        phone: '(11) 95678-9012',
+        email: 'contato@bemestar.com',
+        address: 'Av. Brigadeiro Faria Lima, 1500 - São Paulo, SP',
+        document: '34.567.890/0001-23',
+        ordersCount: 27,
+        totalValue: 'R$ 13.980,00',
+        status: 'active',
+      },
+    ];
+    setClients(mockClients.filter(client => client.status === 'active'));
+  }, []);
+
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
@@ -110,11 +217,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Clínica Dental Care">Clínica Dental Care</SelectItem>
-                        <SelectItem value="Dr. Roberto Alves">Dr. Roberto Alves</SelectItem>
-                        <SelectItem value="Odontologia Sorriso">Odontologia Sorriso</SelectItem>
-                        <SelectItem value="Dra. Márcia Santos">Dra. Márcia Santos</SelectItem>
-                        <SelectItem value="Centro Odontológico Bem Estar">Centro Odontológico Bem Estar</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.name}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -138,11 +245,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Coroa em Zircônia">Coroa em Zircônia</SelectItem>
-                        <SelectItem value="Prótese Fixa">Prótese Fixa</SelectItem>
-                        <SelectItem value="Faceta">Faceta</SelectItem>
-                        <SelectItem value="Implante">Implante</SelectItem>
-                        <SelectItem value="Prótese Removível">Prótese Removível</SelectItem>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.name}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -15,9 +15,15 @@ interface OrderDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: any | null;
+  clientMode?: boolean;
 }
 
-export default function OrderDetailsDialog({ open, onOpenChange, order }: OrderDetailsDialogProps) {
+export default function OrderDetailsDialog({ 
+  open, 
+  onOpenChange, 
+  order,
+  clientMode = false
+}: OrderDetailsDialogProps) {
   if (!order) return null;
 
   const statusStyles = {
@@ -40,7 +46,9 @@ export default function OrderDetailsDialog({ open, onOpenChange, order }: OrderD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Detalhes da Ordem de Serviço</DialogTitle>
+          <DialogTitle>
+            {clientMode ? 'Detalhes da Ordem do Cliente' : 'Detalhes da Ordem de Serviço'}
+          </DialogTitle>
           <DialogDescription>
             #{order.id} • {order.dueDate}
           </DialogDescription>

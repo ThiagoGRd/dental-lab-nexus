@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +64,22 @@ export default function ServiceManagement() {
     category: '',
   });
 
+  // Carregando serviços do localStorage ao iniciar
+  useEffect(() => {
+    const savedServices = localStorage.getItem('services');
+    if (savedServices) {
+      setServices(JSON.parse(savedServices));
+    } else {
+      // Se não houver serviços salvos, use os iniciais e salve-os
+      localStorage.setItem('services', JSON.stringify(initialServices));
+    }
+  }, []);
+
+  // Atualizando localStorage sempre que os serviços forem alterados
+  useEffect(() => {
+    localStorage.setItem('services', JSON.stringify(services));
+  }, [services]);
+
   // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -88,10 +104,14 @@ export default function ServiceManagement() {
       id: newId,
       ...formData,
     };
-    setServices([...services, newService]);
+    const updatedServices = [...services, newService];
+    setServices(updatedServices);
     setIsAddDialogOpen(false);
     toast.success('Serviço adicionado com sucesso!');
     resetForm();
+    
+    // Atualiza o localStorage
+    localStorage.setItem('services', JSON.stringify(updatedServices));
   };
 
   // View service details
@@ -126,6 +146,9 @@ export default function ServiceManagement() {
     setIsEditDialogOpen(false);
     toast.success('Serviço atualizado com sucesso!');
     resetForm();
+    
+    // Atualiza o localStorage
+    localStorage.setItem('services', JSON.stringify(updatedServices));
   };
 
   // Delete service
@@ -133,6 +156,9 @@ export default function ServiceManagement() {
     const updatedServices = services.filter((service) => service.id !== id);
     setServices(updatedServices);
     toast.success('Serviço excluído com sucesso!');
+    
+    // Atualiza o localStorage
+    localStorage.setItem('services', JSON.stringify(updatedServices));
   };
 
   // Reset form

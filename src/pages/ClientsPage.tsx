@@ -7,7 +7,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
   CardDescription
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,6 +34,18 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import ClientOrdersDialog from '@/components/clients/ClientOrdersDialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Schema para validação do formulário de cliente
 const clientSchema = z.object({
@@ -54,19 +65,26 @@ type ClientFormValues = z.infer<typeof clientSchema>;
 
 export default function ClientsPage() {
   const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
+  const [isEditClientDialogOpen, setIsEditClientDialogOpen] = useState(false);
+  const [isClientOrdersDialogOpen, setIsClientOrdersDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   
   // Mock clients data
-  const clients = [
+  const [clients, setClients] = useState([
     {
       id: 'CLI001',
       name: 'Clínica Dental Care',
-      contact: 'Dr. Carlos Silva',
+      contactName: 'Dr. Carlos Silva',
       phone: '(11) 98765-4321',
       email: 'contato@dentalcare.com',
       address: 'Av. Paulista, 1000 - São Paulo, SP',
       document: '12.345.678/0001-90',
+      city: 'São Paulo',
+      state: 'SP',
+      zipCode: '01310-100',
+      notes: 'Cliente referência em atendimentos odontológicos de luxo.',
       ordersCount: 24,
       totalValue: 'R$ 12.450,00',
       status: 'active',
@@ -74,11 +92,15 @@ export default function ClientsPage() {
     {
       id: 'CLI002',
       name: 'Dr. Roberto Alves',
-      contact: 'Roberto Alves',
+      contactName: 'Roberto Alves',
       phone: '(11) 91234-5678',
       email: 'dr.roberto@gmail.com',
       address: 'Rua Augusta, 500 - São Paulo, SP',
       document: '123.456.789-10',
+      city: 'São Paulo',
+      state: 'SP',
+      zipCode: '01304-000',
+      notes: 'Prefere receber as entregas após as 14h.',
       ordersCount: 18,
       totalValue: 'R$ 9.870,00',
       status: 'active',
@@ -86,11 +108,15 @@ export default function ClientsPage() {
     {
       id: 'CLI003',
       name: 'Odontologia Sorriso',
-      contact: 'Dra. Ana Beatriz',
+      contactName: 'Dra. Ana Beatriz',
       phone: '(11) 93456-7890',
       email: 'contato@odontosorriso.com',
       address: 'Av. Brasil, 200 - Campinas, SP',
       document: '23.456.789/0001-12',
+      city: 'Campinas',
+      state: 'SP',
+      zipCode: '13010-060',
+      notes: 'Sempre solicita urgência nas ordens.',
       ordersCount: 32,
       totalValue: 'R$ 15.750,00',
       status: 'active',
@@ -98,11 +124,15 @@ export default function ClientsPage() {
     {
       id: 'CLI004',
       name: 'Dra. Márcia Santos',
-      contact: 'Márcia Santos',
+      contactName: 'Márcia Santos',
       phone: '(11) 97890-1234',
       email: 'dra.marcia@outlook.com',
       address: 'Rua Itapeva, 300 - São Paulo, SP',
       document: '234.567.890-12',
+      city: 'São Paulo',
+      state: 'SP',
+      zipCode: '01332-000',
+      notes: 'Cliente inativo desde 01/2023.',
       ordersCount: 15,
       totalValue: 'R$ 8.320,00',
       status: 'inactive',
@@ -110,19 +140,23 @@ export default function ClientsPage() {
     {
       id: 'CLI005',
       name: 'Centro Odontológico Bem Estar',
-      contact: 'Dr. Felipe Souza',
+      contactName: 'Dr. Felipe Souza',
       phone: '(11) 95678-9012',
       email: 'contato@bemestar.com',
       address: 'Av. Brigadeiro Faria Lima, 1500 - São Paulo, SP',
       document: '34.567.890/0001-23',
+      city: 'São Paulo',
+      state: 'SP',
+      zipCode: '01452-002',
+      notes: 'Preferência por contato via WhatsApp.',
       ordersCount: 27,
       totalValue: 'R$ 13.980,00',
       status: 'active',
     },
-  ];
+  ]);
 
-  // Cliente form using react-hook-form
-  const form = useForm<ClientFormValues>({
+  // Cliente forms using react-hook-form
+  const addForm = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: "",
@@ -138,11 +172,88 @@ export default function ClientsPage() {
     },
   });
 
-  const onSubmit = (values: ClientFormValues) => {
-    console.log(values);
+  const editForm = useForm<ClientFormValues>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: {
+      name: "",
+      contactName: "",
+      email: "",
+      phone: "",
+      document: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      notes: "",
+    },
+  });
+
+  const handleAddClient = (values: ClientFormValues) => {
+    const newClient = {
+      id: `CLI${String(clients.length + 1).padStart(3, '0')}`,
+      ...values,
+      ordersCount: 0,
+      totalValue: 'R$ 0,00',
+      status: 'active',
+    };
+    
+    setClients([...clients, newClient]);
     toast.success("Cliente cadastrado com sucesso!");
-    form.reset();
+    addForm.reset();
     setIsAddClientDialogOpen(false);
+  };
+
+  const handleEditClient = (values: ClientFormValues) => {
+    if (!selectedClient) return;
+
+    const updatedClients = clients.map(client => {
+      if (client.id === selectedClient.id) {
+        return { ...client, ...values };
+      }
+      return client;
+    });
+
+    setClients(updatedClients);
+    toast.success("Cliente atualizado com sucesso!");
+    editForm.reset();
+    setIsEditClientDialogOpen(false);
+  };
+
+  const handleEditSetup = (client: any) => {
+    setSelectedClient(client);
+    
+    // Preenche o formulário com os dados do cliente selecionado
+    editForm.reset({
+      name: client.name,
+      contactName: client.contactName,
+      email: client.email,
+      phone: client.phone,
+      document: client.document,
+      address: client.address,
+      city: client.city,
+      state: client.state,
+      zipCode: client.zipCode,
+      notes: client.notes,
+    });
+    
+    setIsEditClientDialogOpen(true);
+  };
+
+  const handleViewOrders = (client: any) => {
+    setSelectedClient(client);
+    setIsClientOrdersDialogOpen(true);
+  };
+
+  const handleDeleteClient = (clientId: string) => {
+    const updatedClients = clients.map(client => {
+      if (client.id === clientId) {
+        return { ...client, status: 'inactive' };
+      }
+      return client;
+    });
+    
+    setClients(updatedClients);
+    toast.success("Cliente desativado com sucesso!");
   };
 
   const filteredClients = clients.filter(client => {
@@ -156,7 +267,7 @@ export default function ClientsPage() {
       const query = searchQuery.toLowerCase();
       return (
         client.name.toLowerCase().includes(query) ||
-        client.contact.toLowerCase().includes(query) ||
+        client.contactName.toLowerCase().includes(query) ||
         client.email.toLowerCase().includes(query) ||
         client.phone.includes(query)
       );
@@ -185,11 +296,11 @@ export default function ClientsPage() {
                 Preencha os dados abaixo para cadastrar um novo cliente no sistema.
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Form {...addForm}>
+              <form onSubmit={addForm.handleSubmit(handleAddClient)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
@@ -202,7 +313,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="contactName"
                     render={({ field }) => (
                       <FormItem>
@@ -215,7 +326,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
@@ -228,7 +339,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
@@ -241,7 +352,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="document"
                     render={({ field }) => (
                       <FormItem>
@@ -254,7 +365,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="address"
                     render={({ field }) => (
                       <FormItem>
@@ -267,7 +378,7 @@ export default function ClientsPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={addForm.control}
                     name="city"
                     render={({ field }) => (
                       <FormItem>
@@ -281,7 +392,7 @@ export default function ClientsPage() {
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      control={form.control}
+                      control={addForm.control}
                       name="state"
                       render={({ field }) => (
                         <FormItem>
@@ -294,7 +405,7 @@ export default function ClientsPage() {
                       )}
                     />
                     <FormField
-                      control={form.control}
+                      control={addForm.control}
                       name="zipCode"
                       render={({ field }) => (
                         <FormItem>
@@ -310,7 +421,7 @@ export default function ClientsPage() {
                 </div>
 
                 <FormField
-                  control={form.control}
+                  control={addForm.control}
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
@@ -431,11 +542,21 @@ export default function ClientsPage() {
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="outline" size="sm" className="flex items-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center"
+                        onClick={() => handleViewOrders(client)}
+                      >
                         <FileText className="mr-2 h-3.5 w-3.5" />
                         Ver Ordens
                       </Button>
-                      <Button variant="outline" size="sm" className="flex items-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center"
+                        onClick={() => handleEditSetup(client)}
+                      >
                         <Edit className="mr-2 h-3.5 w-3.5" />
                         Editar
                       </Button>
@@ -447,6 +568,219 @@ export default function ClientsPage() {
           ))
         )}
       </div>
+      
+      {/* Diálogo para editar cliente */}
+      <Dialog open={isEditClientDialogOpen} onOpenChange={setIsEditClientDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do cliente abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditClient)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Clínica/Dentista</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Contato Principal</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do contato" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="email@exemplo.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(00) 00000-0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="document"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF/CNPJ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Documento" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Endereço</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Rua, número, complemento" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Cidade" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <FormControl>
+                          <Input placeholder="UF" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <FormControl>
+                          <Input placeholder="00000-000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <FormField
+                control={editForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Preferências de atendimento, condições especiais, etc."
+                        {...field}
+                        className="min-h-[80px]"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className="flex justify-between items-center">
+                <div>
+                  {selectedClient && selectedClient.status === 'active' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-red-600">
+                          <Trash2 className="mr-2 h-4 w-4" /> Desativar Cliente
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Desativar Cliente</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja desativar este cliente? Ele não aparecerá mais na lista de clientes ativos.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => {
+                              if (selectedClient) {
+                                handleDeleteClient(selectedClient.id);
+                                setIsEditClientDialogOpen(false);
+                              }
+                            }}
+                          >
+                            Desativar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsEditClientDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700">
+                    Salvar Alterações
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para visualizar ordens do cliente */}
+      {selectedClient && (
+        <ClientOrdersDialog
+          open={isClientOrdersDialogOpen}
+          onOpenChange={setIsClientOrdersDialogOpen}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+        />
+      )}
     </div>
   );
 }
