@@ -39,12 +39,6 @@ type UserProfile = {
   created_at: string;
 }
 
-type ProfileResponse = {
-  name: string | null;
-  role: string;
-  is_active: boolean | null;
-}
-
 export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,35 +61,49 @@ export default function UserManagement() {
     setLoading(true);
     
     try {
-      // Buscar todos os usuários do Supabase Auth
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) throw authError;
-      
-      // Buscar perfis com informações adicionais
+      // Buscar apenas os perfis com informações de usuários
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
       if (profilesError) throw profilesError;
       
-      // Combinar dados de auth.users e profiles
-      const combinedUsers = authUsers.users.map(authUser => {
-        const profile = profiles?.find(p => p.id === authUser.id) as ProfileResponse || {
-          name: null,
-          role: 'user',
-          is_active: true
-        };
+      // Para cada perfil, buscar o e-mail do usuário correspondente (precisamos usar a sessão atual)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar autenticado para visualizar os usuários');
+        setLoading(false);
+        return;
+      }
+      
+      // Verificar se o usuário atual é um admin
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (!currentProfile || currentProfile.role !== 'admin') {
+        toast.error('Você não tem permissão para gerenciar usuários');
+        setLoading(false);
+        return;
+      }
+      
+      // Formar uma lista de usuários com os dados dos perfis
+      // Nota: Apenas o usuário atual terá o email disponível por limitações de segurança do Supabase
+      const combinedUsers = profiles?.map(profile => {
+        const isCurrentUser = profile.id === session.user.id;
         
         return {
-          id: authUser.id,
-          email: authUser.email || '',
-          name: profile.name || authUser.email?.split('@')[0] || '',
+          id: profile.id,
+          email: isCurrentUser ? session.user.email : 'email@protegido.com',
+          name: profile.name || 'Usuário',
           role: profile.role || 'user',
           is_active: profile.is_active !== null ? profile.is_active : true,
-          created_at: authUser.created_at
+          created_at: profile.created_at
         };
-      });
+      }) || [];
       
       setUsers(combinedUsers);
     } catch (error) {
@@ -153,21 +161,6 @@ export default function UserManagement() {
 
       if (profileError) throw profileError;
 
-      // Atualizar senha se fornecida
-      if (formData.password) {
-        if (formData.password !== formData.confirmPassword) {
-          toast.error('As senhas não correspondem');
-          return;
-        }
-
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          currentUser.id,
-          { password: formData.password }
-        );
-
-        if (passwordError) throw passwordError;
-      }
-
       toast.success('Usuário atualizado com sucesso!');
       setIsEditDialogOpen(false);
       fetchUsers();
@@ -184,28 +177,38 @@ export default function UserManagement() {
     }
 
     try {
-      // Criar novo usuário no Supabase Auth
-      const { data, error } = await supabase.auth.admin.createUser({
+      // Usar o método de registro padrão
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        email_confirm: true,
-        user_metadata: { name: formData.name }
+        options: {
+          data: {
+            name: formData.name
+          }
+        }
       });
 
       if (error) throw error;
 
-      // O perfil será criado automaticamente pelo trigger do banco de dados
-      // Atualizar o perfil para definir a função correta
-      if (formData.role !== 'user') {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: formData.role })
-          .eq('id', data.user.id);
-
-        if (updateError) throw updateError;
+      toast.success(`Usuário criado com sucesso! ${data?.user ? '' : 'Um email de confirmação foi enviado.'}`);
+      
+      // Se o usuário foi criado com sucesso e o perfil for diferente de 'user',
+      // atualizamos o perfil para definir o papel correto
+      if (data?.user && formData.role !== 'user') {
+        // Nota: Pode ser necessário esperar um pouco para que o trigger crie o perfil
+        setTimeout(async () => {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role: formData.role })
+            .eq('id', data.user!.id);
+  
+          if (updateError) {
+            console.error('Erro ao atualizar o perfil do usuário:', updateError);
+            toast.error('Usuário criado, mas não foi possível definir a função');
+          }
+        }, 1000);
       }
 
-      toast.success('Usuário criado com sucesso!');
       setIsNewUserDialogOpen(false);
       fetchUsers();
     } catch (error) {
@@ -225,12 +228,6 @@ export default function UserManagement() {
         .eq('id', user.id);
       
       if (profileError) throw profileError;
-
-      // Se estiver desativando, invalidar as sessões do usuário
-      if (!newStatus) {
-        const { error: sessionError } = await supabase.auth.admin.signOut(user.id);
-        if (sessionError) throw sessionError;
-      }
 
       toast.success(`Usuário ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
       fetchUsers();
@@ -342,7 +339,7 @@ export default function UserManagement() {
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Atualize as informações do usuário. Deixe a senha em branco para mantê-la inalterada.
+              Atualize as informações do usuário.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -379,26 +376,6 @@ export default function UserManagement() {
                   <SelectItem value="user">Usuário</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Nova Senha (opcional)</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-              />
             </div>
           </div>
           <DialogFooter>
