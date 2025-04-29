@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 interface FinancialAccountItemProps {
   account: any;
   type: 'payable' | 'receivable';
-  onPayOrReceive: (id: number) => void;
+  onPayOrReceive: (id: string) => void;  // Changed from number to string
   onView: (account: any) => void;
   onEdit: (account: any) => void;
 }
