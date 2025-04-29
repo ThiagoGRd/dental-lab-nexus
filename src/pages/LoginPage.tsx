@@ -41,20 +41,28 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         // Processo de registro
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
             data: {
               name: formData.name
-            }
+            },
+            emailRedirectTo: window.location.origin
           }
         });
 
         if (error) throw error;
         
-        toast.success('Conta criada com sucesso! Por favor, verifique seu email para confirmação.');
-        setIsSignUp(false);
+        // Se o registro for bem-sucedido, fazer login automático
+        if (data.user && !data.session) {
+          // Usuário foi criado mas ainda precisa confirmar o email
+          toast.info('Enviamos um email de confirmação. Por favor, confirme seu email para continuar.');
+        } else if (data.session) {
+          // Usuário foi criado e autenticado automaticamente
+          toast.success('Conta criada com sucesso!');
+          navigate('/');
+        }
       } else {
         // Processo de login
         const { error } = await supabase.auth.signInWithPassword({
@@ -69,7 +77,17 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error('Erro de autenticação:', error);
-      toast.error(error.message || 'Ocorreu um erro durante a autenticação');
+      
+      // Mensagens de erro mais amigáveis
+      const errorMessages: Record<string, string> = {
+        'Email not confirmed': 'Email ainda não confirmado. Verifique sua caixa de entrada.',
+        'Invalid login credentials': 'Credenciais inválidas. Verifique seu email e senha.',
+        'Email already registered': 'Este email já está cadastrado.',
+        'Password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres.'
+      };
+      
+      const errorMessage = errorMessages[error.message] || error.message || 'Ocorreu um erro durante a autenticação';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +146,11 @@ export default function LoginPage() {
                 className="bg-darkblue-800 border-darkblue-600"
               />
             </div>
+            <p className="text-xs text-gray-400 mt-2">
+              {isSignUp 
+                ? 'Ao criar uma conta, você concorda com os nossos termos de serviço.'
+                : 'Se você não conseguir fazer login, tente criar uma nova conta.'}
+            </p>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button
