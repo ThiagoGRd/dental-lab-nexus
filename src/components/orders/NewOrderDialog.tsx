@@ -35,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from "@/integrations/supabase/client";
 
 const orderFormSchema = z.object({
   client: z.string().min(1, 'O cliente é obrigatório'),
@@ -78,7 +79,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   
-  // Carrega serviços e clientes do localStorage ou usa dados mockados
+  // Carrega serviços e clientes
   useEffect(() => {
     // Carrega serviços do localStorage ou usa dados mockados
     const storedServices = localStorage.getItem('services');
@@ -96,71 +97,43 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       setServices(initialServices);
     }
     
-    // Carrega clientes do localStorage ou usa dados mockados
-    const mockClients = [
-      {
-        id: 'CLI001',
-        name: 'Clínica Dental Care',
-        contact: 'Dr. Carlos Silva',
-        phone: '(11) 98765-4321',
-        email: 'contato@dentalcare.com',
-        address: 'Av. Paulista, 1000 - São Paulo, SP',
-        document: '12.345.678/0001-90',
-        ordersCount: 24,
-        totalValue: 'R$ 12.450,00',
-        status: 'active',
-      },
-      {
-        id: 'CLI002',
-        name: 'Dr. Roberto Alves',
-        contact: 'Roberto Alves',
-        phone: '(11) 91234-5678',
-        email: 'dr.roberto@gmail.com',
-        address: 'Rua Augusta, 500 - São Paulo, SP',
-        document: '123.456.789-10',
-        ordersCount: 18,
-        totalValue: 'R$ 9.870,00',
-        status: 'active',
-      },
-      {
-        id: 'CLI003',
-        name: 'Odontologia Sorriso',
-        contact: 'Dra. Ana Beatriz',
-        phone: '(11) 93456-7890',
-        email: 'contato@odontosorriso.com',
-        address: 'Av. Brasil, 200 - Campinas, SP',
-        document: '23.456.789/0001-12',
-        ordersCount: 32,
-        totalValue: 'R$ 15.750,00',
-        status: 'active',
-      },
-      {
-        id: 'CLI004',
-        name: 'Dra. Márcia Santos',
-        contact: 'Márcia Santos',
-        phone: '(11) 97890-1234',
-        email: 'dra.marcia@outlook.com',
-        address: 'Rua Itapeva, 300 - São Paulo, SP',
-        document: '234.567.890-12',
-        ordersCount: 15,
-        totalValue: 'R$ 8.320,00',
-        status: 'inactive',
-      },
-      {
-        id: 'CLI005',
-        name: 'Centro Odontológico Bem Estar',
-        contact: 'Dr. Felipe Souza',
-        phone: '(11) 95678-9012',
-        email: 'contato@bemestar.com',
-        address: 'Av. Brigadeiro Faria Lima, 1500 - São Paulo, SP',
-        document: '34.567.890/0001-23',
-        ordersCount: 27,
-        totalValue: 'R$ 13.980,00',
-        status: 'active',
-      },
-    ];
-    setClients(mockClients.filter(client => client.status === 'active'));
-  }, []);
+    // Carrega clientes do banco de dados Supabase
+    const fetchClients = async () => {
+      try {
+        const { data: clientsData, error } = await supabase
+          .from('clients')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (clientsData) {
+          // Transform Supabase clients data to match the Client interface
+          const formattedClients = clientsData.map(client => ({
+            id: client.id,
+            name: client.name || '',
+            contact: client.contact_name || '',
+            phone: client.phone || '',
+            email: client.email || '',
+            address: client.address || '',
+            document: client.document || '',
+            ordersCount: 0, // Placeholder, could be calculated if needed
+            totalValue: 'R$ 0,00', // Placeholder
+            status: 'active' // Assuming all fetched clients are active
+          }));
+          
+          setClients(formattedClients);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        toast.error('Não foi possível carregar a lista de clientes.');
+      }
+    };
+    
+    fetchClients();
+  }, [open]); // Recarrega quando o diálogo é aberto
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -178,11 +151,40 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
     }
   });
 
-  const handleSubmit = (data: OrderFormValues) => {
+  const handleSubmit = async (data: OrderFormValues) => {
     console.log("Nova ordem:", data);
-    toast.success('Ordem de serviço criada com sucesso!');
-    setOpen(false);
-    form.reset();
+    
+    // Aqui você pode implementar a lógica para salvar a ordem no Supabase
+    // Exemplo:
+    try {
+      // Encontre o cliente pelo nome
+      const selectedClient = clients.find(client => client.name === data.client);
+      
+      if (!selectedClient) {
+        toast.error('Cliente não encontrado.');
+        return;
+      }
+      
+      // Implemente quando estiver pronto para salvar no banco de dados
+      // const { error } = await supabase.from('orders').insert({
+      //   client_id: selectedClient.id,
+      //   service: data.service,
+      //   deadline: new Date(data.dueDate),
+      //   priority: data.isUrgent ? 'urgent' : 'normal',
+      //   notes: data.notes,
+      //   status: 'pending'
+      //   // outros campos conforme necessário
+      // });
+      
+      // if (error) throw error;
+      
+      toast.success('Ordem de serviço criada com sucesso!');
+      setOpen(false);
+      form.reset();
+    } catch (error: any) {
+      console.error('Erro ao criar ordem:', error);
+      toast.error('Ocorreu um erro ao criar a ordem.');
+    }
   };
 
   return (
