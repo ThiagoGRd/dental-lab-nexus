@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,8 +33,14 @@ export default function FinancePage() {
     handleAddPayable,
     handleAddReceivable,
     payableAccounts,
-    receivableAccounts
+    receivableAccounts,
+    refreshData
   } = useFinanceData();
+
+  // Refresh data when the component is mounted to ensure we have the latest data
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   return (
     <div className="p-6">

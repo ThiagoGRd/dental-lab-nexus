@@ -47,7 +47,8 @@ export default function ProductionPage() {
             created_at, 
             deadline, 
             notes,
-            client_id
+            client_id,
+            total_value
           `)
           .not('status', 'eq', 'delivered')
           .order('created_at', { ascending: false });
@@ -108,6 +109,7 @@ export default function ProductionPage() {
             status: order.status as OrderStatus,
             isUrgent: order.priority === 'urgent',
             notes: order.notes || '',
+            totalValue: order.total_value || 0,
             // Dados originais para atualizações
             originalData: {
               orderId: order.id,
@@ -140,6 +142,42 @@ export default function ProductionPage() {
     setIsViewDialogOpen(true);
   };
 
+  // Função para criar conta a receber quando uma ordem for finalizada
+  const createReceivableAccount = async (order: any) => {
+    try {
+      // Dados para a nova conta a receber
+      const receivableData = {
+        description: `Receita: ${order.client}`,
+        amount: order.totalValue,
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Vencimento em 7 dias
+        status: 'pending',
+        notes: `Ordem de serviço #${order.id.substring(0, 8)} finalizada`,
+        type: 'revenue',
+        related_order_id: order.originalData?.orderId || order.id
+      };
+      
+      // Inserir nova conta a receber
+      const { data, error } = await supabase
+        .from('finances')
+        .insert(receivableData)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Erro ao criar conta a receber:', error);
+        throw new Error('Não foi possível criar a conta a receber.');
+      }
+      
+      toast.success('Conta a receber criada automaticamente.');
+      return data;
+      
+    } catch (error) {
+      console.error('Erro ao gerar conta a receber:', error);
+      toast.error('Ocorreu um erro ao gerar a conta a receber.');
+      return null;
+    }
+  };
+
   const updateStatus = async (order: any, newStatus: string) => {
     try {
       // Atualizar no banco de dados
@@ -152,6 +190,11 @@ export default function ProductionPage() {
         console.error('Erro ao atualizar status:', error);
         toast.error('Erro ao atualizar status da ordem.');
         return;
+      }
+      
+      // Se a ordem está sendo finalizada (status completed), criar conta a receber
+      if (newStatus === 'completed') {
+        await createReceivableAccount(order);
       }
       
       // Atualizar localmente
@@ -225,6 +268,7 @@ export default function ProductionPage() {
         <div className="flex justify-between items-center mt-2">
           <div className="text-sm">
             <p>Data entrega: {order.dueDate || 'Não definida'}</p>
+            <p className="mt-1">Valor: R$ {order.totalValue.toFixed(2)}</p>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => handleViewOrder(order)}>

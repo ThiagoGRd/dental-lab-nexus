@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
@@ -14,11 +13,8 @@ export function useFinanceData() {
   const [editFormData, setEditFormData] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchFinanceData();
-  }, []);
-
-  const fetchFinanceData = async () => {
+  // Use useCallback to make refreshData available as dependency
+  const fetchFinanceData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -128,7 +124,11 @@ export function useFinanceData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchFinanceData();
+  }, [fetchFinanceData]);
 
   // Filtered data based on search term
   const filteredPayables = payableAccounts.filter(acc => 
