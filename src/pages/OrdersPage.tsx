@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,17 +20,23 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Plus, Search } from 'lucide-react';
 import NewOrderDialog from '@/components/orders/NewOrderDialog';
+import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
+import OrderEditDialog from '@/components/orders/OrderEditDialog';
+import { toast } from 'sonner';
 
 export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const statuses = {
-    'pending': { label: 'Pendente', className: 'status-pending' },
-    'production': { label: 'Em Produção', className: 'status-production' },
-    'waiting': { label: 'Aguardando Material', className: 'status-waiting' },
-    'completed': { label: 'Finalizado', className: 'status-completed' },
-    'delivered': { label: 'Entregue', className: 'status-delivered' },
+    'pending': { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    'production': { label: 'Em Produção', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+    'waiting': { label: 'Aguardando Material', className: 'bg-orange-100 text-orange-800 border-orange-300' },
+    'completed': { label: 'Finalizado', className: 'bg-green-100 text-green-800 border-green-300' },
+    'delivered': { label: 'Entregue', className: 'bg-purple-100 text-purple-800 border-purple-300' },
   };
 
   // Simulating more orders by duplicating the mock data
@@ -51,6 +56,23 @@ export default function OrdersPage() {
     
     return matchesSearch && matchesStatus;
   });
+
+  const handleViewOrder = (order: any) => {
+    setSelectedOrder(order);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditOrder = (order: any) => {
+    setSelectedOrder(order);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateOrder = (updatedOrder: any) => {
+    // In a real app, this would update the order in the database
+    // For now, we'll just close the dialog
+    setIsEditDialogOpen(false);
+    toast.success('Ordem atualizada com sucesso!');
+  };
 
   return (
     <div className="p-6">
@@ -123,7 +145,7 @@ export default function OrdersPage() {
                 <div>Cliente / Serviço</div>
                 <div className="hidden sm:block">Data de Entrega</div>
                 <div>Status</div>
-                <div></div>
+                <div>Ações</div>
               </div>
               <div className="divide-y">
                 {filteredOrders.map((order) => (
@@ -144,14 +166,19 @@ export default function OrdersPage() {
                     <div>
                       <span className={cn(
                         "rounded-full border px-2 py-1 text-xs font-medium",
-                        statuses[order.status].className
+                        statuses[order.status as keyof typeof statuses].className
                       )}>
-                        {statuses[order.status].label}
+                        {statuses[order.status as keyof typeof statuses].label}
                       </span>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      Ver
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)}>
+                        Ver
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleEditOrder(order)}>
+                        Editar
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -159,6 +186,20 @@ export default function OrdersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Diálogos para visualizar e editar ordens */}
+      <OrderDetailsDialog 
+        open={isViewDialogOpen} 
+        onOpenChange={setIsViewDialogOpen}
+        order={selectedOrder}
+      />
+      
+      <OrderEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        order={selectedOrder}
+        onSave={handleUpdateOrder}
+      />
     </div>
   );
 }

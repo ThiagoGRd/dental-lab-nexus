@@ -20,7 +20,8 @@ import {
   Settings,
   LogOut,
   BarChart2,
-  Wallet
+  Wallet,
+  Package
 } from "lucide-react";
 import { toast } from 'sonner';
 
@@ -67,6 +68,11 @@ export default function Sidebar() {
       title: "Estoque",
       icon: Database,
       href: "/inventory",
+    },
+    {
+      title: "Serviços",
+      icon: Package,
+      href: "/services",
     },
     {
       title: "Finanças",
