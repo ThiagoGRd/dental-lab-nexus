@@ -39,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const orderFormSchema = z.object({
   client: z.string().min(1, 'O cliente é obrigatório'),
+  patientName: z.string().min(1, 'O nome do paciente é obrigatório'),
   service: z.string().min(1, 'O serviço é obrigatório'),
   dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
   isUrgent: z.boolean().default(false),
@@ -121,6 +122,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
       client: '',
+      patientName: '',
       service: '',
       dueDate: format(
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias no futuro
@@ -157,7 +159,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           client_id: selectedClient.id,
           deadline: data.dueDate,
           priority: data.isUrgent ? 'urgent' : 'normal',
-          notes: data.notes,
+          notes: `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`,
           status: 'pending'
         })
         .select()
@@ -176,7 +178,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           service_id: selectedService.id,
           price: selectedService.price,
           total: selectedService.price,
-          notes: `Cor/Escala: ${data.shade}`
+          notes: `Paciente: ${data.patientName}, Cor/Escala: ${data.shade}`
         });
       
       if (orderItemError) {
@@ -241,32 +243,46 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
 
               <FormField
                 control={form.control}
-                name="service"
+                name="patientName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Serviço</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um serviço" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.name}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Nome do Paciente</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome do paciente" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="service"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Serviço</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um serviço" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.name}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-2 gap-4">
               <FormField

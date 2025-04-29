@@ -105,15 +105,31 @@ export default function OrdersPage() {
             ? servicesData?.find(s => s.id === orderItem.service_id)
             : null;
             
+          // Extrair o nome do paciente das notas, se disponível
+          let patientName = '';
+          if (order.notes && order.notes.includes('Paciente:')) {
+            const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
+            if (patientMatch && patientMatch[1]) {
+              patientName = patientMatch[1].trim();
+            }
+          }
+          
+          // Extrair possíveis notas adicionais
+          let cleanNotes = order.notes || '';
+          if (cleanNotes.includes('Paciente:')) {
+            cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+          }
+            
           return {
             id: order.id,
             client: client?.name || 'Cliente não encontrado',
+            patientName: patientName,
             service: service?.name || 'Serviço não especificado',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
             status: order.status as OrderStatus,
             isUrgent: order.priority === 'urgent',
-            notes: order.notes || '',
+            notes: cleanNotes,
             // Mantenha os IDs originais para uso em atualizações
             originalData: {
               clientId: order.client_id,
@@ -146,7 +162,8 @@ export default function OrdersPage() {
         filtered = filtered.filter(order => 
           order.client.toLowerCase().includes(term) || 
           order.id.toLowerCase().includes(term) ||
-          order.service.toLowerCase().includes(term)
+          order.service.toLowerCase().includes(term) ||
+          (order.patientName && order.patientName.toLowerCase().includes(term))
         );
       }
       
@@ -186,6 +203,11 @@ export default function OrdersPage() {
 
   const handleUpdateOrder = async (updatedOrder: any) => {
     try {
+      // Preparar notas com o nome do paciente
+      const notes = updatedOrder.patientName 
+        ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
+        : updatedOrder.notes;
+      
       // Atualizar no Supabase
       const { error } = await supabase
         .from('orders')
@@ -193,7 +215,7 @@ export default function OrdersPage() {
           status: updatedOrder.status,
           deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
           priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
-          notes: updatedOrder.notes || null
+          notes: notes
         })
         .eq('id', updatedOrder.originalData?.orderId || updatedOrder.id);
         
@@ -245,7 +267,7 @@ export default function OrdersPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
-                placeholder="Buscar por cliente ou ID..."
+                placeholder="Buscar por cliente, paciente ou ID..."
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -293,7 +315,7 @@ export default function OrdersPage() {
           <CardContent className="p-0">
             <div className="rounded-md border">
               <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 bg-muted/50 p-4 font-medium">
-                <div>Cliente / Serviço</div>
+                <div>Cliente / Paciente / Serviço</div>
                 <div className="hidden sm:block">Data de Entrega</div>
                 <div>Status</div>
                 <div>Ações</div>
@@ -317,6 +339,11 @@ export default function OrdersPage() {
                             <Badge variant="destructive" className="text-xs">Urgente</Badge>
                           )}
                         </div>
+                        {order.patientName && (
+                          <div className="text-sm text-muted-foreground">
+                            Paciente: {order.patientName}
+                          </div>
+                        )}
                         <div className="text-sm text-muted-foreground">{order.service}</div>
                         <div className="text-xs text-muted-foreground">#{order.id.substring(0, 8)}</div>
                       </div>

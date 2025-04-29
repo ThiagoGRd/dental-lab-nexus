@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 
 const orderFormSchema = z.object({
   client: z.string().min(1, 'O cliente é obrigatório'),
+  patientName: z.string().min(1, 'O nome do paciente é obrigatório'),
   service: z.string().min(1, 'O serviço é obrigatório'),
   status: z.string().min(1, 'O status é obrigatório'),
   dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
@@ -56,6 +57,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
       client: order?.client || '',
+      patientName: order?.patientName || '',
       service: order?.service || '',
       status: order?.status || 'pending',
       dueDate: order?.dueDate || '',
@@ -70,6 +72,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
     if (order) {
       form.reset({
         client: order.client || '',
+        patientName: order.patientName || '',
         service: order.service || '',
         status: order.status || 'pending',
         dueDate: order.dueDate || '',
@@ -137,32 +140,46 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
 
               <FormField
                 control={form.control}
-                name="service"
+                name="patientName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Serviço</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um serviço" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Coroa em Zircônia">Coroa em Zircônia</SelectItem>
-                        <SelectItem value="Prótese Fixa">Prótese Fixa</SelectItem>
-                        <SelectItem value="Faceta">Faceta</SelectItem>
-                        <SelectItem value="Implante">Implante</SelectItem>
-                        <SelectItem value="Prótese Removível">Prótese Removível</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Nome do Paciente</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome do paciente" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="service"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Serviço</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um serviço" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Coroa em Zircônia">Coroa em Zircônia</SelectItem>
+                      <SelectItem value="Prótese Fixa">Prótese Fixa</SelectItem>
+                      <SelectItem value="Faceta">Faceta</SelectItem>
+                      <SelectItem value="Implante">Implante</SelectItem>
+                      <SelectItem value="Prótese Removível">Prótese Removível</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
