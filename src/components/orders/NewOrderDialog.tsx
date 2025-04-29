@@ -43,7 +43,6 @@ const orderFormSchema = z.object({
   dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
   isUrgent: z.boolean().default(false),
   shade: z.string().min(1, 'A cor/escala é obrigatória'),
-  material: z.string().min(1, 'O material é obrigatório'),
   notes: z.string().optional(),
 });
 
@@ -54,7 +53,7 @@ interface NewOrderDialogProps {
 }
 
 interface Service {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -64,75 +63,58 @@ interface Service {
 interface Client {
   id: string;
   name: string;
-  contact: string;
-  phone: string;
-  email: string;
-  address: string;
-  document: string;
-  ordersCount: number;
-  totalValue: string;
-  status: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  document: string | null;
 }
 
 export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(false);
   
   // Carrega serviços e clientes
   useEffect(() => {
-    // Carrega serviços do localStorage ou usa dados mockados
-    const storedServices = localStorage.getItem('services');
-    if (storedServices) {
-      setServices(JSON.parse(storedServices));
-    } else {
-      // Dados mockados de serviços
-      const initialServices = [
-        { id: 1, name: 'Prótese Dentária', description: 'Prótese dentária completa', price: 1500, category: 'Protético' },
-        { id: 2, name: 'Coroa de Porcelana', description: 'Coroa unitária de porcelana', price: 800, category: 'Protético' },
-        { id: 3, name: 'Moldagem Digital', description: 'Escaneamento e modelagem 3D', price: 350, category: 'Digital' },
-        { id: 4, name: 'Modelo de Estudo', description: 'Modelo de gesso para análise', price: 120, category: 'Convencional' },
-        { id: 5, name: 'Faceta de Resina', description: 'Faceta estética', price: 400, category: 'Estético' },
-      ];
-      setServices(initialServices);
-    }
-    
-    // Carrega clientes do banco de dados Supabase
-    const fetchClients = async () => {
+    const fetchData = async () => {
       try {
-        const { data: clientsData, error } = await supabase
+        // Carrega serviços do Supabase
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('*')
+          .eq('active', true)
+          .order('name');
+        
+        if (servicesError) {
+          console.error("Erro ao carregar serviços:", servicesError);
+          toast.error('Não foi possível carregar a lista de serviços.');
+        } else {
+          setServices(servicesData || []);
+        }
+        
+        // Carrega clientes do banco de dados Supabase
+        const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('*')
           .order('name');
         
-        if (error) {
-          throw error;
-        }
-        
-        if (clientsData) {
-          // Transform Supabase clients data to match the Client interface
-          const formattedClients = clientsData.map(client => ({
-            id: client.id,
-            name: client.name || '',
-            contact: client.contact_name || '',
-            phone: client.phone || '',
-            email: client.email || '',
-            address: client.address || '',
-            document: client.document || '',
-            ordersCount: 0, // Placeholder, could be calculated if needed
-            totalValue: 'R$ 0,00', // Placeholder
-            status: 'active' // Assuming all fetched clients are active
-          }));
-          
-          setClients(formattedClients);
+        if (clientsError) {
+          console.error("Erro ao carregar clientes:", clientsError);
+          toast.error('Não foi possível carregar a lista de clientes.');
+        } else {
+          setClients(clientsData || []);
         }
       } catch (error) {
-        console.error('Erro ao carregar clientes:', error);
-        toast.error('Não foi possível carregar a lista de clientes.');
+        console.error('Erro ao buscar dados:', error);
+        toast.error('Ocorreu um erro ao carregar os dados necessários.');
       }
     };
     
-    fetchClients();
+    if (open) {
+      fetchData();
+    }
   }, [open]); // Recarrega quando o diálogo é aberto
 
   const form = useForm<OrderFormValues>({
@@ -146,44 +128,70 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       ),
       isUrgent: false,
       shade: '',
-      material: '',
       notes: ''
     }
   });
 
   const handleSubmit = async (data: OrderFormValues) => {
-    console.log("Nova ordem:", data);
+    setLoading(true);
     
-    // Aqui você pode implementar a lógica para salvar a ordem no Supabase
-    // Exemplo:
     try {
-      // Encontre o cliente pelo nome
+      // Encontrar o cliente pelo nome
       const selectedClient = clients.find(client => client.name === data.client);
-      
       if (!selectedClient) {
         toast.error('Cliente não encontrado.');
         return;
       }
       
-      // Implemente quando estiver pronto para salvar no banco de dados
-      // const { error } = await supabase.from('orders').insert({
-      //   client_id: selectedClient.id,
-      //   service: data.service,
-      //   deadline: new Date(data.dueDate),
-      //   priority: data.isUrgent ? 'urgent' : 'normal',
-      //   notes: data.notes,
-      //   status: 'pending'
-      //   // outros campos conforme necessário
-      // });
+      // Encontrar o serviço pelo nome
+      const selectedService = services.find(service => service.name === data.service);
+      if (!selectedService) {
+        toast.error('Serviço não encontrado.');
+        return;
+      }
       
-      // if (error) throw error;
+      // Inserir a ordem no Supabase
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          client_id: selectedClient.id,
+          deadline: data.dueDate,
+          priority: data.isUrgent ? 'urgent' : 'normal',
+          notes: data.notes,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      
+      if (orderError) {
+        console.error("Erro ao criar ordem:", orderError);
+        throw new Error(orderError.message);
+      }
+      
+      // Inserir o item da ordem
+      const { error: orderItemError } = await supabase
+        .from('order_items')
+        .insert({
+          order_id: orderData.id,
+          service_id: selectedService.id,
+          price: selectedService.price,
+          total: selectedService.price,
+          notes: `Cor/Escala: ${data.shade}`
+        });
+      
+      if (orderItemError) {
+        console.error("Erro ao adicionar item à ordem:", orderItemError);
+        throw new Error(orderItemError.message);
+      }
       
       toast.success('Ordem de serviço criada com sucesso!');
       setOpen(false);
-      form.reset();
+      form.reset(); // Limpa o formulário
     } catch (error: any) {
       console.error('Erro ao criar ordem:', error);
-      toast.error('Ocorreu um erro ao criar a ordem.');
+      toast.error(`Ocorreu um erro ao criar a ordem: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -297,49 +305,19 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="shade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cor/Escala</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: A2" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="material"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Material</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o material" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Zircônia Multicamada">Zircônia Multicamada</SelectItem>
-                        <SelectItem value="Dissilicato de Lítio">Dissilicato de Lítio</SelectItem>
-                        <SelectItem value="Resina Z350">Resina Z350</SelectItem>
-                        <SelectItem value="Metal para Infraestrutura">Metal para Infraestrutura</SelectItem>
-                        <SelectItem value="Cerâmica Feldspática">Cerâmica Feldspática</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="shade"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cor/Escala</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: A2" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -363,8 +341,8 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700">
-                Criar Ordem
+              <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled={loading}>
+                {loading ? 'Criando...' : 'Criar Ordem'}
               </Button>
             </DialogFooter>
           </form>

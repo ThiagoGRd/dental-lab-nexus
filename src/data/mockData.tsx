@@ -23,15 +23,32 @@ export const statusLabels: Record<OrderStatus, {label: string, className: string
   'delivered': { label: 'Entregue', className: 'bg-purple-100 text-purple-800 border-purple-300' },
 };
 
+// Interface para ordens
+export interface Order {
+  id: string;
+  client: string;
+  service: string;
+  createdAt: string;
+  dueDate: string;
+  status: OrderStatus;
+  isUrgent?: boolean;
+  shade?: string;
+  notes?: string;
+  originalData?: {
+    clientId: string;
+    orderId: string;
+  };
+}
+
 // Dados mockados de ordens para backup
-export const mockRecentOrders = [
+export const mockRecentOrders: Order[] = [
   {
     id: 'ORD001',
     client: 'Clínica Dental Care',
     service: 'Prótese Total Superior',
     createdAt: '2025-04-25',
     dueDate: '2025-05-02',
-    status: 'pending' as OrderStatus,
+    status: 'pending',
     isUrgent: true,
   },
   {
@@ -40,7 +57,7 @@ export const mockRecentOrders = [
     service: 'Coroa de Porcelana',
     createdAt: '2025-04-24',
     dueDate: '2025-05-04',
-    status: 'production' as OrderStatus,
+    status: 'production',
   },
   {
     id: 'ORD003',
@@ -48,7 +65,7 @@ export const mockRecentOrders = [
     service: 'Aparelho Ortodôntico',
     createdAt: '2025-04-23',
     dueDate: '2025-05-03',
-    status: 'waiting' as OrderStatus,
+    status: 'waiting',
   },
   {
     id: 'ORD004',
@@ -56,7 +73,7 @@ export const mockRecentOrders = [
     service: 'Faceta de Porcelana',
     createdAt: '2025-04-22',
     dueDate: '2025-04-29',
-    status: 'completed' as OrderStatus,
+    status: 'completed',
   },
   {
     id: 'ORD005',
@@ -64,7 +81,7 @@ export const mockRecentOrders = [
     service: 'Prótese Parcial Removível',
     createdAt: '2025-04-21',
     dueDate: '2025-04-28',
-    status: 'delivered' as OrderStatus,
+    status: 'delivered',
   },
 ];
 

@@ -39,7 +39,6 @@ const orderFormSchema = z.object({
   dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
   isUrgent: z.boolean().default(false),
   shade: z.string().min(1, 'A cor/escala é obrigatória'),
-  material: z.string().min(1, 'O material é obrigatório'),
   notes: z.string().optional(),
 });
 
@@ -62,7 +61,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       dueDate: order?.dueDate || '',
       isUrgent: order?.isUrgent || false,
       shade: order?.shade || '',
-      material: order?.material || '',
       notes: order?.notes || '',
     },
   });
@@ -77,7 +75,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         dueDate: order.dueDate || '',
         isUrgent: order.isUrgent || false,
         shade: order.shade || 'A2',
-        material: order.material || 'Zircônia',
         notes: order.notes || '',
       });
     }
@@ -211,7 +208,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="shade"
@@ -221,34 +218,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                     <FormControl>
                       <Input placeholder="Ex: A2" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="material"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Material</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o material" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Zircônia Multicamada">Zircônia Multicamada</SelectItem>
-                        <SelectItem value="Dissilicato de Lítio">Dissilicato de Lítio</SelectItem>
-                        <SelectItem value="Resina Z350">Resina Z350</SelectItem>
-                        <SelectItem value="Metal para Infraestrutura">Metal para Infraestrutura</SelectItem>
-                        <SelectItem value="Cerâmica Feldspática">Cerâmica Feldspática</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
