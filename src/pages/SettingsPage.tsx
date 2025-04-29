@@ -17,18 +17,19 @@ import { toast } from 'sonner';
 import { 
   Settings, 
   Building, 
-  FileText, 
   User, 
   Mail, 
   Phone, 
   MapPin 
 } from 'lucide-react';
+import UserManagement from '@/components/settings/UserManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function SettingsPage() {
   const [companySettings, setCompanySettings] = useState({
-    name: 'DentalLab Nexus',
+    name: 'Protech Lab Nexus',
     document: '12.345.678/0001-00',
-    email: 'contato@dentallabnexus.com',
+    email: 'contato@protechlabnexus.com',
     phone: '(11) 98765-4321',
     address: 'Av. Paulista, 1000 - Sala 301',
     city: 'São Paulo',
@@ -69,8 +70,8 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-dentalblue-800">Configurações</h1>
-      <p className="text-gray-600 mb-6">Gerencie as configurações do sistema</p>
+      <h1 className="text-3xl font-bold text-protechblue-100">Configurações</h1>
+      <p className="text-gray-400 mb-6">Gerencie as configurações do sistema</p>
 
       <Tabs defaultValue="company" className="w-full">
         <TabsList className="mb-6">
@@ -184,7 +185,7 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter>
               <Button 
-                className="bg-dentalblue-600 hover:bg-dentalblue-700"
+                className="bg-protechblue-600 hover:bg-protechblue-700"
                 onClick={saveCompanySettings}
               >
                 Salvar Alterações
@@ -259,7 +260,7 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter>
               <Button 
-                className="bg-dentalblue-600 hover:bg-dentalblue-700"
+                className="bg-protechblue-600 hover:bg-protechblue-700"
                 onClick={saveSystemSettings}
               >
                 Salvar Alterações
@@ -277,59 +278,7 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-[1fr_200px_150px_auto] items-center gap-4 bg-muted/50 p-4 font-medium">
-                  <div>Nome de Usuário</div>
-                  <div>Função</div>
-                  <div>Status</div>
-                  <div>Ações</div>
-                </div>
-                <div className="divide-y">
-                  <div className="grid grid-cols-[1fr_200px_150px_auto] items-center gap-4 p-4">
-                    <div>
-                      <div className="font-medium">Admin</div>
-                      <div className="text-sm text-muted-foreground">admin@dentallabnexus.com</div>
-                    </div>
-                    <div>Administrador</div>
-                    <div>
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">Ativo</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
-                        Editar
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600">
-                        Desativar
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[1fr_200px_150px_auto] items-center gap-4 p-4">
-                    <div>
-                      <div className="font-medium">Técnico</div>
-                      <div className="text-sm text-muted-foreground">tecnico@dentallabnexus.com</div>
-                    </div>
-                    <div>Técnico</div>
-                    <div>
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">Ativo</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
-                        Editar
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600">
-                        Desativar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <Button className="bg-dentalblue-600 hover:bg-dentalblue-700">
-                  <User className="mr-2 h-4 w-4" />
-                  Adicionar Usuário
-                </Button>
-              </div>
+              <UserManagement />
             </CardContent>
           </Card>
         </TabsContent>

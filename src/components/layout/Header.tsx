@@ -5,10 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
 import Notifications from '@/components/Notifications';
+import { supabase } from '@/integrations/supabase/client';
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: string;
+};
 
 export default function Header() {
   const sidebar = useSidebar();
-  const [user, setUser] = useState<{ name: string; avatar: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     // Buscar dados do usuário do localStorage
@@ -49,7 +58,7 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <div className="hidden md:flex md:flex-col md:items-end">
               <div className="text-sm font-medium text-protechblue-100">{user.name}</div>
-              <div className="text-xs text-gray-400">Administrador</div>
+              <div className="text-xs text-gray-400">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
             </div>
             <div className="h-9 w-9 rounded-full bg-protechblue-700 flex items-center justify-center text-protechblue-100 font-medium">
               {user.name?.charAt(0).toUpperCase() || 'U'}

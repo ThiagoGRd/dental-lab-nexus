@@ -2,27 +2,81 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: 'admin' | 'user';
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [hasRequiredRole, setHasRequiredRole] = useState<boolean | null>(null);
   
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    setIsAuthenticated(!!user);
+    const checkAuth = async () => {
+      try {
+        // Verificar a sessão atual
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (!session) {
+          setIsAuthenticated(false);
+          toast.error('Você precisa estar logado para acessar esta página');
+          return;
+        }
+        
+        setIsAuthenticated(true);
+        
+        // Se não há requisito de papel, não precisamos verificar
+        if (!requiredRole) {
+          setHasRequiredRole(true);
+          return;
+        }
+        
+        // Verificar se o usuário tem o papel necessário
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) throw profileError;
+        
+        if (!profile || profile.role !== requiredRole) {
+          setHasRequiredRole(false);
+          toast.error('Você não tem permissão para acessar esta página');
+          return;
+        }
+        
+        setHasRequiredRole(true);
+        
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        setIsAuthenticated(false);
+        setHasRequiredRole(false);
+        toast.error('Erro ao verificar autenticação');
+      }
+    };
     
-    if (!user) {
-      toast.error('Você precisa estar logado para acessar esta página');
-    }
-  }, []);
+    checkAuth();
+  }, [requiredRole]);
 
-  if (isAuthenticated === null) {
+  if (isAuthenticated === null || (requiredRole && hasRequiredRole === null)) {
     // Ainda carregando
-    return <div className="flex h-screen items-center justify-center">Carregando...</div>;
+    return <div className="flex h-screen items-center justify-center bg-darkblue-500">
+      <div className="text-xl text-protechblue-100">Carregando...</div>
+    </div>;
   }
   
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (requiredRole && !hasRequiredRole) {
+    return <Navigate to="/" />;
+  }
+  
+  return <>{children}</>;
 }

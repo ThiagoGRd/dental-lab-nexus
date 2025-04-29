@@ -24,9 +24,18 @@ import {
   Package
 } from "lucide-react";
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: string;
+};
 
 export default function Sidebar() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -37,10 +46,16 @@ export default function Sidebar() {
     }
   }, []);
   
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    toast.success('Sessão encerrada com sucesso');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('user');
+      toast.success('Sessão encerrada com sucesso');
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao encerrar sessão');
+    }
   };
 
   const menuItems = [
@@ -88,8 +103,14 @@ export default function Sidebar() {
       title: "Configurações",
       icon: Settings,
       href: "/settings",
+      adminOnly: true,
     }
   ];
+
+  // Filtrar itens do menu com base no papel do usuário
+  const filteredMenuItems = user?.role === 'admin'
+    ? menuItems
+    : menuItems.filter(item => !item.adminOnly);
 
   return (
     <SidebarComponent className="bg-darkblue-500 border-r border-darkblue-800">
@@ -103,7 +124,7 @@ export default function Sidebar() {
           <SidebarGroupLabel className="text-protechblue-100">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <Link 
