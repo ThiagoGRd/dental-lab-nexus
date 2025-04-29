@@ -7,7 +7,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import Notifications from '@/components/Notifications';
 
 export default function Header() {
-  const { setCollapsed, collapsed } = useSidebar();
+  const sidebar = useSidebar();
   const [user, setUser] = useState<{ name: string; avatar: string } | null>(null);
 
   useEffect(() => {
@@ -25,7 +25,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
-      <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={() => sidebar.toggleSidebar()}
+      >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle Menu</span>
       </Button>

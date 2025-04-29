@@ -9,6 +9,7 @@ import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Mock de notificações
 const mockNotifications = [
@@ -36,53 +37,55 @@ export default function Notifications() {
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
-              {unreadCount}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium">Notificações</h3>
-          {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-xs text-blue-500 hover:text-blue-600"
-              onClick={markAllAsRead}
-            >
-              Marcar todas como lidas
-            </Button>
-          )}
-        </div>
-        <ScrollArea className="h-80">
-          <div className="space-y-2">
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <div 
-                  key={notification.id}
-                  className={`p-3 rounded-md text-sm ${notification.read ? 'bg-gray-50' : 'bg-blue-50'}`}
-                  onClick={() => markAsRead(notification.id)}
-                >
-                  <div className="flex justify-between">
-                    <h4 className="font-medium">{notification.title}</h4>
-                    <span className="text-xs text-gray-500">{notification.time}</span>
-                  </div>
-                  <p className="text-gray-600 mt-1">{notification.message}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-4">Sem notificações</p>
+    <TooltipProvider>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="sm" className="relative">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
+                {unreadCount}
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80" align="end">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-medium">Notificações</h3>
+            {unreadCount > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs text-blue-500 hover:text-blue-600"
+                onClick={markAllAsRead}
+              >
+                Marcar todas como lidas
+              </Button>
             )}
           </div>
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+          <ScrollArea className="h-80">
+            <div className="space-y-2">
+              {notifications.length > 0 ? (
+                notifications.map((notification) => (
+                  <div 
+                    key={notification.id}
+                    className={`p-3 rounded-md text-sm ${notification.read ? 'bg-gray-50' : 'bg-blue-50'}`}
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    <div className="flex justify-between">
+                      <h4 className="font-medium">{notification.title}</h4>
+                      <span className="text-xs text-gray-500">{notification.time}</span>
+                    </div>
+                    <p className="text-gray-600 mt-1">{notification.message}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">Sem notificações</p>
+              )}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
   );
 }
