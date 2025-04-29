@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, BarChart2, Calendar, Download, FileText, Printer, Users } from 'lucide-react';
-import { BarChart as ReBarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart2, Calendar, Download, FileText, Printer, Users } from 'lucide-react';
+import { BarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Dados para os gráficos
 const productionData = [
@@ -105,7 +105,7 @@ export default function ReportsPage() {
             Clientes
           </TabsTrigger>
           <TabsTrigger value="stock" className="flex items-center">
-            <BarChart className="h-4 w-4 mr-2" />
+            <BarChart2 className="h-4 w-4 mr-2" />
             Estoque
           </TabsTrigger>
         </TabsList>

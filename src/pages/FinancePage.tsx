@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search, FileUp, FileDown, Calendar, ArrowUp, ArrowDown, Filter, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import NewFinancialEntryForm from '@/components/finance/NewFinancialEntryForm';
 
 // Mock de dados para contas a pagar
-const payableAccounts = [
+const initialPayableAccounts = [
   { id: 1, description: 'Fornecedor XYZ - Material A', category: 'Fornecedores', value: 2500.00, dueDate: '2025-05-10', status: 'pending' },
   { id: 2, description: 'Aluguel do mês', category: 'Despesas Fixas', value: 3800.00, dueDate: '2025-05-05', status: 'pending' },
   { id: 3, description: 'Conta de Energia', category: 'Despesas Fixas', value: 650.00, dueDate: '2025-05-15', status: 'pending' },
@@ -18,7 +19,7 @@ const payableAccounts = [
 ];
 
 // Mock de dados para contas a receber
-const receivableAccounts = [
+const initialReceivableAccounts = [
   { id: 101, client: 'Clínica Dental Care', orderNumber: 'ORD001', value: 3450.00, dueDate: '2025-05-08', status: 'pending' },
   { id: 102, client: 'Dr. Roberto Alves', orderNumber: 'ORD005', value: 1200.00, dueDate: '2025-05-15', status: 'pending' },
   { id: 103, client: 'Odontologia Sorriso', orderNumber: 'ORD003', value: 2800.00, dueDate: '2025-04-30', status: 'received' },
@@ -28,12 +29,21 @@ const receivableAccounts = [
 
 export default function FinancePage() {
   const [activeTab, setActiveTab] = useState('receivable');
+  const [payableAccounts, setPayableAccounts] = useState(initialPayableAccounts);
+  const [receivableAccounts, setReceivableAccounts] = useState(initialReceivableAccounts);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const handlePayment = (id: number) => {
+    setPayableAccounts(payableAccounts.map(account => 
+      account.id === id ? { ...account, status: 'paid' } : account
+    ));
     toast.success(`Pagamento da conta #${id} registrado com sucesso!`);
   };
   
   const handleReceive = (id: number) => {
+    setReceivableAccounts(receivableAccounts.map(account => 
+      account.id === id ? { ...account, status: 'received' } : account
+    ));
     toast.success(`Recebimento da conta #${id} registrado com sucesso!`);
   };
 
@@ -47,6 +57,45 @@ export default function FinancePage() {
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'dd/MM/yyyy');
   };
+
+  const handleAddPayable = (data: any) => {
+    const newId = Math.max(...payableAccounts.map(acc => acc.id), 0) + 1;
+    const newPayable = {
+      id: newId,
+      description: data.description,
+      category: data.category,
+      value: data.value,
+      dueDate: data.dueDate,
+      status: 'pending'
+    };
+    setPayableAccounts([...payableAccounts, newPayable]);
+    toast.success('Nova conta a pagar adicionada com sucesso!');
+  };
+
+  const handleAddReceivable = (data: any) => {
+    const newId = Math.max(...receivableAccounts.map(acc => acc.id), 0) + 1;
+    const newReceivable = {
+      id: newId,
+      client: data.client,
+      orderNumber: data.orderNumber,
+      value: data.value,
+      dueDate: data.dueDate,
+      status: 'pending'
+    };
+    setReceivableAccounts([...receivableAccounts, newReceivable]);
+    toast.success('Nova conta a receber adicionada com sucesso!');
+  };
+  
+  // Filtrar contas com base no termo de busca
+  const filteredPayables = payableAccounts.filter(acc => 
+    acc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    acc.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const filteredReceivables = receivableAccounts.filter(acc => 
+    acc.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    acc.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="p-6">
@@ -71,6 +120,16 @@ export default function FinancePage() {
               </TabsList>
               
               <div className="flex gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                  <Input
+                    className="pl-9 w-64"
+                    placeholder="Buscar..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                
                 <Button variant="outline" size="sm">
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
@@ -79,10 +138,28 @@ export default function FinancePage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-                <Button size="sm" className="bg-dentalblue-600 hover:bg-dentalblue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova {activeTab === 'receivable' ? 'Cobrança' : 'Despesa'}
-                </Button>
+                
+                {activeTab === 'receivable' ? (
+                  <NewFinancialEntryForm 
+                    type="receivable" 
+                    onSubmit={handleAddReceivable}
+                  >
+                    <Button size="sm" className="bg-dentalblue-600 hover:bg-dentalblue-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Cobrança
+                    </Button>
+                  </NewFinancialEntryForm>
+                ) : (
+                  <NewFinancialEntryForm 
+                    type="payable" 
+                    onSubmit={handleAddPayable}
+                  >
+                    <Button size="sm" className="bg-dentalblue-600 hover:bg-dentalblue-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Despesa
+                    </Button>
+                  </NewFinancialEntryForm>
+                )}
               </div>
             </div>
 
@@ -96,7 +173,7 @@ export default function FinancePage() {
                   <div></div>
                 </div>
                 <div className="divide-y">
-                  {receivableAccounts.map((account) => (
+                  {filteredReceivables.map((account) => (
                     <div key={account.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 p-4">
                       <div>
                         <div className="font-medium">{account.client}</div>
@@ -146,7 +223,7 @@ export default function FinancePage() {
                   <div></div>
                 </div>
                 <div className="divide-y">
-                  {payableAccounts.map((account) => (
+                  {filteredPayables.map((account) => (
                     <div key={account.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 p-4">
                       <div>
                         <div className="font-medium">{account.description}</div>
@@ -199,21 +276,36 @@ export default function FinancePage() {
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-md">
                 <div>
                   <p className="text-sm text-gray-600">Total a Receber</p>
-                  <p className="text-xl font-bold text-dentalblue-700">R$ 8.430,00</p>
+                  <p className="text-xl font-bold text-dentalblue-700">
+                    {formatCurrency(receivableAccounts
+                      .filter(acc => acc.status === 'pending')
+                      .reduce((sum, acc) => sum + acc.value, 0)
+                    )}
+                  </p>
                 </div>
                 <FileDown className="h-8 w-8 text-dentalblue-500" />
               </div>
               <div className="flex justify-between items-center p-3 bg-red-50 rounded-md">
                 <div>
                   <p className="text-sm text-gray-600">Total a Pagar</p>
-                  <p className="text-xl font-bold text-red-700">R$ 9.000,00</p>
+                  <p className="text-xl font-bold text-red-700">
+                    {formatCurrency(payableAccounts
+                      .filter(acc => acc.status === 'pending')
+                      .reduce((sum, acc) => sum + acc.value, 0)
+                    )}
+                  </p>
                 </div>
                 <FileUp className="h-8 w-8 text-red-500" />
               </div>
               <div className="flex justify-between items-center p-3 bg-green-50 rounded-md">
                 <div>
                   <p className="text-sm text-gray-600">Saldo Previsto</p>
-                  <p className="text-xl font-bold text-green-700">R$ 2.430,00</p>
+                  <p className="text-xl font-bold text-green-700">
+                    {formatCurrency(
+                      receivableAccounts.filter(acc => acc.status === 'pending').reduce((sum, acc) => sum + acc.value, 0) -
+                      payableAccounts.filter(acc => acc.status === 'pending').reduce((sum, acc) => sum + acc.value, 0)
+                    )}
+                  </p>
                 </div>
                 <Calendar className="h-8 w-8 text-green-500" />
               </div>
@@ -228,7 +320,7 @@ export default function FinancePage() {
           <CardContent>
             <div className="space-y-3">
               {[...payableAccounts, ...receivableAccounts]
-                .filter(item => 'status' in item && item.status === 'pending')
+                .filter(item => 'status' in item && (item.status === 'pending' || item.status === 'pending'))
                 .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
                 .slice(0, 5)
                 .map((item, idx) => {

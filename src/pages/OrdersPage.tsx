@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -20,8 +20,12 @@ import { mockRecentOrders } from '@/data/mockData';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Plus, Search } from 'lucide-react';
+import NewOrderDialog from '@/components/orders/NewOrderDialog';
 
 export default function OrdersPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
   const statuses = {
     'pending': { label: 'Pendente', className: 'status-pending' },
     'production': { label: 'Em Produção', className: 'status-production' },
@@ -31,10 +35,22 @@ export default function OrdersPage() {
   };
 
   // Simulating more orders by duplicating the mock data
-  const orders = [...mockRecentOrders, ...mockRecentOrders].map((order, index) => ({
+  const allOrders = [...mockRecentOrders, ...mockRecentOrders].map((order, index) => ({
     ...order,
     id: `ORD${String(index + 1).padStart(3, '0')}`,
   }));
+  
+  // Filter orders based on search term and status filter
+  const filteredOrders = allOrders.filter(order => {
+    const matchesSearch = 
+      order.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.service.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="p-6">
@@ -43,9 +59,11 @@ export default function OrdersPage() {
           <h1 className="text-3xl font-bold text-dentalblue-800">Ordens de Serviço</h1>
           <p className="text-gray-600">Gerencie todas as ordens do laboratório</p>
         </div>
-        <Button className="bg-dentalblue-600 hover:bg-dentalblue-700">
-          <Plus className="mr-2 h-4 w-4" /> Nova Ordem
-        </Button>
+        <NewOrderDialog>
+          <Button className="bg-dentalblue-600 hover:bg-dentalblue-700">
+            <Plus className="mr-2 h-4 w-4" /> Nova Ordem
+          </Button>
+        </NewOrderDialog>
       </div>
 
       <Card>
@@ -60,9 +78,14 @@ export default function OrdersPage() {
               <Input
                 placeholder="Buscar por cliente ou ID..."
                 className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select>
+            <Select 
+              value={statusFilter} 
+              onValueChange={setStatusFilter}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -103,7 +126,7 @@ export default function OrdersPage() {
                 <div></div>
               </div>
               <div className="divide-y">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <div key={order.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4">
                     <div>
                       <div className="flex items-center gap-2">
