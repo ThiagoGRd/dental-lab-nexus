@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -38,6 +39,12 @@ type UserProfile = {
   created_at: string;
 }
 
+type ProfileResponse = {
+  name: string | null;
+  role: string;
+  is_active: boolean | null;
+}
+
 export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,14 +81,18 @@ export default function UserManagement() {
       
       // Combinar dados de auth.users e profiles
       const combinedUsers = authUsers.users.map(authUser => {
-        const profile = profiles.find(p => p.id === authUser.id) || {};
+        const profile = profiles?.find(p => p.id === authUser.id) as ProfileResponse || {
+          name: null,
+          role: 'user',
+          is_active: true
+        };
         
         return {
           id: authUser.id,
           email: authUser.email || '',
           name: profile.name || authUser.email?.split('@')[0] || '',
           role: profile.role || 'user',
-          is_active: profile.is_active !== undefined ? profile.is_active : true,
+          is_active: profile.is_active !== null ? profile.is_active : true,
           created_at: authUser.created_at
         };
       });
