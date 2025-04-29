@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,12 +14,12 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   
   // Dados para os gráficos
-  const [productionData, setProductionData] = useState([]);
-  const [financialData, setFinancialData] = useState([]);
-  const [clientData, setClientData] = useState([]);
-  const [statusData, setStatusData] = useState([]);
-  const [topServices, setTopServices] = useState([]);
-  const [inventoryData, setInventoryData] = useState([]);
+  const [productionData, setProductionData] = useState<any[]>([]);
+  const [financialData, setFinancialData] = useState<any[]>([]);
+  const [clientData, setClientData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [topServices, setTopServices] = useState<any[]>([]);
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
   
   // Resumo financeiro
   const [financialSummary, setFinancialSummary] = useState({
@@ -30,7 +29,7 @@ export default function ReportsPage() {
     profitPercentage: '0%',
     previousComparisonRevenue: '0%',
     previousComparisonExpenses: '0%',
-    expenseBreakdown: []
+    expenseBreakdown: [] as any[]
   });
   
   // Resumo de produção
@@ -47,7 +46,7 @@ export default function ReportsPage() {
     activeClients: 0,
     averageOrders: 0,
     averageValue: 'R$ 0,00',
-    topClientsByValue: []
+    topClientsByValue: [] as any[]
   });
 
   const loadReportsData = async () => {
@@ -65,15 +64,15 @@ export default function ReportsPage() {
         console.error('Erro ao buscar ordens:', ordersError);
       } else {
         // Agrupar ordens por mês para o gráfico de produção
-        const ordersCountByMonth = processOrdersByMonth(ordersData);
+        const ordersCountByMonth = processOrdersByMonth(ordersData || []);
         setProductionData(ordersCountByMonth);
         
         // Resumo de status das ordens
         const statusCounts = {
-          totalOrders: ordersData.length,
-          pendingOrders: ordersData.filter(o => o.status === 'pending').length,
-          inProductionOrders: ordersData.filter(o => o.status === 'production').length,
-          completedOrders: ordersData.filter(o => o.status === 'completed' || o.status === 'delivered').length
+          totalOrders: ordersData?.length || 0,
+          pendingOrders: ordersData?.filter(o => o.status === 'pending').length || 0,
+          inProductionOrders: ordersData?.filter(o => o.status === 'production').length || 0,
+          completedOrders: ordersData?.filter(o => o.status === 'completed' || o.status === 'delivered').length || 0
         };
         setProductionSummary(statusCounts);
         
@@ -97,7 +96,7 @@ export default function ReportsPage() {
         console.error('Erro ao buscar dados financeiros:', financesError);
       } else {
         // Processar dados financeiros
-        const processedFinancialData = processFinancialData(financesData);
+        const processedFinancialData = processFinancialData(financesData || []);
         setFinancialData(processedFinancialData.monthlyData);
         setFinancialSummary(processedFinancialData.summary);
       }
@@ -111,15 +110,15 @@ export default function ReportsPage() {
         console.error('Erro ao buscar clientes:', clientsError);
       } else {
         // Total e clientes ativos
-        const activeClientsCount = clientsData.length; // Supomos que todos são ativos por enquanto
+        const activeClientsCount = clientsData?.length || 0; // Supomos que todos são ativos por enquanto
         setClientSummary(prev => ({
           ...prev,
-          totalClients: clientsData.length,
+          totalClients: clientsData?.length || 0,
           activeClients: activeClientsCount
         }));
         
         // Buscar dados para o gráfico de clientes
-        if (clientsData.length > 0) {
+        if (clientsData && clientsData.length > 0) {
           const clientsWithOrdersPromises = clientsData.slice(0, 10).map(async client => {
             const { count } = await supabase
               .from('orders')
@@ -159,21 +158,58 @@ export default function ReportsPage() {
       if (servicesError) {
         console.error('Erro ao buscar serviços:', servicesError);
       } else if (servicesData && servicesData.length > 0) {
-        // Pegamos apenas os 5 primeiros serviços para simplificar
-        const topServicesData = servicesData.slice(0, 5).map((service, index) => {
-          // Calculamos valores aleatórios para quantidade e porcentagem
-          const quantity = Math.floor(Math.random() * 50) + 20;
-          const total = 297; // Total estimado
-          const percentage = ((quantity / total) * 100).toFixed(1) + '%';
+        // Buscar os serviços mais utilizados
+        const { data: orderItemsData, error: orderItemsError } = await supabase
+          .from('order_items')
+          .select('service_id, quantity')
+          .gte('created_at', startDate)
+          .lte('created_at', endDate);
+
+        if (!orderItemsError && orderItemsData) {
+          // Contar quantas vezes cada serviço foi utilizado
+          const serviceCount: Record<string, number> = {};
+          orderItemsData.forEach(item => {
+            if (!serviceCount[item.service_id]) {
+              serviceCount[item.service_id] = 0;
+            }
+            serviceCount[item.service_id] += item.quantity;
+          });
+
+          // Calcular total
+          const total = orderItemsData.reduce((sum, item) => sum + item.quantity, 0);
+
+          // Formatar os dados dos top serviços
+          const topServicesData = Object.entries(serviceCount)
+            .map(([serviceId, quantity]) => {
+              const service = servicesData.find(s => s.id === serviceId);
+              const percentage = total > 0 ? ((quantity / total) * 100).toFixed(1) + '%' : '0%';
+              
+              return {
+                name: service ? service.name : 'Serviço desconhecido',
+                quantity,
+                percentage
+              };
+            })
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 5);
+
+          setTopServices(topServicesData);
+        } else {
+          // Se não houver dados reais, usamos os primeiros serviços
+          const defaultTopServices = servicesData.slice(0, 5).map((service, index) => {
+            const quantity = Math.floor(Math.random() * 50) + 20;
+            const total = 297; // Total estimado
+            const percentage = ((quantity / total) * 100).toFixed(1) + '%';
+            
+            return {
+              name: service.name,
+              quantity,
+              percentage
+            };
+          });
           
-          return {
-            name: service.name,
-            quantity,
-            percentage
-          };
-        });
-        
-        setTopServices(topServicesData);
+          setTopServices(defaultTopServices);
+        }
       }
       
       // Buscar dados de estoque
@@ -185,14 +221,16 @@ export default function ReportsPage() {
       if (inventoryError) {
         console.error('Erro ao buscar estoque:', inventoryError);
       } else {
-        const processedInventory = inventoryData.map(item => {
+        const processedInventory = (inventoryData || []).map(item => {
           let status = 'ok';
-          // Fix for the first error: Ensure min_quantity is a number before comparison
-          const minQuantity = typeof item.min_quantity === 'number' ? item.min_quantity : 0;
           
-          if (item.quantity < minQuantity) {
+          // Garantir que min_quantity é um número e fazer a comparação
+          const minQuantity = typeof item.min_quantity === 'number' ? item.min_quantity : 0;
+          const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+          
+          if (quantity < minQuantity) {
             status = 'critical';
-          } else if (item.quantity < minQuantity * 1.5) {
+          } else if (quantity < minQuantity * 1.5) {
             status = 'low';
           }
           
@@ -213,7 +251,7 @@ export default function ReportsPage() {
   };
   
   // Funções auxiliares para processar os dados
-  const processOrdersByMonth = (orders) => {
+  const processOrdersByMonth = (orders: any[]) => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
     const result = months.map(month => ({
       month,
@@ -248,7 +286,7 @@ export default function ReportsPage() {
     return result;
   };
   
-  const processFinancialData = (finances) => {
+  const processFinancialData = (finances: any[]) => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
     const monthlyData = months.map(month => ({
       month,
@@ -287,33 +325,36 @@ export default function ReportsPage() {
     // Processa os dados reais
     let totalRevenue = 0;
     let totalExpenses = 0;
-    const expensesByCategory = {};
+    const expensesByCategory: Record<string, number> = {};
     
     finances.forEach(finance => {
       const date = new Date(finance.created_at);
       const monthIndex = date.getMonth();
       
       if (monthIndex >= 0 && monthIndex < 6) {
+        // Garantir que o valor é numérico
+        const amount = typeof finance.amount === 'number' ? finance.amount : 0;
+        
         if (finance.type === 'revenue') {
-          monthlyData[monthIndex].receita += finance.amount;
-          totalRevenue += finance.amount;
+          monthlyData[monthIndex].receita += amount;
+          totalRevenue += amount;
         } else if (finance.type === 'expense') {
-          monthlyData[monthIndex].despesa += finance.amount;
-          totalExpenses += finance.amount;
+          monthlyData[monthIndex].despesa += amount;
+          totalExpenses += amount;
           
           // Agrupar despesas por categoria
           const category = finance.category || 'Outros';
           if (!expensesByCategory[category]) {
             expensesByCategory[category] = 0;
           }
-          expensesByCategory[category] += finance.amount;
+          expensesByCategory[category] += amount;
         }
       }
     });
     
     // Calcular percentuais de despesas
     const expenseBreakdown = Object.entries(expensesByCategory).map(([name, value]) => {
-      // Fix for the second error: Use Number() to ensure value is a number before division
+      // Garantir que value é um número antes da divisão
       const numericalValue = Number(value);
       const percentage = totalExpenses > 0 ? ((numericalValue / totalExpenses) * 100).toFixed(1) + '%' : '0%';
       
@@ -323,7 +364,7 @@ export default function ReportsPage() {
         percentage
       };
     }).sort((a, b) => {
-      // Extract percentage values without the % sign for comparison
+      // Extrair valores percentuais sem o sinal % para comparação
       const percentA = parseFloat(a.percentage);
       const percentB = parseFloat(b.percentage);
       return percentB - percentA;
@@ -334,7 +375,7 @@ export default function ReportsPage() {
     const profitPercentage = totalRevenue > 0 ? ((profit / totalRevenue) * 100).toFixed(1) + '%' : '0%';
     
     // Formatar valores para exibição
-    const formatCurrency = (value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     
     return {
       monthlyData,

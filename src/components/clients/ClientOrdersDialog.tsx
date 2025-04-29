@@ -32,6 +32,7 @@ export default function ClientOrdersDialog({
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [loading, setLoading] = useState(true);
   const [clientOrders, setClientOrders] = useState<any[]>([]);
+  const [totalValue, setTotalValue] = useState<number>(0);
   
   useEffect(() => {
     // Só carrega os dados quando o diálogo estiver aberto
@@ -55,7 +56,8 @@ export default function ClientOrdersDialog({
           priority, 
           created_at, 
           deadline, 
-          notes
+          notes,
+          total_value
         `)
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
@@ -65,6 +67,16 @@ export default function ClientOrdersDialog({
         return;
       }
       
+      // Calcular o valor total de todas as ordens
+      let totalSum = 0;
+      ordersData.forEach(order => {
+        // Garantir que o valor é numérico antes de somar
+        if (order.total_value && typeof order.total_value === 'number') {
+          totalSum += order.total_value;
+        }
+      });
+      setTotalValue(totalSum);
+      
       // Buscar itens de serviço para cada ordem
       const orderIds = ordersData.map(order => order.id);
       const { data: orderItemsData, error: orderItemsError } = await supabase
@@ -72,7 +84,10 @@ export default function ClientOrdersDialog({
         .select(`
           order_id,
           service_id,
-          notes
+          notes,
+          price,
+          quantity,
+          total
         `)
         .in('order_id', orderIds);
 
@@ -107,6 +122,7 @@ export default function ClientOrdersDialog({
           status: order.status as OrderStatus,
           isUrgent: order.priority === 'urgent',
           notes: order.notes || '',
+          value: order.total_value || 0,
           originalData: {
             orderId: order.id,
             clientId: clientId
@@ -127,6 +143,14 @@ export default function ClientOrdersDialog({
     setShowOrderDetails(true);
   };
   
+  // Formatar valor em reais
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+  
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,6 +161,17 @@ export default function ClientOrdersDialog({
               Histórico de ordens de serviço deste cliente
             </DialogDescription>
           </DialogHeader>
+          
+          <div className="mb-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm text-gray-600">Total de ordens: <span className="font-medium">{clientOrders.length}</span></p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">
+                Valor total: <span className="font-medium">{formatCurrency(totalValue)}</span>
+              </p>
+            </div>
+          </div>
           
           {loading ? (
             <div className="text-center py-8">Carregando ordens de serviço...</div>
@@ -155,7 +190,10 @@ export default function ClientOrdersDialog({
                     <div key={order.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4">
                       <div>
                         <div className="font-medium">{order.service}</div>
-                        <div className="text-xs text-gray-600">#{order.id.substring(0, 8)}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="text-xs text-gray-600">#{order.id.substring(0, 8)}</div>
+                          <div className="text-xs text-gray-600">{formatCurrency(order.value)}</div>
+                        </div>
                       </div>
                       <div className="text-sm">
                         {order.dueDate || 'Não definida'}

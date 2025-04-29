@@ -193,7 +193,7 @@ export default function ProductionPage() {
       setWaitingOrders(updatedWaitingOrders);
       setCompletedOrders(updatedCompletedOrders);
       
-      toast.success(`Ordem ${order.id.substring(0, 8)} atualizada para ${statusLabels[newStatus as OrderStatus].label}`);
+      toast.success(`Ordem ${order.id.substring(0, 8)} atualizada para ${statusLabels[newStatus as OrderStatus]?.label || newStatus}`);
     } catch (error) {
       console.error('Erro ao processar atualização:', error);
       toast.error('Ocorreu um erro ao atualizar a ordem.');
@@ -238,9 +238,14 @@ export default function ProductionPage() {
             )}
             
             {order.status === 'production' && (
-              <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'completed')}>
-                Finalizar
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'waiting')}>
+                  Aguardando Material
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'completed')}>
+                  Finalizar
+                </Button>
+              </>
             )}
             
             {order.status === 'waiting' && (
