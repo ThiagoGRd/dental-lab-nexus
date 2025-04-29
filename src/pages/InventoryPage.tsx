@@ -36,7 +36,17 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InventoryItem {
