@@ -13,6 +13,7 @@ import InventoryPage from "./pages/InventoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import FinancePage from "./pages/FinancePage";
 import ReportsPage from "./pages/ReportsPage";
+import ServicesPage from "./pages/ServicesPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -74,6 +75,13 @@ const App = () => (
             <ProtectedRoute>
               <Layout>
                 <ReportsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/services" element={
+            <ProtectedRoute>
+              <Layout>
+                <ServicesPage />
               </Layout>
             </ProtectedRoute>
           } />
