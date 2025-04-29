@@ -1,11 +1,20 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Search } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function Header() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
   return (
     <header className="border-b bg-white shadow-sm">
       <div className="flex items-center justify-between px-4 py-3">
@@ -45,13 +54,17 @@ export default function Header() {
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"></span>
           </Button>
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-dentalblue-100 flex items-center justify-center text-dentalblue-700 font-medium">
-              AD
-            </div>
-            <div className="hidden md:block">
-              <p className="text-sm font-medium">Admin</p>
-              <p className="text-xs text-gray-500">admin@dentallab.com</p>
-            </div>
+            {user && (
+              <>
+                <div className="h-9 w-9 rounded-full bg-dentalblue-100 flex items-center justify-center text-dentalblue-700 font-medium">
+                  {user.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

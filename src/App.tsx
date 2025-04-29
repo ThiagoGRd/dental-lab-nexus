@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import OrdersPage from "./pages/OrdersPage";
@@ -11,7 +11,11 @@ import ClientsPage from "./pages/ClientsPage";
 import ProductionPage from "./pages/ProductionPage";
 import InventoryPage from "./pages/InventoryPage";
 import SettingsPage from "./pages/SettingsPage";
+import FinancePage from "./pages/FinancePage";
+import ReportsPage from "./pages/ReportsPage";
+import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -22,35 +26,63 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          
           <Route path="/" element={
-            <Layout>
-              <Dashboard />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="/orders" element={
-            <Layout>
-              <OrdersPage />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <OrdersPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="/clients" element={
-            <Layout>
-              <ClientsPage />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <ClientsPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="/production" element={
-            <Layout>
-              <ProductionPage />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <ProductionPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="/inventory" element={
-            <Layout>
-              <InventoryPage />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <InventoryPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/finances" element={
+            <ProtectedRoute>
+              <Layout>
+                <FinancePage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <Layout>
+                <ReportsPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <Layout>
-              <SettingsPage />
-            </Layout>
+            <ProtectedRoute>
+              <Layout>
+                <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />
         </Routes>

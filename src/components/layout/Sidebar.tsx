@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sidebar as SidebarComponent,
   SidebarContent,
@@ -18,10 +18,30 @@ import {
   FileText,
   Database,
   Settings,
-  LogOut
+  LogOut,
+  BarChart2,
+  Wallet
 } from "lucide-react";
+import { toast } from 'sonner';
 
 export default function Sidebar() {
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    toast.success('Sessão encerrada com sucesso');
+    navigate('/login');
+  };
+
   const menuItems = [
     {
       title: "Dashboard",
@@ -49,6 +69,16 @@ export default function Sidebar() {
       href: "/inventory",
     },
     {
+      title: "Finanças",
+      icon: Wallet,
+      href: "/finances",
+    },
+    {
+      title: "Relatórios",
+      icon: BarChart2,
+      href: "/reports",
+    },
+    {
       title: "Configurações",
       icon: Settings,
       href: "/settings",
@@ -70,7 +100,10 @@ export default function Sidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.href} className="flex items-center gap-3">
+                    <Link 
+                      to={item.href} 
+                      className={`flex items-center gap-3 ${location.pathname === item.href ? 'bg-dentalblue-100 text-dentalblue-700' : ''}`}
+                    >
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -82,7 +115,16 @@ export default function Sidebar() {
         </SidebarGroup>
       </SidebarContent>
       <div className="mt-auto p-4">
-        <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+        {user && (
+          <div className="mb-4 rounded-md bg-dentalblue-50 p-3">
+            <div className="font-medium">{user.name}</div>
+            <div className="text-xs text-gray-500">{user.email}</div>
+          </div>
+        )}
+        <button 
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
           <LogOut className="h-5 w-5" />
           <span>Sair</span>
         </button>
