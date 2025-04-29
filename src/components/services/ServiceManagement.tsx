@@ -36,16 +36,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 
+// Updated interface to match Supabase data structure
 interface Service {
-  id: number;
+  id: string; // Changed from number to string to match Supabase's UUID
   name: string;
-  description: string;
+  description: string | null;
   price: number;
-  category: string;
+  category: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ServiceManagementProps {
-  initialServices?: any[];
+  initialServices?: Service[];
   loading?: boolean;
 }
 
@@ -56,7 +60,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentService, setCurrentService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(loading);
-  const [formData, setFormData] = useState<Omit<Service, 'id'>>({
+  const [formData, setFormData] = useState<Omit<Service, 'id' | 'created_at' | 'updated_at' | 'active'>>({
     name: '',
     description: '',
     price: 0,
@@ -117,7 +121,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
       }
 
       if (data && data.length > 0) {
-        const newService = data[0];
+        const newService = data[0] as Service;
         setServices([...services, newService]);
         setIsAddDialogOpen(false);
         toast.success('Serviço adicionado com sucesso!');
@@ -142,9 +146,9 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     setCurrentService(service);
     setFormData({
       name: service.name,
-      description: service.description,
+      description: service.description || '',
       price: service.price,
-      category: service.category,
+      category: service.category || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -172,7 +176,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
       }
       
       if (data && data.length > 0) {
-        const updatedService = data[0];
+        const updatedService = data[0] as Service;
         setServices(services.map((service) =>
           service.id === currentService.id ? updatedService : service
         ));
@@ -190,7 +194,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
   };
 
   // Delete service
-  const handleDeleteService = async (id: number) => {
+  const handleDeleteService = async (id: string) => {
     try {
       setIsLoading(true);
       

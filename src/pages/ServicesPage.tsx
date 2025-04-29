@@ -3,9 +3,21 @@ import React, { useState, useEffect } from 'react';
 import ServiceManagement from '@/components/services/ServiceManagement';
 import { supabase } from "@/integrations/supabase/client";
 
+// This type matches the updated Service interface in ServiceManagement.tsx
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -22,7 +34,7 @@ export default function ServicesPage() {
           // Armazenar os serviços no localStorage para uso em componentes que 
           // ainda não foram migrados para consultas diretas
           localStorage.setItem('services', JSON.stringify(data));
-          setServices(data);
+          setServices(data as Service[]);
         }
       } catch (error) {
         console.error('Erro inesperado:', error);
