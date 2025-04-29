@@ -187,9 +187,12 @@ export default function ReportsPage() {
       } else {
         const processedInventory = inventoryData.map(item => {
           let status = 'ok';
-          if (item.quantity < item.min_quantity) {
+          // Fix for the first error: Ensure min_quantity is a number before comparison
+          const minQuantity = typeof item.min_quantity === 'number' ? item.min_quantity : 0;
+          
+          if (item.quantity < minQuantity) {
             status = 'critical';
-          } else if (item.quantity < item.min_quantity * 1.5) {
+          } else if (item.quantity < minQuantity * 1.5) {
             status = 'low';
           }
           
@@ -310,13 +313,21 @@ export default function ReportsPage() {
     
     // Calcular percentuais de despesas
     const expenseBreakdown = Object.entries(expensesByCategory).map(([name, value]) => {
-      const percentage = totalExpenses > 0 ? ((value / totalExpenses) * 100).toFixed(1) + '%' : '0%';
+      // Fix for the second error: Use Number() to ensure value is a number before division
+      const numericalValue = Number(value);
+      const percentage = totalExpenses > 0 ? ((numericalValue / totalExpenses) * 100).toFixed(1) + '%' : '0%';
+      
       return {
         name,
-        value: `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        value: `R$ ${numericalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         percentage
       };
-    }).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage));
+    }).sort((a, b) => {
+      // Extract percentage values without the % sign for comparison
+      const percentA = parseFloat(a.percentage);
+      const percentB = parseFloat(b.percentage);
+      return percentB - percentA;
+    });
     
     // Calcular lucro e percentual
     const profit = totalRevenue - totalExpenses;
