@@ -28,9 +28,10 @@ interface OrderDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: any | null;
+  clientMode?: boolean; // Make it optional with a default value
 }
 
-export default function OrderDetailsDialog({ open, onOpenChange, order }: OrderDetailsDialogProps) {
+export default function OrderDetailsDialog({ open, onOpenChange, order, clientMode = false }: OrderDetailsDialogProps) {
   const [hasWorkflow, setHasWorkflow] = useState(false);
   const [serviceName, setServiceName] = useState("");
   const [client, setClient] = useState<any>(null);

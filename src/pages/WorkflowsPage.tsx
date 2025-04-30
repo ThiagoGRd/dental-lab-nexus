@@ -29,6 +29,7 @@ interface WorkflowTemplate {
   description: string | null;
   steps: WorkflowStep[];
   created_at: string;
+  updated_at: string;
 }
 
 // Tipo para uma etapa do fluxo de trabalho
@@ -74,8 +75,13 @@ export default function WorkflowsPage() {
       if (templatesError) {
         console.error('Erro ao carregar templates:', templatesError);
         toast.error('Não foi possível carregar os templates de fluxo de trabalho.');
-      } else {
-        setTemplates(templatesData || []);
+      } else if (templatesData) {
+        // Corrigi o tipo dos steps no template
+        const formattedTemplates = templatesData.map(template => ({
+          ...template,
+          steps: template.steps as unknown as WorkflowStep[]
+        }));
+        setTemplates(formattedTemplates);
       }
 
       // Carregar ordens com workflows ativos
@@ -164,6 +170,10 @@ export default function WorkflowsPage() {
           }
         }
 
+        // Fix for the total steps calculation
+        const steps = workflow.workflow_templates?.steps;
+        const totalSteps = Array.isArray(steps) ? steps.length : 0;
+
         return {
           id: order.id,
           client: client?.name || 'Cliente não encontrado',
@@ -173,7 +183,7 @@ export default function WorkflowsPage() {
           currentStep: workflow.current_step,
           status: order.status,
           workflowName: workflow.workflow_templates?.name || 'Fluxo indefinido',
-          totalSteps: workflow.workflow_templates?.steps?.length || 0,
+          totalSteps,
           isUrgent: order.priority === 'urgent'
         };
       }).filter(Boolean) as OrderWithWorkflow[];

@@ -82,14 +82,17 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
         return;
       }
 
-      // Formatar os dados
+      // Formatar os dados - corrigindo o problema de tipo
+      const steps = workflowData.workflow_templates.steps as unknown as WorkflowStep[];
+      const history = workflowData.history ? (workflowData.history as unknown as any[]) : [];
+
       setWorkflow({
         id: workflowData.id,
         templateId: workflowData.template_id,
         currentStep: workflowData.current_step,
         templateName: workflowData.workflow_templates.name,
-        steps: workflowData.workflow_templates.steps as WorkflowStep[],
-        history: workflowData.history || [],
+        steps,
+        history,
         notes: workflowData.notes
       });
     } catch (error) {
