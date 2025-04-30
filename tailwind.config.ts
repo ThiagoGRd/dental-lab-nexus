@@ -99,6 +99,24 @@ export default {
 					800: '#0A2351',
 					900: '#051937',
 				},
+				// Adicionando novas cores modernas
+				modern: {
+					primary: '#6366F1',  // Indigo
+					secondary: '#8B5CF6', // Violet
+					tertiary: '#EC4899',  // Pink
+					info: '#0EA5E9',      // Sky blue
+					success: '#10B981',   // Emerald
+					warning: '#F59E0B',   // Amber
+					danger: '#EF4444',    // Red
+					light: '#F9FAFB',     // Gray 50
+					dark: '#111827',      // Gray 900
+					muted: '#6B7280',     // Gray 500
+				},
+				gradient: {
+					start: '#6366F1',     // Indigo
+					mid: '#8B5CF6',       // Violet
+					end: '#EC4899',       // Pink
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -129,12 +147,39 @@ export default {
 					to: {
 						opacity: '1'
 					}
+				},
+				'slide-in': {
+					'0%': {
+						transform: 'translateX(-100%)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'translateX(0)',
+						opacity: '1'
+					}
+				},
+				'scale-in': {
+					'0%': {
+						transform: 'scale(0.95)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						opacity: '1'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out'
+				'fade-in': 'fade-in 0.3s ease-out',
+				'slide-in': 'slide-in 0.4s ease-out',
+				'scale-in': 'scale-in 0.2s ease-out'
+			},
+			boxShadow: {
+				'soft': '0 4px 15px 0 rgba(0, 0, 0, 0.05)',
+				'modern': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+				'glow': '0 0 15px rgba(99, 102, 241, 0.5)'
 			}
 		}
 	},

@@ -13,9 +13,9 @@ type StatusChartProps = {
 
 export default function StatusChart({ data }: StatusChartProps) {
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Status das Ordens</CardTitle>
+    <Card className="h-full shadow-soft border border-slate-100 hover:shadow-md transition-all">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold text-slate-800">Status das Ordens</CardTitle>
       </CardHeader>
       <CardContent className="flex justify-center">
         <div className="w-full h-[250px]">
@@ -31,15 +31,22 @@ export default function StatusChart({ data }: StatusChartProps) {
                 paddingAngle={5}
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                strokeWidth={1}
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" />
                 ))}
               </Pie>
               <Tooltip 
                 formatter={(value: number) => [`${value} ordens`, '']} 
+                contentStyle={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
               />
-              <Legend />
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{ paddingTop: '20px' }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>

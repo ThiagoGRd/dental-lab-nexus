@@ -23,28 +23,28 @@ export default function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn("transition-all hover:shadow-md", className)}>
+    <Card className={cn("transition-all hover:shadow-md border-l-4 border-l-modern-primary bg-white", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
+        {icon && <div className="h-6 w-6 text-modern-primary">{icon}</div>}
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        <div className="flex items-center text-xs text-muted-foreground">
+        <div className="flex items-center text-xs text-muted-foreground mt-1">
           {trend && (
             <div 
               className={cn(
-                "mr-1", 
-                trend === 'up' && "text-green-500",
-                trend === 'down' && "text-red-500"
+                "mr-1 font-medium", 
+                trend === 'up' && "text-modern-success",
+                trend === 'down' && "text-modern-danger"
               )}
             >
-              {trend === 'up' && '↑'}
-              {trend === 'down' && '↓'}
+              {trend === 'up' && '↑ '}
+              {trend === 'down' && '↓ '}
               {trendValue}
             </div>
           )}
-          <div>{description}</div>
+          <div className="text-slate-500">{description}</div>
         </div>
       </CardContent>
     </Card>
