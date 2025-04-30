@@ -91,6 +91,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
   // Update form values when order changes
   useEffect(() => {
     if (order) {
+      console.log('Dados da ordem carregados:', order);
       form.reset({
         client: order.client || '',
         patientName: order.patientName || '',
@@ -126,18 +127,23 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
     if (!order) return;
     
     try {
+      const orderId = order.originalData?.orderId || order.id;
+      console.log('Verificando workflow para ordem:', orderId);
+      
       const { data, error } = await supabase
         .from('order_workflows')
         .select('template_id')
-        .eq('order_id', order.originalData?.orderId || order.id)
-        .single();
+        .eq('order_id', orderId)
+        .maybeSingle();
         
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error("Erro ao verificar workflow existente:", error);
         setCurrentWorkflow(null);
       } else if (data) {
+        console.log('Workflow existente encontrado:', data);
         setCurrentWorkflow(data.template_id);
       } else {
+        console.log('Nenhum workflow encontrado para esta ordem');
         setCurrentWorkflow(null);
       }
     } catch (error) {
@@ -151,23 +157,46 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
     setLoading(true);
     
     try {
-      // Preparar dados atualizados
-      const updatedOrder = {
-        ...order,
-        ...data,
-      };
+      // Obter o ID real da ordem
+      const orderId = order.originalData?.orderId || order.id;
+      console.log('Atualizando ordem com ID:', orderId);
+      console.log('Dados para atualização:', data);
+      
+      // Preparar notas com o nome do paciente
+      const notes = data.patientName 
+        ? `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`
+        : data.notes || '';
+      
+      // Atualizar no Supabase
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: data.status,
+          deadline: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+          priority: data.isUrgent ? 'urgent' : 'normal',
+          notes: notes
+        })
+        .eq('id', orderId);
+        
+      if (error) {
+        console.error("Erro ao atualizar ordem:", error);
+        toast.error("Erro ao salvar as alterações.");
+        setLoading(false);
+        return;
+      }
       
       // Verificar se precisa criar ou atualizar workflow
-      if (data.workflowTemplateId) {
+      if (data.workflowTemplateId && data.workflowTemplateId !== 'none') {
         if (currentWorkflow) {
           // Já existe um workflow para esta ordem, não fazemos nada
           console.log("Workflow já existe para esta ordem");
         } else {
           // Criar novo workflow
+          console.log('Criando novo workflow com template:', data.workflowTemplateId);
           const { error: workflowError } = await supabase
             .from('order_workflows')
             .insert({
-              order_id: order.originalData?.orderId || order.id,
+              order_id: orderId,
               template_id: data.workflowTemplateId,
               current_step: 0,
               history: [],
@@ -183,11 +212,24 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         }
       }
       
+      // Preparar dados atualizados para o estado local
+      const updatedOrder = {
+        ...order,
+        status: data.status,
+        dueDate: data.dueDate,
+        isUrgent: data.isUrgent,
+        notes: data.notes,
+        shade: data.shade,
+        patientName: data.patientName,
+      };
+      
+      toast.success("Ordem atualizada com sucesso!");
       onSave(updatedOrder);
-      setLoading(false);
+      
     } catch (error) {
       console.error("Erro ao atualizar ordem:", error);
       toast.error("Ocorreu um erro ao salvar as alterações.");
+    } finally {
       setLoading(false);
     }
   };
