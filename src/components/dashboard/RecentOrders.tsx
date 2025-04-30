@@ -10,6 +10,7 @@ type OrderStatus = 'pending' | 'production' | 'waiting' | 'completed' | 'deliver
 type Order = {
   id: string;
   client: string;
+  patientName?: string; // Added patientName as an optional field
   service: string;
   createdAt: string;
   dueDate: string;
@@ -41,11 +42,20 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
             <div key={order.id} className="flex items-center gap-4 rounded-lg border p-3">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium">{order.client}</p>
+                  {/* Display patient name if available, otherwise fall back to client name */}
+                  <p className="font-medium">
+                    {order.patientName || order.client}
+                  </p>
                   {order.isUrgent && (
                     <Badge variant="destructive" className="text-xs">Urgente</Badge>
                   )}
                 </div>
+                {/* If we're showing the patient name above, show the client as secondary info */}
+                {order.patientName && (
+                  <p className="text-xs text-muted-foreground">
+                    Cliente: {order.client}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   {order.service}
                 </p>

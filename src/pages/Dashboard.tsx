@@ -30,7 +30,7 @@ export default function Dashboard() {
           // Limitar a quantidade de dados retornados com select simplificado
           supabase
             .from('orders')
-            .select('id, status, priority, created_at, client_id, deadline')
+            .select('id, status, priority, created_at, client_id, deadline, notes')
             .order('created_at', { ascending: false }),
           
           // Buscar apenas os clientes necessários após ter IDs dos pedidos
@@ -85,9 +85,20 @@ export default function Dashboard() {
         
         const recentOrdersFormatted = recentOrdersData.map(order => {
           const client = clientsMap.get(order.client_id);
+          
+          // Extrair o nome do paciente das notas, se disponível
+          let patientName = '';
+          if (order.notes && order.notes.includes('Paciente:')) {
+            const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
+            if (patientMatch && patientMatch[1]) {
+              patientName = patientMatch[1].trim();
+            }
+          }
+          
           return {
             id: order.id.substring(0, 8),
             client: client?.name || 'Cliente não encontrado',
+            patientName: patientName, // Adicionar o nome do paciente extraído das notas
             service: 'Serviço',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'Não definida',
