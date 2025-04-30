@@ -334,14 +334,18 @@ export default function OrdersPage() {
                     <div key={order.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{order.client}</span>
+                          {/* Exibir nome do paciente se disponível, senão exibir nome do cliente */}
+                          <span className="font-medium">
+                            {order.patientName || order.client}
+                          </span>
                           {order.isUrgent && (
                             <Badge variant="destructive" className="text-xs">Urgente</Badge>
                           )}
                         </div>
+                        {/* Se estiver mostrando o nome do paciente, mostrar o cliente como informação secundária */}
                         {order.patientName && (
                           <div className="text-sm text-muted-foreground">
-                            Paciente: {order.patientName}
+                            Cliente: {order.client}
                           </div>
                         )}
                         <div className="text-sm text-muted-foreground">{order.service}</div>
