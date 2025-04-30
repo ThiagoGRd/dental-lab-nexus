@@ -33,7 +33,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,6 +45,7 @@ const orderFormSchema = z.object({
   isUrgent: z.boolean().default(false),
   shade: z.string().min(1, 'A cor/escala é obrigatória'),
   notes: z.string().optional(),
+  workflowTemplateId: z.string().optional(),
 });
 
 type OrderFormValues = z.infer<typeof orderFormSchema>;
@@ -59,6 +60,7 @@ interface Service {
   description: string;
   price: number;
   category: string;
+  workflow_template_id: string | null;
 }
 
 interface Client {
@@ -71,11 +73,19 @@ interface Client {
   document: string | null;
 }
 
+interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedServiceWorkflow, setSelectedServiceWorkflow] = useState<string | null>(null);
   
   // Carrega serviços e clientes
   useEffect(() => {
@@ -107,6 +117,18 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         } else {
           setClients(clientsData || []);
         }
+        
+        // Carrega templates de workflow
+        const { data: templatesData, error: templatesError } = await supabase
+          .from('workflow_templates')
+          .select('id, name, description')
+          .order('name');
+          
+        if (templatesError) {
+          console.error("Erro ao carregar templates de workflow:", templatesError);
+        } else {
+          setWorkflowTemplates(templatesData || []);
+        }
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error('Ocorreu um erro ao carregar os dados necessários.');
@@ -130,9 +152,24 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       ),
       isUrgent: false,
       shade: '',
-      notes: ''
+      notes: '',
+      workflowTemplateId: ''
     }
   });
+  
+  // Observe changes to the selected service to auto-select workflow
+  const watchedService = form.watch('service');
+  useEffect(() => {
+    if (watchedService) {
+      const selectedService = services.find(s => s.name === watchedService);
+      if (selectedService && selectedService.workflow_template_id) {
+        setSelectedServiceWorkflow(selectedService.workflow_template_id);
+        form.setValue('workflowTemplateId', selectedService.workflow_template_id);
+      } else {
+        setSelectedServiceWorkflow(null);
+      }
+    }
+  }, [watchedService, services, form]);
 
   const handleSubmit = async (data: OrderFormValues) => {
     setLoading(true);
@@ -184,6 +221,24 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       if (orderItemError) {
         console.error("Erro ao adicionar item à ordem:", orderItemError);
         throw new Error(orderItemError.message);
+      }
+      
+      // Criar workflow se selecionado
+      if (data.workflowTemplateId) {
+        const { error: workflowError } = await supabase
+          .from('order_workflows')
+          .insert({
+            order_id: orderData.id,
+            template_id: data.workflowTemplateId,
+            current_step: 0,
+            history: [],
+            notes: `Workflow iniciado em ${new Date().toLocaleDateString()}`
+          });
+          
+        if (workflowError) {
+          console.error("Erro ao criar workflow:", workflowError);
+          toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
+        }
       }
       
       toast.success('Ordem de serviço criada com sucesso!');
@@ -348,6 +403,48 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="workflowTemplateId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1">
+                    Fluxo de Trabalho 
+                    <HelpCircle className="h-4 w-4 text-gray-400" />
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                    disabled={!!selectedServiceWorkflow}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedServiceWorkflow ? "Fluxo de trabalho do serviço" : "Selecione um fluxo de trabalho (opcional)"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Nenhum</SelectItem>
+                      {workflowTemplates.map(template => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedServiceWorkflow ? (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Este serviço já tem um fluxo de trabalho associado
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Associar um fluxo de trabalho para acompanhar as etapas de produção
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

@@ -203,6 +203,54 @@ export type Database = {
           },
         ]
       }
+      order_workflows: {
+        Row: {
+          created_at: string
+          current_step: number
+          history: Json | null
+          id: string
+          notes: string | null
+          order_id: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_step?: number
+          history?: Json | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_step?: number
+          history?: Json | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_workflows_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflows_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           client_id: string
@@ -287,6 +335,7 @@ export type Database = {
           name: string
           price: number
           updated_at: string
+          workflow_template_id: string | null
         }
         Insert: {
           active?: boolean
@@ -297,6 +346,7 @@ export type Database = {
           name: string
           price: number
           updated_at?: string
+          workflow_template_id?: string | null
         }
         Update: {
           active?: boolean
@@ -306,6 +356,42 @@ export type Database = {
           id?: string
           name?: string
           price?: number
+          updated_at?: string
+          workflow_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          steps: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          steps?: Json
           updated_at?: string
         }
         Relationships: []
