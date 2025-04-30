@@ -43,11 +43,10 @@ export default function StatusChart({ data }: StatusChartProps) {
               <Tooltip 
                 formatter={(value: number) => [`${value} ordens`, '']} 
                 contentStyle={{ 
-                  borderRadius: '12px', 
-                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '10px', 
+                  boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
                   border: 'none',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(8px)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
                   padding: '10px 14px'
                 }}
               />

@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -92,17 +93,17 @@ export default {
 					200: '#90CAF9',
 					300: '#64B5F6',
 					400: '#42A5F5',
-					500: '#1A1F2C',
+					500: '#F9FAFB',
 					600: '#1565C0',
 					700: '#0D47A1',
-					800: '#0A2351',
-					900: '#051937',
+					800: '#F1F5F9',
+					900: '#F8FAFC',
 				},
-				// Atualizando as cores modernas com uma paleta mais vibrante
+				// Atualizando as cores para um tema mais claro
 				modern: {
-					primary: '#6D28D9',    // Roxo profundo (Violet-700)
-					secondary: '#8B5CF6',  // Roxo médio (Violet-500)
-					tertiary: '#A78BFA',   // Roxo claro (Violet-400)
+					primary: '#3B82F6',    // Azul (Blue-500)
+					secondary: '#60A5FA',  // Azul médio (Blue-400)
+					tertiary: '#93C5FD',   // Azul claro (Blue-300)
 					info: '#0EA5E9',       // Azul brilhante (Sky-500)
 					success: '#10B981',    // Verde esmeralda (Emerald-500)
 					warning: '#F59E0B',    // Âmbar (Amber-500)
@@ -112,9 +113,9 @@ export default {
 					muted: '#6B7280',      // Cinza médio (Gray-500)
 				},
 				gradient: {
-					start: '#6D28D9',     // Roxo profundo (Violet-700)
-					mid: '#8B5CF6',       // Roxo médio (Violet-500)
-					end: '#A78BFA',       // Roxo claro (Violet-400)
+					start: '#3B82F6',     // Azul (Blue-500)
+					mid: '#60A5FA',       // Azul médio (Blue-400)
+					end: '#93C5FD',       // Azul claro (Blue-300)
 				},
 			},
 			borderRadius: {
@@ -178,7 +179,7 @@ export default {
 			boxShadow: {
 				'soft': '0 4px 15px 0 rgba(0, 0, 0, 0.05)',
 				'modern': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-				'glow': '0 0 15px rgba(109, 40, 217, 0.5)' // Roxo glow
+				'glow': '0 0 15px rgba(59, 130, 246, 0.5)' // Azul glow
 			}
 		}
 	},

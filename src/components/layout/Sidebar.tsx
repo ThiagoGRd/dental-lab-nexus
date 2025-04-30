@@ -113,15 +113,15 @@ export default function Sidebar() {
     : menuItems.filter(item => !item.adminOnly);
 
   return (
-    <SidebarComponent className="bg-darkblue-500 border-r border-darkblue-800">
+    <SidebarComponent className="bg-white border-r border-slate-200">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-protechblue-300">
+        <h1 className="text-2xl font-bold text-modern-primary">
           Protech Lab Nexus
         </h1>
       </div>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-protechblue-100">Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-slate-500">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
@@ -129,7 +129,7 @@ export default function Sidebar() {
                   <SidebarMenuButton asChild>
                     <Link 
                       to={item.href} 
-                      className={`flex items-center gap-3 ${location.pathname === item.href ? 'bg-darkblue-800 text-protechblue-300' : 'text-gray-300 hover:bg-darkblue-700 hover:text-protechblue-200'}`}
+                      className={`flex items-center gap-3 ${location.pathname === item.href ? 'bg-blue-50 text-modern-primary' : 'text-slate-700 hover:bg-slate-100 hover:text-modern-primary'}`}
                     >
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
@@ -143,14 +143,14 @@ export default function Sidebar() {
       </SidebarContent>
       <div className="mt-auto p-4">
         {user && (
-          <div className="mb-4 rounded-md bg-darkblue-800 p-3">
-            <div className="font-medium text-protechblue-100">{user.name}</div>
-            <div className="text-xs text-gray-400">{user.email}</div>
+          <div className="mb-4 rounded-md bg-blue-50 p-3">
+            <div className="font-medium text-slate-800">{user.name}</div>
+            <div className="text-xs text-slate-500">{user.email}</div>
           </div>
         )}
         <button 
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-400 hover:bg-darkblue-800"
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50"
         >
           <LogOut className="h-5 w-5" />
           <span>Sair</span>

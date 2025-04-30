@@ -23,10 +23,10 @@ export default function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn("transition-all duration-300 hover:shadow-glow border-l-4 border-l-modern-primary bg-white/90 backdrop-blur-sm rounded-xl", className)}>
+    <Card className={cn("transition-all duration-300 hover:shadow-modern border-l-4 border-l-modern-primary bg-white rounded-xl", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle>
-        {icon && <div className="h-7 w-7 text-modern-primary bg-modern-primary/10 p-1.5 rounded-lg">{icon}</div>}
+        {icon && <div className="h-7 w-7 text-modern-primary bg-blue-100 p-1.5 rounded-lg">{icon}</div>}
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-bold text-slate-800">{value}</div>

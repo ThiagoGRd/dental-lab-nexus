@@ -105,8 +105,8 @@ export default function Layout({ children }: LayoutProps) {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-darkblue-500">
-        <div className="text-xl text-protechblue-100">Carregando...</div>
+      <div className="flex h-screen w-full items-center justify-center bg-white">
+        <div className="text-xl text-blue-600">Carregando...</div>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function Layout({ children }: LayoutProps) {
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-auto bg-darkblue-500">
+          <main className="flex-1 overflow-y-auto bg-gray-50">
             {children}
           </main>
         </div>

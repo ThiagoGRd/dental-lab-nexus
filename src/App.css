@@ -11,11 +11,11 @@
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
-  filter: drop-shadow(0 0 0.5em rgba(109, 40, 217, 0.6)); /* Roxo shadow */
+  filter: drop-shadow(0 0 0.5em rgba(59, 130, 246, 0.6)); /* Azul shadow */
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 1em rgba(109, 40, 217, 0.8)); /* Roxo shadow mais forte */
+  filter: drop-shadow(0 0 1em rgba(59, 130, 246, 0.8)); /* Azul shadow mais forte */
 }
 
 .logo.react:hover {
@@ -39,15 +39,15 @@
 
 .card {
   padding: 2em;
-  border-radius: 1.2rem; /* Cantos mais arredondados */
-  background-color: rgba(255, 255, 255, 0.9); /* Fundo mais opaco */
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06); /* Sombra mais suave */
+  border-radius: 0.75rem; /* Cantos arredondados suaves */
+  background-color: rgba(255, 255, 255, 1); /* Fundo branco */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Sombra suave */
   transition: all 0.4s ease;
 }
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(109, 40, 217, 0.08); /* Roxo shadow leve */
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.08); /* Azul shadow leve */
 }
 
 .read-the-docs {
@@ -57,15 +57,15 @@
 
 .btn-modern {
   padding: 0.7rem 1.4rem;
-  border-radius: 0.8rem;
-  background-image: linear-gradient(to right, #6D28D9, #8B5CF6);
+  border-radius: 0.5rem;
+  background-image: linear-gradient(to right, #3B82F6, #60A5FA);
   color: white;
   font-weight: 500;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .btn-modern:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(109, 40, 217, 0.4);
+  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3);
 }

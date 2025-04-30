@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 252 252 255; /* Fundo levemente roxo */
+    --background: 210 40% 98%; /* Fundo levemente azulado claro */
     --foreground: 15 23 42;
 
     --card: 255 255 255;
@@ -13,10 +14,10 @@
     --popover: 255 255 255;
     --popover-foreground: 15 23 42;
 
-    --primary: 259 94 42; /* Roxo profundo */
+    --primary: 217 91 60; /* Azul médio */
     --primary-foreground: 255 255 255;
 
-    --secondary: 254 215 170; /* Pêssego suave */
+    --secondary: 221 83 70; /* Azul claro */
     --secondary-foreground: 15 23 42;
 
     --muted: 241 245 249;
@@ -30,18 +31,18 @@
 
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 259 94 42; /* Roxo profundo */
+    --ring: 217 91 60; /* Azul médio */
 
     --sidebar-background: 255 255 255;
     --sidebar-foreground: 15 23 42;
-    --sidebar-primary: 259 94 42; /* Roxo profundo */
+    --sidebar-primary: 217 91 60; /* Azul médio */
     --sidebar-primary-foreground: 255 255 255;
     --sidebar-accent: 226 232 240;
     --sidebar-accent-foreground: 15 23 42;
     --sidebar-border: 241 245 249;
-    --sidebar-ring: 259 94 42; /* Roxo profundo */
+    --sidebar-ring: 217 91 60; /* Azul médio */
 
-    --radius: 1rem; /* Raios de borda mais arredondados */
+    --radius: 0.75rem; /* Raios de borda mais suaves */
   }
 }
 
@@ -52,7 +53,7 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    background-image: linear-gradient(to bottom right, rgba(248, 250, 252, 0.8), rgba(245, 243, 255, 0.8));
+    background-image: linear-gradient(to bottom right, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.8));
     background-attachment: fixed;
   }
 }
@@ -83,7 +84,7 @@
 
 @layer utilities {
   .card-modern {
-    @apply bg-white rounded-2xl shadow-modern border border-slate-100 transition-all hover:shadow-glow;
+    @apply bg-white rounded-xl shadow-soft border border-slate-100 transition-all hover:shadow-modern;
   }
   
   .btn-gradient {
