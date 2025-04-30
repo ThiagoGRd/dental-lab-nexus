@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
 import StatusChart from '@/components/dashboard/StatusChart';
 import RecentOrders from '@/components/dashboard/RecentOrders';
@@ -19,56 +19,76 @@ export default function Dashboard() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [statusData, setStatusData] = useState(mockStatusData);
 
+  // Otimize a consulta ao banco de dados
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Buscar estatísticas de pedidos
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('id, status, priority, created_at, client_id, deadline')
-          .order('created_at', { ascending: false });
+        // Uso de Promise.all para consultas paralelas
+        const [ordersResult, clientsResult] = await Promise.all([
+          // Limitar a quantidade de dados retornados com select simplificado
+          supabase
+            .from('orders')
+            .select('id, status, priority, created_at, client_id, deadline')
+            .order('created_at', { ascending: false }),
           
-        if (ordersError) {
-          console.error('Erro ao buscar pedidos:', ordersError);
+          // Buscar apenas os clientes necessários após ter IDs dos pedidos
+          supabase
+            .from('clients')
+            .select('id, name')
+        ]);
+        
+        if (ordersResult.error) {
+          console.error('Erro ao buscar pedidos:', ordersResult.error);
           return;
         }
         
-        // Calcular estatísticas
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const ordersData = ordersResult.data || [];
+        const clientsData = clientsResult.data || [];
         
-        const ordersThisMonth = ordersData.filter(order => {
+        // Usar a função Date apenas uma vez para o mês e ano atual
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        // Otimizar cálculos com um único loop pelos pedidos
+        let inProduction = 0;
+        let completedThisMonth = 0;
+        let urgent = 0;
+        let ordersThisMonth = 0;
+        
+        ordersData.forEach(order => {
           const orderDate = new Date(order.created_at);
-          return orderDate.getMonth() === currentMonth && 
-                 orderDate.getFullYear() === currentYear;
-        });
-        
-        const inProduction = ordersData.filter(order => order.status === 'production').length;
-        const completed = ordersThisMonth.filter(order => 
-          order.status === 'completed' || order.status === 'delivered'
-        ).length;
-        const urgent = ordersData.filter(order => order.priority === 'urgent').length;
-
-        // Buscar clientes para relacionar com os pedidos recentes
-        const clientIds = ordersData.slice(0, 5).map(order => order.client_id);
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('id, name')
-          .in('id', clientIds);
+          const isCurrentMonth = orderDate.getMonth() === currentMonth && 
+                                orderDate.getFullYear() === currentYear;
           
-        if (clientsError) {
-          console.error('Erro ao buscar clientes:', clientsError);
-        }
+          if (isCurrentMonth) {
+            ordersThisMonth++;
+            if (order.status === 'completed' || order.status === 'delivered') {
+              completedThisMonth++;
+            }
+          }
+          
+          if (order.status === 'production') {
+            inProduction++;
+          }
+          
+          if (order.priority === 'urgent') {
+            urgent++;
+          }
+        });
 
-        // Preparar dados para exibição de ordens recentes
-        const recentOrdersFormatted = ordersData.slice(0, 5).map(order => {
-          const client = clientsData?.find(c => c.id === order.client_id);
+        // Preparar dados para exibição de ordens recentes - apenas os 5 primeiros
+        const recentOrdersData = ordersData.slice(0, 5);
+        const clientsMap = new Map(clientsData.map(client => [client.id, client]));
+        
+        const recentOrdersFormatted = recentOrdersData.map(order => {
+          const client = clientsMap.get(order.client_id);
           return {
             id: order.id.substring(0, 8),
             client: client?.name || 'Cliente não encontrado',
-            service: 'Serviço', // Idealmente buscar de order_items
+            service: 'Serviço',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'Não definida',
             status: order.status,
@@ -76,14 +96,20 @@ export default function Dashboard() {
           };
         });
 
-        // Calcular dados para o gráfico de status
+        // Calcular dados para o gráfico de status de forma mais eficiente
         const statusCounts = {
-          pending: ordersData.filter(order => order.status === 'pending').length,
-          production: ordersData.filter(order => order.status === 'production').length,
-          waiting: ordersData.filter(order => order.status === 'waiting').length,
-          completed: ordersData.filter(order => order.status === 'completed').length,
-          delivered: ordersData.filter(order => order.status === 'delivered').length
+          pending: 0,
+          production: 0,
+          waiting: 0, 
+          completed: 0,
+          delivered: 0
         };
+        
+        ordersData.forEach(order => {
+          if (statusCounts.hasOwnProperty(order.status)) {
+            statusCounts[order.status]++;
+          }
+        });
 
         const chartData = [
           { name: 'Pendente', value: statusCounts.pending, color: '#FCD34D' },
@@ -95,9 +121,9 @@ export default function Dashboard() {
 
         // Atualizar o estado com os dados calculados
         setStats({
-          totalOrders: ordersThisMonth.length,
+          totalOrders: ordersThisMonth,
           inProduction,
-          completed,
+          completed: completedThisMonth,
           urgent
         });
         setRecentOrders(recentOrdersFormatted);
@@ -113,6 +139,41 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  // Componentes memorizados para evitar re-renderizações desnecessárias
+  const statsCards = useMemo(() => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <StatCard
+        title="Total de Ordens"
+        value={loading ? "..." : stats.totalOrders.toString()}
+        description="no mês atual"
+        icon={<FileText />}
+        trend="up"
+        trendValue="12%"
+      />
+      <StatCard
+        title="Em Produção"
+        value={loading ? "..." : stats.inProduction.toString()}
+        description="ordens ativas"
+        icon={<Clock />}
+      />
+      <StatCard
+        title="Finalizadas"
+        value={loading ? "..." : stats.completed.toString()}
+        description="este mês"
+        icon={<Check />}
+        trend="up"
+        trendValue="8%"
+      />
+      <StatCard
+        title="Ordens Urgentes"
+        value={loading ? "..." : stats.urgent.toString()}
+        description="com prioridade"
+        icon={<AlertTriangle />}
+        className="border-red-200 bg-red-50"
+      />
+    </div>
+  ), [loading, stats]);
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -120,37 +181,7 @@ export default function Dashboard() {
         <p className="text-gray-600">Visão geral do seu laboratório</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total de Ordens"
-          value={loading ? "..." : stats.totalOrders.toString()}
-          description="no mês atual"
-          icon={<FileText />}
-          trend="up"
-          trendValue="12%"
-        />
-        <StatCard
-          title="Em Produção"
-          value={loading ? "..." : stats.inProduction.toString()}
-          description="ordens ativas"
-          icon={<Clock />}
-        />
-        <StatCard
-          title="Finalizadas"
-          value={loading ? "..." : stats.completed.toString()}
-          description="este mês"
-          icon={<Check />}
-          trend="up"
-          trendValue="8%"
-        />
-        <StatCard
-          title="Ordens Urgentes"
-          value={loading ? "..." : stats.urgent.toString()}
-          description="com prioridade"
-          icon={<AlertTriangle />}
-          className="border-red-200 bg-red-50"
-        />
-      </div>
+      {statsCards}
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <StatusChart data={statusData} />

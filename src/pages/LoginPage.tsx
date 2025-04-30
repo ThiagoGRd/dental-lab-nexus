@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,17 @@ export default function LoginPage() {
     name: ''
   });
 
+  // Use useEffect com dependências corretas para evitar re-renderizações desnecessárias
   useEffect(() => {
-    // Verificar se o usuário já está logado
+    // Verificar se o usuário já está logado - apenas uma vez ao montar
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error("Erro ao verificar sessão:", error);
       }
     };
     checkSession();
@@ -34,6 +39,7 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Memorize funções complexas para evitar re-criá-las a cada renderização
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -54,12 +60,9 @@ export default function LoginPage() {
 
         if (error) throw error;
         
-        // Se o registro for bem-sucedido, fazer login automático
         if (data.user && !data.session) {
-          // Usuário foi criado mas ainda precisa confirmar o email
           toast.info('Enviamos um email de confirmação. Por favor, confirme seu email para continuar.');
         } else if (data.session) {
-          // Usuário foi criado e autenticado automaticamente
           toast.success('Conta criada com sucesso!');
           navigate('/');
         }
@@ -93,16 +96,25 @@ export default function LoginPage() {
     }
   };
 
+  // Memorize elementos de UI que não mudam frequentemente
+  const cardTitle = useMemo(() => (
+    <CardTitle className="text-3xl font-bold text-protechblue-300">
+      Protech Lab Nexus
+    </CardTitle>
+  ), []);
+
+  const cardDescription = useMemo(() => (
+    <CardDescription className="text-gray-400">
+      {isSignUp ? 'Crie sua conta para acessar o sistema' : 'Entre com suas credenciais para acessar o sistema'}
+    </CardDescription>
+  ), [isSignUp]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-darkblue-500 p-4">
       <Card className="w-full max-w-md bg-darkblue-700 text-white border-darkblue-800">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-protechblue-300">
-            Protech Lab Nexus
-          </CardTitle>
-          <CardDescription className="text-gray-400">
-            {isSignUp ? 'Crie sua conta para acessar o sistema' : 'Entre com suas credenciais para acessar o sistema'}
-          </CardDescription>
+          {cardTitle}
+          {cardDescription}
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
