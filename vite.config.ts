@@ -39,7 +39,13 @@ export default defineConfig(({ mode }) => ({
             'date-fns'
           ],
           ui: [
-            '@/components/ui'
+            '@/components/ui/button',
+            '@/components/ui/toast',
+            '@/components/ui/toaster',
+            '@/components/ui/dialog',
+            '@/components/ui/select',
+            '@/components/ui/form',
+            '@/components/ui/input'
           ]
         }
       }
