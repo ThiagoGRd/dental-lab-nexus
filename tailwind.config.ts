@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -99,23 +98,23 @@ export default {
 					800: '#0A2351',
 					900: '#051937',
 				},
-				// Adicionando novas cores modernas
+				// Atualizando as cores modernas com uma paleta mais vibrante
 				modern: {
-					primary: '#6366F1',  // Indigo
-					secondary: '#8B5CF6', // Violet
-					tertiary: '#EC4899',  // Pink
-					info: '#0EA5E9',      // Sky blue
-					success: '#10B981',   // Emerald
-					warning: '#F59E0B',   // Amber
-					danger: '#EF4444',    // Red
-					light: '#F9FAFB',     // Gray 50
-					dark: '#111827',      // Gray 900
-					muted: '#6B7280',     // Gray 500
+					primary: '#6D28D9',    // Roxo profundo (Violet-700)
+					secondary: '#8B5CF6',  // Roxo médio (Violet-500)
+					tertiary: '#A78BFA',   // Roxo claro (Violet-400)
+					info: '#0EA5E9',       // Azul brilhante (Sky-500)
+					success: '#10B981',    // Verde esmeralda (Emerald-500)
+					warning: '#F59E0B',    // Âmbar (Amber-500)
+					danger: '#EF4444',     // Vermelho (Red-500)
+					light: '#F9FAFB',      // Cinza claro (Gray-50)
+					dark: '#111827',       // Cinza escuro (Gray-900)
+					muted: '#6B7280',      // Cinza médio (Gray-500)
 				},
 				gradient: {
-					start: '#6366F1',     // Indigo
-					mid: '#8B5CF6',       // Violet
-					end: '#EC4899',       // Pink
+					start: '#6D28D9',     // Roxo profundo (Violet-700)
+					mid: '#8B5CF6',       // Roxo médio (Violet-500)
+					end: '#A78BFA',       // Roxo claro (Violet-400)
 				},
 			},
 			borderRadius: {
@@ -179,7 +178,7 @@ export default {
 			boxShadow: {
 				'soft': '0 4px 15px 0 rgba(0, 0, 0, 0.05)',
 				'modern': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-				'glow': '0 0 15px rgba(99, 102, 241, 0.5)'
+				'glow': '0 0 15px rgba(109, 40, 217, 0.5)' // Roxo glow
 			}
 		}
 	},

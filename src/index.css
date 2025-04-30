@@ -1,12 +1,10 @@
-
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 252 252 255;
+    --background: 252 252 255; /* Fundo levemente roxo */
     --foreground: 15 23 42;
 
     --card: 255 255 255;
@@ -15,10 +13,10 @@
     --popover: 255 255 255;
     --popover-foreground: 15 23 42;
 
-    --primary: 240 86 199;
+    --primary: 259 94 42; /* Roxo profundo */
     --primary-foreground: 255 255 255;
 
-    --secondary: 241 245 249;
+    --secondary: 254 215 170; /* Pêssego suave */
     --secondary-foreground: 15 23 42;
 
     --muted: 241 245 249;
@@ -32,18 +30,18 @@
 
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 240 86 199;
+    --ring: 259 94 42; /* Roxo profundo */
 
     --sidebar-background: 255 255 255;
     --sidebar-foreground: 15 23 42;
-    --sidebar-primary: 240 86 199;
+    --sidebar-primary: 259 94 42; /* Roxo profundo */
     --sidebar-primary-foreground: 255 255 255;
     --sidebar-accent: 226 232 240;
     --sidebar-accent-foreground: 15 23 42;
     --sidebar-border: 241 245 249;
-    --sidebar-ring: 240 86 199;
+    --sidebar-ring: 259 94 42; /* Roxo profundo */
 
-    --radius: 0.6rem;
+    --radius: 1rem; /* Raios de borda mais arredondados */
   }
 }
 
@@ -54,6 +52,8 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    background-image: linear-gradient(to bottom right, rgba(248, 250, 252, 0.8), rgba(245, 243, 255, 0.8));
+    background-attachment: fixed;
   }
 }
 
@@ -83,7 +83,7 @@
 
 @layer utilities {
   .card-modern {
-    @apply bg-white rounded-xl shadow-soft border border-slate-100 transition-all hover:shadow-md;
+    @apply bg-white rounded-2xl shadow-modern border border-slate-100 transition-all hover:shadow-glow;
   }
   
   .btn-gradient {
@@ -95,6 +95,23 @@
   }
   
   .glassmorphism {
-    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-soft;
+    @apply bg-white/90 backdrop-blur-lg border border-white/20 shadow-soft;
+  }
+
+  .animated-bg {
+    background-size: 400% 400%;
+    animation: gradient 10s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
 }

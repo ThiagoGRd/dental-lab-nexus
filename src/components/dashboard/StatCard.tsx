@@ -23,20 +23,20 @@ export default function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn("transition-all hover:shadow-md border-l-4 border-l-modern-primary bg-white", className)}>
+    <Card className={cn("transition-all duration-300 hover:shadow-glow border-l-4 border-l-modern-primary bg-white/90 backdrop-blur-sm rounded-xl", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="h-6 w-6 text-modern-primary">{icon}</div>}
+        <CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle>
+        {icon && <div className="h-7 w-7 text-modern-primary bg-modern-primary/10 p-1.5 rounded-lg">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <div className="flex items-center text-xs text-muted-foreground mt-1">
+        <div className="text-3xl font-bold text-slate-800">{value}</div>
+        <div className="flex items-center text-xs mt-2">
           {trend && (
             <div 
               className={cn(
-                "mr-1 font-medium", 
-                trend === 'up' && "text-modern-success",
-                trend === 'down' && "text-modern-danger"
+                "mr-1 font-medium px-2 py-1 rounded-full", 
+                trend === 'up' ? "text-modern-success bg-modern-success/10" : "",
+                trend === 'down' ? "text-modern-danger bg-modern-danger/10" : ""
               )}
             >
               {trend === 'up' && '↑ '}

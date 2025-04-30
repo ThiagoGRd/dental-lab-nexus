@@ -13,9 +13,12 @@ type StatusChartProps = {
 
 export default function StatusChart({ data }: StatusChartProps) {
   return (
-    <Card className="h-full shadow-soft border border-slate-100 hover:shadow-md transition-all">
+    <Card className="h-full card-modern">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-slate-800">Status das Ordens</CardTitle>
+        <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+          <div className="w-1.5 h-6 bg-gradient-to-b from-modern-primary to-modern-tertiary rounded-full mr-2"></div>
+          Status das Ordens
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex justify-center">
         <div className="w-full h-[250px]">
@@ -34,18 +37,26 @@ export default function StatusChart({ data }: StatusChartProps) {
                 strokeWidth={1}
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" />
+                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
                 ))}
               </Pie>
               <Tooltip 
                 formatter={(value: number) => [`${value} ordens`, '']} 
-                contentStyle={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                contentStyle={{ 
+                  borderRadius: '12px', 
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                  border: 'none',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '10px 14px'
+                }}
               />
               <Legend
                 layout="horizontal"
                 verticalAlign="bottom"
                 align="center"
                 wrapperStyle={{ paddingTop: '20px' }}
+                iconType="circle"
               />
             </PieChart>
           </ResponsiveContainer>
