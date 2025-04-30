@@ -419,7 +419,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                   </FormLabel>
                   <Select 
                     onValueChange={field.onChange}
-                    value={field.value || ""}
+                    value={field.value || "none"}
                     disabled={!!selectedServiceWorkflow}
                   >
                     <FormControl>
@@ -428,7 +428,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {workflowTemplates.map(template => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}

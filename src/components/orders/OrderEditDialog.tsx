@@ -386,7 +386,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                     <FormLabel>Associar Fluxo de Trabalho</FormLabel>
                     <Select 
                       onValueChange={field.onChange}
-                      value={field.value || ""}
+                      value={field.value || "none"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -394,7 +394,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {workflowTemplates.map(template => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}
