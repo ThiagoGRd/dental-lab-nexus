@@ -5,44 +5,44 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Fundo levemente azulado claro */
-    --foreground: 15 23 42;
+    --background: 0 0% 100%; /* Fundo branco puro */
+    --foreground: 222 47% 11%;
 
-    --card: 255 255 255;
-    --card-foreground: 15 23 42;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 255 255 255;
-    --popover-foreground: 15 23 42;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91 60; /* Azul médio */
-    --primary-foreground: 255 255 255;
+    --primary: 221 83% 53%; /* Azul principal */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 221 83 70; /* Azul claro */
-    --secondary-foreground: 15 23 42;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 241 245 249;
-    --muted-foreground: 100 116 139;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 249 250 251;
-    --accent-foreground: 15 23 42;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 217 91 60; /* Azul médio */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
 
-    --sidebar-background: 255 255 255;
-    --sidebar-foreground: 15 23 42;
-    --sidebar-primary: 217 91 60; /* Azul médio */
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 226 232 240;
-    --sidebar-accent-foreground: 15 23 42;
-    --sidebar-border: 241 245 249;
-    --sidebar-ring: 217 91 60; /* Azul médio */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221 83% 53%;
 
-    --radius: 0.75rem; /* Raios de borda mais suaves */
+    --radius: 0.5rem; /* Bordas mais suaves */
   }
 }
 
@@ -53,66 +53,48 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    background-image: linear-gradient(to bottom right, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.8));
-    background-attachment: fixed;
+    background-color: #f8fafc;
   }
 }
 
 .status-pending {
-  @apply bg-amber-100 text-amber-800 border-amber-300 border rounded-full px-3 py-1;
+  @apply bg-amber-50 text-amber-700 border-amber-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .status-production {
-  @apply bg-blue-100 text-blue-800 border-blue-300 border rounded-full px-3 py-1;
+  @apply bg-blue-50 text-blue-700 border-blue-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .status-waiting {
-  @apply bg-purple-100 text-purple-800 border-purple-300 border rounded-full px-3 py-1;
+  @apply bg-purple-50 text-purple-700 border-purple-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .status-completed {
-  @apply bg-emerald-100 text-emerald-800 border-emerald-300 border rounded-full px-3 py-1;
+  @apply bg-emerald-50 text-emerald-700 border-emerald-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .status-delivered {
-  @apply bg-slate-100 text-slate-800 border-slate-300 border rounded-full px-3 py-1;
+  @apply bg-slate-50 text-slate-700 border-slate-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .status-urgent {
-  @apply bg-rose-100 text-rose-800 border-rose-300 border rounded-full px-3 py-1;
+  @apply bg-rose-50 text-rose-700 border-rose-200 border rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 @layer utilities {
   .card-modern {
-    @apply bg-white rounded-xl shadow-soft border border-slate-100 transition-all hover:shadow-modern;
+    @apply bg-white rounded-md shadow-sm border border-slate-100 transition-all hover:shadow-md;
   }
   
   .btn-gradient {
-    @apply bg-gradient-to-r from-modern-primary to-modern-secondary text-white;
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-modern-primary to-modern-tertiary bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent;
   }
   
   .glassmorphism {
-    @apply bg-white/90 backdrop-blur-lg border border-white/20 shadow-soft;
-  }
-
-  .animated-bg {
-    background-size: 400% 400%;
-    animation: gradient 10s ease infinite;
-  }
-
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+    @apply bg-white/90 backdrop-blur-sm border border-white/20 shadow-sm;
   }
 }

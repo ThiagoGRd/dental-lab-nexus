@@ -8,10 +8,10 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ title, description }: DashboardHeaderProps) {
   return (
-    <div className="mb-10">
-      <h1 className="text-4xl font-bold bg-gradient-to-r from-modern-primary to-modern-tertiary bg-clip-text text-transparent">{title}</h1>
-      <p className="text-slate-600 mt-3 text-lg">{description}</p>
-      <div className="h-1 w-32 bg-gradient-to-r from-modern-primary to-modern-tertiary rounded-full mt-4"></div>
+    <div className="mb-8">
+      <h1 className="text-3xl font-semibold text-gray-800">{title}</h1>
+      <p className="text-gray-500 mt-2">{description}</p>
+      <div className="h-0.5 w-24 bg-blue-500 mt-3"></div>
     </div>
   );
 }
