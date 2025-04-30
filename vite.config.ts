@@ -24,6 +24,12 @@ export default defineConfig(({ mode }) => ({
     // Otimizações de build
     target: 'es2015',
     minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: true
+      }
+    },
     cssMinify: true,
     rollupOptions: {
       output: {

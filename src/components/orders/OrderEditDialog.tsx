@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Select,
@@ -31,6 +32,15 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 
 const orderFormSchema = z.object({
@@ -68,18 +78,30 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
-      client: order?.client || '',
-      patientName: order?.patientName || '',
-      service: order?.service || '',
-      status: order?.status || 'pending',
-      dueDate: order?.dueDate || '',
-      isUrgent: order?.isUrgent || false,
-      shade: order?.shade || '',
-      notes: order?.notes || '',
+      client: '',
+      patientName: '',
+      service: '',
+      status: 'pending',
+      dueDate: format(new Date(), 'yyyy-MM-dd'),
+      isUrgent: false,
+      shade: 'A2',
+      notes: '',
       workflowTemplateId: '',
     },
   });
 
+  // Extract patient name from notes if available
+  const extractPatientName = (notes: string | undefined): string => {
+    if (!notes) return '';
+    
+    const patientMatch = notes.match(/Paciente:\s*([^,\-]+)/);
+    if (patientMatch && patientMatch[1]) {
+      return patientMatch[1].trim();
+    }
+    
+    return notes; // If no specific format, return the whole notes as patient name
+  };
+  
   // Carregar templates de workflow
   useEffect(() => {
     if (open) {
@@ -92,15 +114,23 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
   useEffect(() => {
     if (order) {
       console.log('Dados da ordem carregados:', order);
+      const patientName = extractPatientName(order.notes) || order.patientName || '';
+      
+      // Clean up notes - remove patient name if it's in the format "Paciente: X"
+      let cleanNotes = order.notes || '';
+      if (cleanNotes.includes('Paciente:')) {
+        cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+      }
+      
       form.reset({
         client: order.client || '',
-        patientName: order.patientName || '',
+        patientName: patientName,
         service: order.service || '',
         status: order.status || 'pending',
-        dueDate: order.dueDate || '',
+        dueDate: order.dueDate || format(new Date(), 'yyyy-MM-dd'),
         isUrgent: order.isUrgent || false,
         shade: order.shade || 'A2',
-        notes: order.notes || '',
+        notes: cleanNotes,
         workflowTemplateId: '',
       });
     }
@@ -238,11 +268,11 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Editar Ordem de Serviço</DialogTitle>
           <DialogDescription>
-            #{order.id} • Edite os dados da ordem de serviço
+            #{order.id?.substring(0, 8)} • Edite os dados da ordem de serviço
           </DialogDescription>
         </DialogHeader>
         
@@ -258,6 +288,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                     <Select 
                       onValueChange={field.onChange}
                       value={field.value}
+                      disabled={true}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -265,14 +296,12 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Clínica Dental Care">Clínica Dental Care</SelectItem>
-                        <SelectItem value="Dr. Roberto Alves">Dr. Roberto Alves</SelectItem>
-                        <SelectItem value="Odontologia Sorriso">Odontologia Sorriso</SelectItem>
-                        <SelectItem value="Dra. Márcia Santos">Dra. Márcia Santos</SelectItem>
-                        <SelectItem value="Centro Odontológico Bem Estar">Centro Odontológico Bem Estar</SelectItem>
+                        <SelectItem value={field.value}>{field.value}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormDescription className="text-xs">
+                      O cliente não pode ser alterado
+                    </FormDescription>
                   </FormItem>
                 )}
               />
@@ -301,6 +330,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                   <Select 
                     onValueChange={field.onChange}
                     value={field.value}
+                    disabled={true}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -308,14 +338,12 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Coroa em Zircônia">Coroa em Zircônia</SelectItem>
-                      <SelectItem value="Prótese Fixa">Prótese Fixa</SelectItem>
-                      <SelectItem value="Faceta">Faceta</SelectItem>
-                      <SelectItem value="Implante">Implante</SelectItem>
-                      <SelectItem value="Prótese Removível">Prótese Removível</SelectItem>
+                      <SelectItem value={field.value}>{field.value}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormDescription className="text-xs">
+                    O serviço não pode ser alterado
+                  </FormDescription>
                 </FormItem>
               )}
             />
@@ -353,11 +381,37 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                 control={form.control}
                 name="dueDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Data de Entrega</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(new Date(field.value), "dd/MM/yyyy")
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -410,7 +464,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                   <FormControl>
                     <Textarea 
                       placeholder="Instruções especiais ou observações adicionais" 
-                      className="resize-none" 
+                      className="resize-none min-h-[100px]" 
                       {...field} 
                     />
                   </FormControl>
@@ -466,7 +520,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled={loading}>
                 {loading ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </DialogFooter>
