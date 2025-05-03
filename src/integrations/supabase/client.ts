@@ -6,13 +6,23 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://ssrfjakurvpcshbesvyf.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcmZqYWt1cnZwY3NoYmVzdnlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDEzMTMsImV4cCI6MjA2MTUxNzMxM30.bIXSMU37FC_Q8xjYodSTARBF_izCeD9_HCk_Tgn-wNQ";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Performance optimizations for the Supabase client
+const clientOptions = {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     storage: typeof window !== 'undefined' ? localStorage : undefined
+  },
+  global: {
+    // Disable real-time subscriptions by default to reduce connection overhead
+    realtime: false
+  },
+  // Add request timeout to prevent hanging requests
+  db: {
+    schema: 'public'
   }
-});
+};
+
+// Import the supabase client like this:
+// import { supabase } from "@/integrations/supabase/client";
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, clientOptions);

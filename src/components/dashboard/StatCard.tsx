@@ -13,7 +13,8 @@ type StatCardProps = {
   className?: string;
 };
 
-export default function StatCard({
+// Memoize the StatCard component to prevent unnecessary re-renders
+export default React.memo(function StatCard({
   title,
   value,
   description,
@@ -23,18 +24,18 @@ export default function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn("transition-all duration-200 bg-white border border-gray-100 rounded-md shadow-sm hover:shadow-md", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className={cn("transition-all bg-white border border-gray-100 rounded-md shadow-sm hover:shadow", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
         <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
-        {icon && <div className="h-7 w-7 text-blue-500">{icon}</div>}
+        {icon && <div className="h-6 w-6 text-blue-500">{icon}</div>}
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-semibold text-gray-800">{value}</div>
-        <div className="flex items-center text-xs mt-2">
+        <div className="flex items-center text-xs mt-1">
           {trend && (
             <div 
               className={cn(
-                "mr-2 font-medium px-1.5 py-0.5 rounded-sm", 
+                "mr-1.5 font-medium px-1.5 py-0.5 rounded-sm", 
                 trend === 'up' ? "text-green-700 bg-green-50" : "",
                 trend === 'down' ? "text-red-700 bg-red-50" : ""
               )}
@@ -49,4 +50,4 @@ export default function StatCard({
       </CardContent>
     </Card>
   );
-}
+});

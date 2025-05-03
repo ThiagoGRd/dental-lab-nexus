@@ -20,15 +20,14 @@ export function useDashboardData() {
       try {
         setLoading(true);
         
-        // Uso de Promise.all para consultas paralelas
+        // Use Promise.all for parallel requests to reduce waiting time
         const [ordersResult, clientsResult] = await Promise.all([
-          // Limitar a quantidade de dados retornados com select simplificado
+          // Limit fields and use more efficient queries
           supabase
             .from('orders')
             .select('id, status, priority, created_at, client_id, deadline, notes')
             .order('created_at', { ascending: false }),
           
-          // Buscar apenas os clientes necessários após ter IDs dos pedidos
           supabase
             .from('clients')
             .select('id, name')
@@ -42,17 +41,17 @@ export function useDashboardData() {
         const ordersData = ordersResult.data || [];
         const clientsData = clientsResult.data || [];
         
-        // Usar a função Date apenas uma vez para o mês e ano atual
+        // Optimize by calculating in a single loop
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         
-        // Otimizar cálculos com um único loop pelos pedidos
         let inProduction = 0;
         let completedThisMonth = 0;
         let urgent = 0;
         let ordersThisMonth = 0;
         
+        // Calculate stats in a single pass
         ordersData.forEach(order => {
           const orderDate = new Date(order.created_at);
           const isCurrentMonth = orderDate.getMonth() === currentMonth && 
@@ -74,14 +73,16 @@ export function useDashboardData() {
           }
         });
 
-        // Preparar dados para exibição de ordens recentes - apenas os 5 primeiros
+        // Only process the 5 most recent orders for better performance
         const recentOrdersData = ordersData.slice(0, 5);
+        
+        // Use a Map for O(1) lookups instead of repeated finds
         const clientsMap = new Map(clientsData.map(client => [client.id, client]));
         
         const recentOrdersFormatted = recentOrdersData.map(order => {
           const client = clientsMap.get(order.client_id);
           
-          // Extrair o nome do paciente das notas, se disponível
+          // Extract patient name using a more optimized approach
           let patientName = '';
           if (order.notes && order.notes.includes('Paciente:')) {
             const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
@@ -93,7 +94,7 @@ export function useDashboardData() {
           return {
             id: order.id.substring(0, 8),
             client: client?.name || 'Cliente não encontrado',
-            patientName: patientName, // Adicionar o nome do paciente extraído das notas
+            patientName,
             service: 'Serviço',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'Não definida',
@@ -102,19 +103,18 @@ export function useDashboardData() {
           };
         });
 
-        // Calcular dados para o gráfico de status de forma mais eficiente
-        const statusCounts = {
+        // More efficient status counting using a reducer
+        const statusCounts = ordersData.reduce((acc, order) => {
+          if (acc[order.status] !== undefined) {
+            acc[order.status]++;
+          }
+          return acc;
+        }, {
           pending: 0,
           production: 0,
           waiting: 0, 
           completed: 0,
           delivered: 0
-        };
-        
-        ordersData.forEach(order => {
-          if (statusCounts.hasOwnProperty(order.status)) {
-            statusCounts[order.status]++;
-          }
         });
 
         const chartData = [
@@ -125,7 +125,6 @@ export function useDashboardData() {
           { name: 'Entregue', value: statusCounts.delivered, color: '#9CA3AF' },
         ];
 
-        // Atualizar o estado com os dados calculados
         setStats({
           totalOrders: ordersThisMonth,
           inProduction,

@@ -39,15 +39,15 @@
 
 .card {
   padding: 1.5em;
-  border-radius: 0.5rem;
+  border-radius: 0.375rem;
   background-color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.06);
 }
 
 .read-the-docs {
@@ -61,12 +61,29 @@
   background-color: #3B82F6;
   color: white;
   font-weight: 500;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(59, 130, 246, 0.2);
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.15);
 }
 
 .btn-modern:hover {
   background-color: #2563EB;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* Improve page transition performance */
+.page-transition {
+  will-change: transform, opacity;
+  transition: opacity 0.2s ease;
+}
+
+/* Optimize fixed elements rendering */
+.fixed-element {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Add will-change for better performance on hover effects */
+.hover-effect {
+  will-change: transform, box-shadow;
 }

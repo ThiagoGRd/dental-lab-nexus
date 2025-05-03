@@ -6,20 +6,23 @@ import { toast } from 'sonner';
 export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void) {
   const handleUpdateOrder = async (updatedOrder: any) => {
     try {
-      // Preparar notas com o nome do paciente
+      // Prepare notes with patient name more efficiently
       const notes = updatedOrder.patientName 
         ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
         : updatedOrder.notes;
       
-      // Atualizar no Supabase
+      // Create update object once to avoid repetition
+      const updateData = {
+        status: updatedOrder.status,
+        deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
+        priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
+        notes: notes
+      };
+      
+      // Update in Supabase
       const { error } = await supabase
         .from('orders')
-        .update({
-          status: updatedOrder.status,
-          deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
-          priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
-          notes: notes
-        })
+        .update(updateData)
         .eq('id', updatedOrder.originalData?.orderId || updatedOrder.id);
         
       if (error) {
@@ -28,7 +31,7 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         return false;
       }
       
-      // Atualizar a lista de ordens localmente
+      // Update local state efficiently using map
       const updatedOrders = orders.map(order => 
         (order.id === updatedOrder.id) ? { ...order, ...updatedOrder } : order
       );

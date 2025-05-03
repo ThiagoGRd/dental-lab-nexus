@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFetchOrders } from './useFetchOrders';
 import { useOrderFilters } from './useOrderFilters';
 import { useUpdateOrder } from './useUpdateOrder';
@@ -8,10 +8,12 @@ export function useOrdersData() {
   const { loading, orders: fetchedOrders } = useFetchOrders();
   const [orders, setOrders] = useState<any[]>([]);
   
-  // Atualizar os orders quando os dados forem carregados
-  if (fetchedOrders.length > 0 && orders.length === 0) {
-    setOrders(fetchedOrders);
-  }
+  // Update orders only when fetchedOrders change
+  useEffect(() => {
+    if (fetchedOrders.length > 0) {
+      setOrders(fetchedOrders);
+    }
+  }, [fetchedOrders]);
   
   const {
     searchTerm,
@@ -28,7 +30,8 @@ export function useOrdersData() {
   
   const { handleUpdateOrder } = useUpdateOrder(orders, setOrders);
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  const returnValue = useMemo(() => ({
     searchTerm,
     setSearchTerm,
     statusFilter,
@@ -41,5 +44,16 @@ export function useOrdersData() {
     filteredOrders,
     handleUpdateOrder,
     handleFilter
-  };
+  }), [
+    searchTerm,
+    statusFilter,
+    startDate,
+    endDate,
+    loading,
+    filteredOrders,
+    handleUpdateOrder,
+    handleFilter
+  ]);
+
+  return returnValue;
 }
