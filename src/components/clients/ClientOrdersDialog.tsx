@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasError } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { statusLabels, OrderStatus } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -62,7 +62,7 @@ export default function ClientOrdersDialog({
       setLoading(true);
       
       // Buscar ordens deste cliente
-      const { data: ordersData, error: ordersError } = await supabase
+      const ordersResponse = await supabase
         .from('orders')
         .select(`
           id, 
@@ -76,10 +76,12 @@ export default function ClientOrdersDialog({
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
         
-      if (ordersError) {
-        console.error('Erro ao buscar ordens do cliente:', ordersError);
+      if (hasError(ordersResponse)) {
+        console.error('Erro ao buscar ordens do cliente:', ordersResponse.error);
         return;
       }
+      
+      const ordersData = ordersResponse.data || [];
       
       // Calcular o valor total de todas as ordens
       let calculatedTotal = 0;
@@ -90,14 +92,16 @@ export default function ClientOrdersDialog({
         const orderIds = ordersData.map(order => order.id);
         
         // Buscar detalhes dos itens para calcular o valor total
-        const { data: orderItemsData, error: orderItemsError } = await supabase
+        const orderItemsResponse = await supabase
           .from('order_items')
           .select(`order_id, price, quantity, total`)
           .in('order_id', orderIds);
           
-        if (orderItemsError) {
-          console.error('Erro ao buscar itens das ordens:', orderItemsError);
-        } else if (orderItemsData) {
+        if (hasError(orderItemsResponse)) {
+          console.error('Erro ao buscar itens das ordens:', orderItemsResponse.error);
+        } else {
+          const orderItemsData = orderItemsResponse.data || [];
+          
           // Agrupar o valor total por ordem
           const orderTotals: Record<string, number> = {};
           
@@ -134,7 +138,7 @@ export default function ClientOrdersDialog({
       
       // Buscar itens de serviço para cada ordem
       const orderIds = ordersData?.map(order => order.id) || [];
-      const { data: orderItemsData, error: orderItemsError } = await supabase
+      const orderItemsResponse = await supabase
         .from('order_items')
         .select(`
           order_id,
@@ -146,20 +150,24 @@ export default function ClientOrdersDialog({
         `)
         .in('order_id', orderIds);
 
-      if (orderItemsError) {
-        console.error('Erro ao buscar itens de ordem:', orderItemsError);
+      if (hasError(orderItemsResponse)) {
+        console.error('Erro ao buscar itens de ordem:', orderItemsResponse.error);
       }
+      
+      const orderItemsData = orderItemsResponse.data || [];
 
       // Buscar serviços para associar aos itens
       const serviceIds = orderItemsData?.map(item => item.service_id) || [];
-      const { data: servicesData, error: servicesError } = await supabase
+      const servicesResponse = await supabase
         .from('services')
         .select('id, name')
         .in('id', serviceIds);
 
-      if (servicesError) {
-        console.error('Erro ao buscar serviços:', servicesError);
+      if (hasError(servicesResponse)) {
+        console.error('Erro ao buscar serviços:', servicesResponse.error);
       }
+      
+      const servicesData = servicesResponse.data || [];
 
       // Formatar dados das ordens
       if (ordersData) {
@@ -217,25 +225,25 @@ export default function ClientOrdersDialog({
       setLoading(true);
       
       // Primeiro excluir os itens da ordem
-      const { error: deleteItemsError } = await supabase
+      const deleteItemsResponse = await supabase
         .from('order_items')
         .delete()
         .eq('order_id', orderToDelete.originalData.orderId);
         
-      if (deleteItemsError) {
-        console.error('Erro ao excluir itens da ordem:', deleteItemsError);
+      if (hasError(deleteItemsResponse)) {
+        console.error('Erro ao excluir itens da ordem:', deleteItemsResponse.error);
         toast.error('Erro ao excluir a ordem de serviço.');
         return;
       }
       
       // Depois excluir a ordem em si
-      const { error: deleteOrderError } = await supabase
+      const deleteOrderResponse = await supabase
         .from('orders')
         .delete()
         .eq('id', orderToDelete.originalData.orderId);
         
-      if (deleteOrderError) {
-        console.error('Erro ao excluir ordem:', deleteOrderError);
+      if (hasError(deleteOrderResponse)) {
+        console.error('Erro ao excluir ordem:', deleteOrderResponse.error);
         toast.error('Erro ao excluir a ordem de serviço.');
         return;
       }

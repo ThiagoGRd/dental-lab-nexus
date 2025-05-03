@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, hasError } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -36,13 +36,17 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         }
         
         // Verificar se o usuário tem o papel necessário
-        const { data: profile, error: profileError } = await supabase
+        const profileResponse = await supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
           .single();
         
-        if (profileError) throw profileError;
+        if (hasError(profileResponse)) {
+          throw profileResponse.error;
+        }
+        
+        const profile = profileResponse.data;
         
         if (!profile || profile.role !== requiredRole) {
           setHasRequiredRole(false);

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, hasError } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void) {
@@ -20,13 +20,13 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
       };
       
       // Update in Supabase
-      const { error } = await supabase
+      const response = await supabase
         .from('orders')
         .update(updateData)
         .eq('id', updatedOrder.originalData?.orderId || updatedOrder.id);
         
-      if (error) {
-        console.error('Erro ao atualizar ordem:', error);
+      if (hasError(response)) {
+        console.error('Erro ao atualizar ordem:', response.error);
         toast.error('Erro ao atualizar ordem de serviço.');
         return false;
       }

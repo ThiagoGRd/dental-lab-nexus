@@ -26,3 +26,16 @@ const clientOptions = {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, clientOptions);
+
+// Helper function to check if a Supabase response contains an error
+export function hasError(response: any): boolean {
+  return response && response.error !== undefined;
+}
+
+// Helper function to safely access data from a Supabase response
+export function safeData<T>(response: any, defaultValue: T): T {
+  if (hasError(response) || !response || !response.data) {
+    return defaultValue;
+  }
+  return response.data;
+}
