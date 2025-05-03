@@ -22,7 +22,7 @@ import { statusLabels } from '@/data/mockData';
 import OrderWorkflow from './OrderWorkflow';
 import { CalendarIcon, ChevronsRight, DollarSign, Timer, User } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -47,13 +47,18 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
     if (!order) return;
 
     try {
-      const { data } = await supabase
+      const workflowResponse = await supabase
         .from('order_workflows')
         .select('id')
-        .eq('order_id', order.originalData?.orderId || order.id)
-        .single();
+        .eq('order_id', order.originalData?.orderId || order.id);
       
-      setHasWorkflow(!!data);
+      if (hasError(workflowResponse)) {
+        console.error('Erro ao verificar workflow:', workflowResponse.error);
+        return;
+      }
+      
+      const workflowData = safeData(workflowResponse, []);
+      setHasWorkflow(workflowData.length > 0);
     } catch (error) {
       console.error("Erro ao verificar workflow:", error);
       setHasWorkflow(false);
@@ -65,34 +70,52 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
 
     try {
       // Carregar informações detalhadas do serviço
-      const { data: itemData } = await supabase
+      const itemResponse = await supabase
         .from('order_items')
         .select('service_id')
-        .eq('order_id', order.originalData?.orderId || order.id)
-        .single();
+        .eq('order_id', order.originalData?.orderId || order.id);
 
-      if (itemData) {
-        const { data: serviceData } = await supabase
+      if (hasError(itemResponse)) {
+        console.error('Erro ao carregar item da ordem:', itemResponse.error);
+        return;
+      }
+
+      const itemData = safeData(itemResponse, []);
+      
+      if (itemData && itemData.length > 0) {
+        const serviceResponse = await supabase
           .from('services')
           .select('name')
-          .eq('id', itemData.service_id)
-          .single();
+          .eq('id', itemData[0].service_id);
+
+        if (hasError(serviceResponse)) {
+          console.error('Erro ao carregar serviço:', serviceResponse.error);
+          return;
+        }
+
+        const serviceData = safeData(serviceResponse, []);
           
-        if (serviceData) {
-          setServiceName(serviceData.name);
+        if (serviceData && serviceData.length > 0) {
+          setServiceName(serviceData[0].name);
         }
       }
 
       // Carregar informações detalhadas do cliente
       if (order.originalData?.clientId) {
-        const { data: clientData } = await supabase
+        const clientResponse = await supabase
           .from('clients')
           .select('*')
-          .eq('id', order.originalData.clientId)
-          .single();
+          .eq('id', order.originalData.clientId);
           
-        if (clientData) {
-          setClient(clientData);
+        if (hasError(clientResponse)) {
+          console.error('Erro ao carregar cliente:', clientResponse.error);
+          return;
+        }
+
+        const clientData = safeData(clientResponse, []);
+          
+        if (clientData && clientData.length > 0) {
+          setClient(clientData[0]);
         }
       }
     } catch (error) {

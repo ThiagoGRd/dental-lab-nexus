@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase, hasError } from '@/integrations/supabase/client';
+import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -39,16 +39,15 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         const profileResponse = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', session.user.id);
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
         }
         
-        const profile = profileResponse.data;
+        const profileData = safeData(profileResponse, null);
         
-        if (!profile || profile.role !== requiredRole) {
+        if (!profileData || profileData.length === 0 || profileData[0].role !== requiredRole) {
           setHasRequiredRole(false);
           toast.error('Você não tem permissão para acessar esta página');
           return;

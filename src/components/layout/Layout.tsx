@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { supabase, hasError } from '@/integrations/supabase/client';
+import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 // Use lazy loading for child components when appropriate
@@ -43,14 +43,14 @@ export default function Layout({ children }: LayoutProps) {
         const profileResponse = await supabase
           .from('profiles')
           .select('is_active, role')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', session.user.id);
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
         }
         
-        const profile = profileResponse.data;
+        const profileData = safeData(profileResponse, []);
+        const profile = profileData.length > 0 ? profileData[0] : null;
         
         if (profile && profile.is_active === false) {
           await supabase.auth.signOut();
@@ -89,10 +89,10 @@ export default function Layout({ children }: LayoutProps) {
           const profileResponse = await supabase
             .from('profiles')
             .select('is_active, role')
-            .eq('id', session.user.id)
-            .single();
+            .eq('id', session.user.id);
             
-          const profile = hasError(profileResponse) ? null : profileResponse.data;
+          const profileData = safeData(profileResponse, []);
+          const profile = profileData.length > 0 ? profileData[0] : null;
             
           localStorage.setItem('user', JSON.stringify({
             id: session.user.id,

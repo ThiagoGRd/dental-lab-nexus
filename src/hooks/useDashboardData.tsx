@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { mockStatusData } from '@/data/mockData';
 
@@ -38,8 +38,8 @@ export function useDashboardData() {
           return;
         }
         
-        const ordersData = ordersResult.data || [];
-        const clientsData = clientsResult.data || [];
+        const ordersData = safeData(ordersResult, []);
+        const clientsData = safeData(clientsResult, []);
         
         // Optimize by calculating in a single loop
         const now = new Date();

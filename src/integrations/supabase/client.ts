@@ -39,3 +39,16 @@ export function safeData<T>(response: any, defaultValue: T): T {
   }
   return response.data;
 }
+
+// Type guard to narrow down a response to data-only (no error)
+export function isDataResponse<T>(response: any): response is { data: T; error: null } {
+  return !hasError(response) && response?.data !== null && response?.data !== undefined;
+}
+
+// Helper to safely get a field from potential error responses
+export function safeField<T, K extends keyof T>(obj: T | any, field: K, defaultValue: T[K]): T[K] {
+  if (!obj || typeof obj !== 'object' || hasError(obj)) {
+    return defaultValue;
+  }
+  return (obj as T)[field] !== undefined ? (obj as T)[field] : defaultValue;
+}

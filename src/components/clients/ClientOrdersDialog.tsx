@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import { supabase, hasError } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { statusLabels, OrderStatus } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -73,15 +73,14 @@ export default function ClientOrdersDialog({
           notes,
           total_value
         `)
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
+        .eq('client_id', clientId);
         
       if (hasError(ordersResponse)) {
         console.error('Erro ao buscar ordens do cliente:', ordersResponse.error);
         return;
       }
       
-      const ordersData = ordersResponse.data || [];
+      const ordersData = safeData(ordersResponse, []);
       
       // Calcular o valor total de todas as ordens
       let calculatedTotal = 0;
@@ -100,7 +99,7 @@ export default function ClientOrdersDialog({
         if (hasError(orderItemsResponse)) {
           console.error('Erro ao buscar itens das ordens:', orderItemsResponse.error);
         } else {
-          const orderItemsData = orderItemsResponse.data || [];
+          const orderItemsData = safeData(orderItemsResponse, []);
           
           // Agrupar o valor total por ordem
           const orderTotals: Record<string, number> = {};
@@ -154,7 +153,7 @@ export default function ClientOrdersDialog({
         console.error('Erro ao buscar itens de ordem:', orderItemsResponse.error);
       }
       
-      const orderItemsData = orderItemsResponse.data || [];
+      const orderItemsData = safeData(orderItemsResponse, []);
 
       // Buscar serviços para associar aos itens
       const serviceIds = orderItemsData?.map(item => item.service_id) || [];
@@ -167,7 +166,7 @@ export default function ClientOrdersDialog({
         console.error('Erro ao buscar serviços:', servicesResponse.error);
       }
       
-      const servicesData = servicesResponse.data || [];
+      const servicesData = safeData(servicesResponse, []);
 
       // Formatar dados das ordens
       if (ordersData) {

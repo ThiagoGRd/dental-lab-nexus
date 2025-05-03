@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, hasError } from '@/integrations/supabase/client';
+import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -52,10 +52,10 @@ export function useFetchOrders() {
         return [];
       }
       
-      const ordersData = ordersResponse.data || [];
-      const clientsData = clientsResponse.error ? [] : clientsResponse.data || [];
-      const orderItemsData = orderItemsResponse.error ? [] : orderItemsResponse.data || [];
-      const servicesData = servicesResponse.error ? [] : servicesResponse.data || [];
+      const ordersData = safeData(ordersResponse, []);
+      const clientsData = hasError(clientsResponse) ? [] : safeData(clientsResponse, []);
+      const orderItemsData = hasError(orderItemsResponse) ? [] : safeData(orderItemsResponse, []);
+      const servicesData = hasError(servicesResponse) ? [] : safeData(servicesResponse, []);
       
       // Use Maps for O(1) lookups instead of find() which is O(n)
       const clientsMap = new Map(clientsData?.map(c => [c.id, c]));
