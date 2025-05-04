@@ -43,14 +43,14 @@ export default function Layout({ children }: LayoutProps) {
         const profileResponse = await supabase
           .from('profiles')
           .select('is_active, role')
-          .eq('id', session.user.id);
+          .eq('id', session.user.id)
+          .single();
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
         }
         
-        const profileData = safeData(profileResponse, []);
-        const profile = profileData.length > 0 ? profileData[0] : null;
+        const profile = safeData(profileResponse, null);
         
         if (profile && profile.is_active === false) {
           await supabase.auth.signOut();
@@ -89,10 +89,10 @@ export default function Layout({ children }: LayoutProps) {
           const profileResponse = await supabase
             .from('profiles')
             .select('is_active, role')
-            .eq('id', session.user.id);
+            .eq('id', session.user.id)
+            .single();
             
-          const profileData = safeData(profileResponse, []);
-          const profile = profileData.length > 0 ? profileData[0] : null;
+          const profile = safeData(profileResponse, null);
             
           localStorage.setItem('user', JSON.stringify({
             id: session.user.id,

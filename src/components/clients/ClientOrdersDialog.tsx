@@ -73,7 +73,7 @@ export default function ClientOrdersDialog({
           notes,
           total_value
         `)
-        .eq('client_id', clientId);
+        .filter('client_id', 'eq', clientId);
         
       if (hasError(ordersResponse)) {
         console.error('Erro ao buscar ordens do cliente:', ordersResponse.error);
@@ -88,7 +88,7 @@ export default function ClientOrdersDialog({
       // Buscar itens de serviço para cada ordem para calcular o valor total corretamente
       if (ordersData && ordersData.length > 0) {
         // Obter todos os IDs de ordem
-        const orderIds = ordersData.map(order => order.id);
+        const orderIds = ordersData.map((order: any) => order.id);
         
         // Buscar detalhes dos itens para calcular o valor total
         const orderItemsResponse = await supabase
@@ -105,7 +105,7 @@ export default function ClientOrdersDialog({
           const orderTotals: Record<string, number> = {};
           
           // Calcular o total para cada ordem
-          orderItemsData.forEach(item => {
+          orderItemsData.forEach((item: any) => {
             if (!orderTotals[item.order_id]) {
               orderTotals[item.order_id] = 0;
             }
@@ -115,7 +115,7 @@ export default function ClientOrdersDialog({
           });
           
           // Atualizar os dados da ordem com os totais calculados
-          const updatedOrdersData = ordersData.map(order => {
+          const updatedOrdersData = ordersData.map((order: any) => {
             const calculatedOrderTotal = orderTotals[order.id] || 0;
             calculatedTotal += Number(calculatedOrderTotal);
             
@@ -136,7 +136,7 @@ export default function ClientOrdersDialog({
       }
       
       // Buscar itens de serviço para cada ordem
-      const orderIds = ordersData?.map(order => order.id) || [];
+      const orderIds = ordersData?.map((order: any) => order.id) || [];
       const orderItemsResponse = await supabase
         .from('order_items')
         .select(`
@@ -156,7 +156,7 @@ export default function ClientOrdersDialog({
       const orderItemsData = safeData(orderItemsResponse, []);
 
       // Buscar serviços para associar aos itens
-      const serviceIds = orderItemsData?.map(item => item.service_id) || [];
+      const serviceIds = orderItemsData?.map((item: any) => item.service_id) || [];
       const servicesResponse = await supabase
         .from('services')
         .select('id, name')
@@ -170,10 +170,10 @@ export default function ClientOrdersDialog({
 
       // Formatar dados das ordens
       if (ordersData) {
-        const formattedOrders = ordersData.map(order => {
-          const orderItem = orderItemsData?.find(item => item.order_id === order.id);
+        const formattedOrders = ordersData.map((order: any) => {
+          const orderItem = orderItemsData?.find((item: any) => item.order_id === order.id);
           const service = orderItem 
-            ? servicesData?.find(s => s.id === orderItem.service_id)
+            ? servicesData?.find((s: any) => s.id === orderItem.service_id)
             : null;
           
           // Use the total_value that might have been updated above
@@ -193,7 +193,7 @@ export default function ClientOrdersDialog({
             value: orderValue,
             originalData: {
               orderId: order.id,
-              clientId: clientId
+              clientId
             }
           };
         });

@@ -39,7 +39,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         const profileResponse = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', session.user.id);
+          .eq('id', session.user.id)
+          .single();
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
@@ -47,7 +48,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         
         const profileData = safeData(profileResponse, null);
         
-        if (!profileData || profileData.length === 0 || profileData[0].role !== requiredRole) {
+        if (!profileData || profileData.role !== requiredRole) {
           setHasRequiredRole(false);
           toast.error('Você não tem permissão para acessar esta página');
           return;

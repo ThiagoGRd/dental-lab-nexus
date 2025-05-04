@@ -58,12 +58,12 @@ export function useFetchOrders() {
       const servicesData = hasError(servicesResponse) ? [] : safeData(servicesResponse, []);
       
       // Use Maps for O(1) lookups instead of find() which is O(n)
-      const clientsMap = new Map(clientsData?.map(c => [c.id, c]));
-      const orderItemsMap = new Map(orderItemsData?.map(item => [item.order_id, item]));
-      const servicesMap = new Map(servicesData?.map(s => [s.id, s]));
+      const clientsMap = new Map(clientsData?.map((c: any) => [c.id, c]));
+      const orderItemsMap = new Map(orderItemsData?.map((item: any) => [item.order_id, item]));
+      const servicesMap = new Map(servicesData?.map((s: any) => [s.id, s]));
 
       // Format the orders data more efficiently
-      const formattedOrders = ordersData.map(order => {
+      const formattedOrders = ordersData.map((order: any) => {
         const client = clientsMap.get(order.client_id);
         const orderItem = orderItemsMap.get(order.id);
         const service = orderItem ? servicesMap.get(orderItem.service_id) : null;

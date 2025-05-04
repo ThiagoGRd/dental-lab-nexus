@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -35,25 +34,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Plus, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 
-const orderFormSchema = z.object({
-  client: z.string().min(1, 'O cliente é obrigatório'),
-  patientName: z.string().min(1, 'O nome do paciente é obrigatório'),
-  service: z.string().min(1, 'O serviço é obrigatório'),
-  dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
-  isUrgent: z.boolean().default(false),
-  shade: z.string().min(1, 'A cor/escala é obrigatória'),
-  notes: z.string().optional(),
-  workflowTemplateId: z.string().optional(),
-});
-
-type OrderFormValues = z.infer<typeof orderFormSchema>;
-
-interface NewOrderDialogProps {
-  children: React.ReactNode;
-}
-
+// Define interfaces to match expected types
 interface Service {
   id: string;
   name: string;
@@ -79,6 +62,23 @@ interface WorkflowTemplate {
   description: string | null;
 }
 
+const orderFormSchema = z.object({
+  client: z.string().min(1, 'O cliente é obrigatório'),
+  patientName: z.string().min(1, 'O nome do paciente é obrigatório'),
+  service: z.string().min(1, 'O serviço é obrigatório'),
+  dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
+  isUrgent: z.boolean().default(false),
+  shade: z.string().min(1, 'A cor/escala é obrigatória'),
+  notes: z.string().optional(),
+  workflowTemplateId: z.string().optional(),
+});
+
+type OrderFormValues = z.infer<typeof orderFormSchema>;
+
+interface NewOrderDialogProps {
+  children: React.ReactNode;
+}
+
 export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [services, setServices] = useState<Service[]>([]);
@@ -95,14 +95,14 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*')
-          .eq('active', true)
+          .filter('active', 'eq', true)
           .order('name');
         
         if (servicesError) {
           console.error("Erro ao carregar serviços:", servicesError);
           toast.error('Não foi possível carregar a lista de serviços.');
         } else {
-          setServices(servicesData || []);
+          setServices(servicesData as Service[] || []);
         }
         
         // Carrega clientes do banco de dados Supabase
@@ -115,7 +115,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           console.error("Erro ao carregar clientes:", clientsError);
           toast.error('Não foi possível carregar a lista de clientes.');
         } else {
-          setClients(clientsData || []);
+          setClients(clientsData as Client[] || []);
         }
         
         // Carrega templates de workflow
@@ -127,7 +127,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         if (templatesError) {
           console.error("Erro ao carregar templates de workflow:", templatesError);
         } else {
-          setWorkflowTemplates(templatesData || []);
+          setWorkflowTemplates(templatesData as WorkflowTemplate[] || []);
         }
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
