@@ -37,7 +37,7 @@ export function safeData<T>(response: any, defaultValue: T): T {
   if (hasError(response) || !response || !response.data) {
     return defaultValue;
   }
-  return response.data;
+  return response.data as T;
 }
 
 // Type guard to narrow down a response to data-only (no error)
@@ -51,4 +51,10 @@ export function safeField<T, K extends keyof T>(obj: T | any, field: K, defaultV
     return defaultValue;
   }
   return (obj as T)[field] !== undefined ? (obj as T)[field] : defaultValue;
+}
+
+// Helper to cast data safely to a specific type (useful for Supabase tables)
+export function castData<T>(data: any): T {
+  if (!data) return {} as T;
+  return data as T;
 }

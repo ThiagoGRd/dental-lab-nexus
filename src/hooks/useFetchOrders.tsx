@@ -3,10 +3,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import type { Database } from '@/integrations/supabase/types';
+
+type Order = {
+  id: string;
+  client: string;
+  patientName: string;
+  service: string;
+  createdAt: string;
+  dueDate: string;
+  status: string;
+  isUrgent: boolean;
+  notes: string;
+  originalData: {
+    clientId: string;
+    orderId: string;
+  };
+};
 
 export function useFetchOrders() {
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   // Use useCallback to avoid recreating this function on each render
   const fetchOrders = useCallback(async () => {
@@ -52,18 +69,29 @@ export function useFetchOrders() {
         return [];
       }
       
-      const ordersData = safeData(ordersResponse, []);
-      const clientsData = hasError(clientsResponse) ? [] : safeData(clientsResponse, []);
-      const orderItemsData = hasError(orderItemsResponse) ? [] : safeData(orderItemsResponse, []);
-      const servicesData = hasError(servicesResponse) ? [] : safeData(servicesResponse, []);
+      type OrderRow = Database['public']['Tables']['orders']['Row'];
+      type ClientRow = Database['public']['Tables']['clients']['Row'];
+      type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
+      type ServiceRow = Database['public']['Tables']['services']['Row'];
+      
+      const ordersData = safeData<OrderRow[]>(ordersResponse, []);
+      const clientsData = hasError(clientsResponse) ? [] : safeData<ClientRow[]>(clientsResponse, []);
+      const orderItemsData = hasError(orderItemsResponse) ? [] : safeData<OrderItemRow[]>(orderItemsResponse, []);
+      const servicesData = hasError(servicesResponse) ? [] : safeData<ServiceRow[]>(servicesResponse, []);
       
       // Use Maps for O(1) lookups instead of find() which is O(n)
-      const clientsMap = new Map(clientsData?.map((c: any) => [c.id, c]));
-      const orderItemsMap = new Map(orderItemsData?.map((item: any) => [item.order_id, item]));
-      const servicesMap = new Map(servicesData?.map((s: any) => [s.id, s]));
+      const clientsMap = new Map(clientsData?.map((c) => [c.id, c]));
+      const orderItemsMap = new Map();
+      
+      // Group order items by order_id
+      orderItemsData?.forEach((item) => {
+        orderItemsMap.set(item.order_id, item);
+      });
+      
+      const servicesMap = new Map(servicesData?.map((s) => [s.id, s]));
 
       // Format the orders data more efficiently
-      const formattedOrders = ordersData.map((order: any) => {
+      const formattedOrders = ordersData.map((order) => {
         const client = clientsMap.get(order.client_id);
         const orderItem = orderItemsMap.get(order.id);
         const service = orderItem ? servicesMap.get(orderItem.service_id) : null;

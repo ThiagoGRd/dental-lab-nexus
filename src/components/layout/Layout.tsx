@@ -6,6 +6,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
 // Use lazy loading for child components when appropriate
 const LoadingIndicator = () => (
@@ -17,6 +18,8 @@ const LoadingIndicator = () => (
 type LayoutProps = {
   children: React.ReactNode;
 };
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
@@ -43,14 +46,14 @@ export default function Layout({ children }: LayoutProps) {
         const profileResponse = await supabase
           .from('profiles')
           .select('is_active, role')
-          .eq('id', session.user.id)
+          .eq('id', session.user.id as string)
           .single();
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
         }
         
-        const profile = safeData(profileResponse, null);
+        const profile = safeData<{ is_active: boolean | null, role: string } | null>(profileResponse, null);
         
         if (profile && profile.is_active === false) {
           await supabase.auth.signOut();
@@ -89,10 +92,10 @@ export default function Layout({ children }: LayoutProps) {
           const profileResponse = await supabase
             .from('profiles')
             .select('is_active, role')
-            .eq('id', session.user.id)
+            .eq('id', session.user.id as string)
             .single();
             
-          const profile = safeData(profileResponse, null);
+          const profile = safeData<{ role: string } | null>(profileResponse, null);
             
           localStorage.setItem('user', JSON.stringify({
             id: session.user.id,
