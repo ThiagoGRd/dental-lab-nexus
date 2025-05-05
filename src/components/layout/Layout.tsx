@@ -46,14 +46,14 @@ export default function Layout({ children }: LayoutProps) {
         const profileResponse = await supabase
           .from('profiles')
           .select('is_active, role')
-          .filter('id', 'eq', session.user.id)
+          .eq('id', session.user.id as string)
           .single();
         
         if (hasError(profileResponse)) {
           throw profileResponse.error;
         }
         
-        const profile = safeData<{ is_active: boolean | null, role: string } | null>(profileResponse, null);
+        const profile = safeData<Profile | null>(profileResponse, null);
         
         if (profile && profile.is_active === false) {
           await supabase.auth.signOut();
@@ -92,7 +92,7 @@ export default function Layout({ children }: LayoutProps) {
           const profileResponse = await supabase
             .from('profiles')
             .select('is_active, role')
-            .filter('id', 'eq', session.user.id)
+            .eq('id', session.user.id as string)
             .single();
             
           const profile = safeData<{ role: string } | null>(profileResponse, null);

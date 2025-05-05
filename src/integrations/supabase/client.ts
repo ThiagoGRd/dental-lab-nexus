@@ -59,15 +59,15 @@ export function castData<T>(data: any): T {
   return data as T;
 }
 
-// Use this function for type safety when filtering database tables
+// Improved type-safe filter function that works better with TypeScript
 export function filterByField<T extends keyof Database['public']['Tables']>(
-  table: T, 
-  column: keyof Database['public']['Tables'][T]['Row'], 
+  table: T,
+  field: keyof Database['public']['Tables'][T]['Row'] | string,
   value: any
 ) {
   return supabase
     .from(table)
-    .eq(column as string, value);
+    .eq(field as string, value);
 }
 
 // Safely cast ordered data to the expected type
@@ -76,10 +76,20 @@ export function castOrderedData<T>(data: any): T[] {
   return data as T[];
 }
 
-// A type-safe insert function for Supabase tables
-export async function typeSafeInsert<TableName extends keyof Database['public']['Tables']>(
-  table: TableName,
-  data: Database['public']['Tables'][TableName]['Insert']
+// Type-safe insert function for Supabase tables
+export async function typeSafeInsert<T extends keyof Database['public']['Tables']>(
+  table: T,
+  data: Database['public']['Tables'][T]['Insert']
 ) {
-  return await supabase.from(table).insert(data as any);
+  return await supabase.from(table).insert(data);
+}
+
+// Type-safe update function for Supabase tables
+export async function typeSafeUpdate<T extends keyof Database['public']['Tables']>(
+  table: T,
+  data: Database['public']['Tables'][T]['Update'],
+  field: string,
+  value: any
+) {
+  return await supabase.from(table).update(data).eq(field, value);
 }

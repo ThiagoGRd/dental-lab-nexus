@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -41,6 +42,8 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { supabase, safeData } from "@/integrations/supabase/client";
+import { updateOrder, createWorkflow } from "@/utils/orderUtils";
+import type { Database } from '@/integrations/supabase/types';
 
 const orderFormSchema = z.object({
   client: z.string().min(1, 'O cliente é obrigatório'),
@@ -145,8 +148,8 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       if (error) {
         console.error("Erro ao carregar templates de workflow:", error);
       } else {
-        const templateData = safeData<WorkflowTemplate[]>(data, []);
-        setWorkflowTemplates(templateData);
+        const typedTemplates = safeData<WorkflowTemplate[]>(data, []);
+        setWorkflowTemplates(typedTemplates);
       }
     } catch (error) {
       console.error("Erro ao carregar templates:", error);
@@ -197,25 +200,23 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         ? `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`
         : data.notes || '';
       
-      // Atualizar no Supabase
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          status: data.status,
-          deadline: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-          priority: data.isUrgent ? 'urgent' : 'normal',
-          notes: notes
-        })
-        .eq('id', orderId);
+      // Atualizar no Supabase usando a função helper
+      const updateResult = await updateOrder(
+        orderId,
+        data.status,
+        data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        data.isUrgent ? 'urgent' : 'normal',
+        notes
+      );
         
-      if (error) {
-        console.error("Erro ao atualizar ordem:", error);
+      if (updateResult.error) {
+        console.error("Erro ao atualizar ordem:", updateResult.error);
         toast.error("Erro ao salvar as alterações.");
         setLoading(false);
         return;
       }
       
-      // Verificar se precisa criar ou atualizar workflow
+      // Verificar se precisa criar workflow
       if (data.workflowTemplateId && data.workflowTemplateId !== 'none') {
         if (currentWorkflow) {
           // Já existe um workflow para esta ordem, não fazemos nada
@@ -223,18 +224,17 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         } else {
           // Criar novo workflow
           console.log('Criando novo workflow com template:', data.workflowTemplateId);
-          const { error: workflowError } = await supabase
-            .from('order_workflows')
-            .insert({
-              order_id: orderId,
-              template_id: data.workflowTemplateId,
-              current_step: 0,
-              history: [],
-              notes: `Workflow iniciado em ${new Date().toLocaleDateString()}`
-            });
+          const workflowNotes = `Workflow iniciado em ${new Date().toLocaleDateString()}`;
+          const workflowResult = await createWorkflow(
+            orderId,
+            data.workflowTemplateId,
+            0,
+            [],
+            workflowNotes
+          );
             
-          if (workflowError) {
-            console.error("Erro ao criar workflow:", workflowError);
+          if (workflowResult.error) {
+            console.error("Erro ao criar workflow:", workflowResult.error);
             toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
           } else {
             toast.success("Fluxo de trabalho associado com sucesso!");
