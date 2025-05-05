@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -35,7 +34,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Plus, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase, hasError, safeData } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData, typeSafeInsert } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
 
 // Define interfaces to match expected types
@@ -97,7 +96,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*')
-          .eq('active', true)
+          .filter('active', 'eq', true)
           .order('name');
         
         if (servicesError) {
@@ -192,13 +191,13 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       }
       
       // Preparar dados da ordem para inserção
-      const orderInsert: Database['public']['Tables']['orders']['Insert'] = {
+      const orderInsert = {
         client_id: selectedClient.id,
-        deadline: data.dueDate,
+        deadline: data.dueDate ? data.dueDate : null,
         priority: data.isUrgent ? 'urgent' : 'normal',
         notes: `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`,
         status: 'pending'
-      };
+      } as Database['public']['Tables']['orders']['Insert'];
       
       // Inserir a ordem no Supabase
       const { data: orderData, error: orderError } = await supabase
@@ -207,23 +206,19 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         .select()
         .single();
       
-      if (orderError) {
+      if (orderError || !orderData) {
         console.error("Erro ao criar ordem:", orderError);
-        throw new Error(orderError.message);
-      }
-      
-      if (!orderData) {
-        throw new Error("Dados da ordem não retornados");
+        throw new Error(orderError ? orderError.message : "Dados da ordem não retornados");
       }
       
       // Preparar dados do item de ordem para inserção
-      const orderItemInsert: Database['public']['Tables']['order_items']['Insert'] = {
+      const orderItemInsert = {
         order_id: orderData.id,
         service_id: selectedService.id,
         price: selectedService.price,
         total: selectedService.price,
         notes: `Paciente: ${data.patientName}, Cor/Escala: ${data.shade}`
-      };
+      } as Database['public']['Tables']['order_items']['Insert'];
       
       // Inserir o item da ordem
       const { error: orderItemError } = await supabase
@@ -237,13 +232,13 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       
       // Criar workflow se selecionado
       if (data.workflowTemplateId) {
-        const workflowInsert: Database['public']['Tables']['order_workflows']['Insert'] = {
+        const workflowInsert = {
           order_id: orderData.id,
           template_id: data.workflowTemplateId,
           current_step: 0,
           history: [],
           notes: `Workflow iniciado em ${new Date().toLocaleDateString()}`
-        };
+        } as Database['public']['Tables']['order_workflows']['Insert'];
         
         const { error: workflowError } = await supabase
           .from('order_workflows')

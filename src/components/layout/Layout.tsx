@@ -46,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
         const profileResponse = await supabase
           .from('profiles')
           .select('is_active, role')
-          .eq('id', session.user.id as string)
+          .filter('id', 'eq', session.user.id)
           .single();
         
         if (hasError(profileResponse)) {
@@ -92,7 +92,7 @@ export default function Layout({ children }: LayoutProps) {
           const profileResponse = await supabase
             .from('profiles')
             .select('is_active, role')
-            .eq('id', session.user.id as string)
+            .filter('id', 'eq', session.user.id)
             .single();
             
           const profile = safeData<{ role: string } | null>(profileResponse, null);

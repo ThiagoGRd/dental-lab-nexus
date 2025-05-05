@@ -34,7 +34,7 @@ export function hasError(response: any): boolean {
 
 // Helper function to safely access data from a Supabase response
 export function safeData<T>(response: any, defaultValue: T): T {
-  if (hasError(response) || !response || !response.data) {
+  if (hasError(response) || !response || response.data === undefined || response.data === null) {
     return defaultValue;
   }
   return response.data as T;
@@ -57,4 +57,29 @@ export function safeField<T, K extends keyof T>(obj: T | any, field: K, defaultV
 export function castData<T>(data: any): T {
   if (!data) return {} as T;
   return data as T;
+}
+
+// Use this function for type safety when filtering database tables
+export function filterByField<T extends keyof Database['public']['Tables']>(
+  table: T, 
+  column: keyof Database['public']['Tables'][T]['Row'], 
+  value: any
+) {
+  return supabase
+    .from(table)
+    .eq(column as string, value);
+}
+
+// Safely cast ordered data to the expected type
+export function castOrderedData<T>(data: any): T[] {
+  if (!data || !Array.isArray(data)) return [] as T[];
+  return data as T[];
+}
+
+// A type-safe insert function for Supabase tables
+export async function typeSafeInsert<TableName extends keyof Database['public']['Tables']>(
+  table: TableName,
+  data: Database['public']['Tables'][TableName]['Insert']
+) {
+  return await supabase.from(table).insert(data as any);
 }

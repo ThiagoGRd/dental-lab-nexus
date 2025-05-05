@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -41,7 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, safeData } from "@/integrations/supabase/client";
 
 const orderFormSchema = z.object({
   client: z.string().min(1, 'O cliente é obrigatório'),
@@ -146,7 +145,8 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       if (error) {
         console.error("Erro ao carregar templates de workflow:", error);
       } else {
-        setWorkflowTemplates(data || []);
+        const templateData = safeData<WorkflowTemplate[]>(data, []);
+        setWorkflowTemplates(templateData);
       }
     } catch (error) {
       console.error("Erro ao carregar templates:", error);
