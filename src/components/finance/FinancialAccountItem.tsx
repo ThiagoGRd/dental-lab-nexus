@@ -37,6 +37,9 @@ export default function FinancialAccountItem({
 
   const isPayable = type === 'payable';
   const isPending = account.status === 'pending';
+  const serviceInfo = account.originalData?.notes?.includes('serviço') 
+    ? account.originalData.notes 
+    : null;
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 p-4">
@@ -50,6 +53,9 @@ export default function FinancialAccountItem({
           <>
             <div className="font-medium">{account.client}</div>
             <div className="text-sm text-muted-foreground">#{account.orderNumber}</div>
+            {serviceInfo && (
+              <div className="text-xs text-blue-600 mt-1">{serviceInfo}</div>
+            )}
           </>
         )}
       </div>

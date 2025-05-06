@@ -31,6 +31,9 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
   if (!account) return null;
 
   const isPayable = 'description' in account;
+  const serviceInfo = account.originalData?.notes?.includes('serviço') 
+    ? account.originalData.notes 
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,6 +65,12 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
                 <h4 className="text-sm font-medium text-gray-500">Número da Ordem</h4>
                 <p>#{account.orderNumber}</p>
               </div>
+              {serviceInfo && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Serviço</h4>
+                  <p className="text-blue-600">{serviceInfo}</p>
+                </div>
+              )}
             </>
           )}
           <div>
@@ -86,7 +95,7 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
                   : 'Pendente'}
             </span>
           </div>
-          {account.notes && (
+          {account.notes && !serviceInfo && (
             <div>
               <h4 className="text-sm font-medium text-gray-500">Observações</h4>
               <p>{account.notes}</p>
