@@ -37,9 +37,22 @@ export default function FinancialAccountItem({
 
   const isPayable = type === 'payable';
   const isPending = account.status === 'pending';
+  
+  // Extract service information
   const serviceInfo = account.originalData?.notes?.includes('serviço') 
     ? account.originalData.notes 
     : null;
+  
+  // Parse the service name from the notes if available
+  let serviceName = null;
+  if (serviceInfo) {
+    const serviceMatch = serviceInfo.match(/serviço: (.*?)(?:\s\(|$)/i);
+    if (serviceMatch && serviceMatch[1]) {
+      serviceName = serviceMatch[1].trim();
+    } else {
+      serviceName = serviceInfo.replace(/ordem de serviço.*finalizada:?\s*/i, '').trim();
+    }
+  }
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 p-4">
@@ -53,8 +66,8 @@ export default function FinancialAccountItem({
           <>
             <div className="font-medium">{account.client}</div>
             <div className="text-sm text-muted-foreground">#{account.orderNumber}</div>
-            {serviceInfo && (
-              <div className="text-xs text-blue-600 mt-1">{serviceInfo}</div>
+            {serviceName && (
+              <div className="text-xs text-blue-600 mt-1">{serviceName}</div>
             )}
           </>
         )}

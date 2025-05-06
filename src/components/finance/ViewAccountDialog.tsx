@@ -31,9 +31,23 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
   if (!account) return null;
 
   const isPayable = 'description' in account;
+  
+  // Extract service information
   const serviceInfo = account.originalData?.notes?.includes('serviço') 
     ? account.originalData.notes 
     : null;
+  
+  // Parse the service name from the notes if available
+  let serviceName = null;
+  if (serviceInfo) {
+    // Try to extract just the service name from the notes
+    const serviceMatch = serviceInfo.match(/serviço: (.*?)(?:\s\(|$)/i);
+    if (serviceMatch && serviceMatch[1]) {
+      serviceName = serviceMatch[1].trim();
+    } else {
+      serviceName = serviceInfo.replace(/ordem de serviço.*finalizada:?\s*/i, '').trim();
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,10 +79,10 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
                 <h4 className="text-sm font-medium text-gray-500">Número da Ordem</h4>
                 <p>#{account.orderNumber}</p>
               </div>
-              {serviceInfo && (
+              {serviceName && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Serviço</h4>
-                  <p className="text-blue-600">{serviceInfo}</p>
+                  <p className="text-blue-600">{serviceName}</p>
                 </div>
               )}
             </>
