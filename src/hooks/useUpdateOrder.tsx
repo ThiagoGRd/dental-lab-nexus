@@ -1,11 +1,12 @@
 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 
 export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void) {
   const handleUpdateOrder = async (updatedOrder: any) => {
     try {
+      console.log('Attempting to update order:', updatedOrder);
+      
       // Prepare notes with patient name more efficiently
       const notes = updatedOrder.patientName 
         ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
@@ -19,11 +20,14 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         notes: notes
       };
       
+      console.log('Update data:', updateData);
+      console.log('Order ID:', updatedOrder.originalData?.orderId || updatedOrder.id);
+      
       // Update in Supabase
       const orderId = updatedOrder.originalData?.orderId || updatedOrder.id;
       const { error } = await supabase
         .from('orders')
-        .update(updateData as any)
+        .update(updateData)
         .eq('id', orderId);
         
       if (error) {
@@ -31,6 +35,8 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         toast.error('Erro ao atualizar ordem de serviço.');
         return false;
       }
+      
+      console.log('Order updated successfully in Supabase');
       
       // Update local state efficiently using map
       const updatedOrders = orders.map(order => 

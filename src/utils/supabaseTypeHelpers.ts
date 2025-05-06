@@ -1,33 +1,25 @@
+
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-import { type Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Type-safe wrapper for inserting data to a specific Supabase table
- */
-export async function typedInsert<
-  T extends keyof Database['public']['Tables']
->(
-  table: T,
-  data: any // Using 'any' here to avoid deep type instantiation issues
-) {
+// Use a simpler approach with direct type assertions
+// This avoids excessive type depth while maintaining basic type safety
+export async function typedInsert(table: string, data: any) {
   return supabase
-    .from(table as string)
+    .from(table as any)
     .insert(data);
 }
 
 /**
  * Type-safe wrapper for updating data in a specific Supabase table
  */
-export async function typedUpdate<
-  T extends keyof Database['public']['Tables']
->(
-  table: T,
+export async function typedUpdate(
+  table: string,
   id: string,
-  data: any // Using 'any' here to avoid deep type instantiation issues
+  data: any
 ) {
   return supabase
-    .from(table as string)
+    .from(table as any)
     .update(data)
     .eq('id', id);
 }
@@ -35,16 +27,14 @@ export async function typedUpdate<
 /**
  * Type-safe wrapper for selecting data from a specific Supabase table by a field
  */
-export async function typedSelectByField<
-  T extends keyof Database['public']['Tables']
->(
-  table: T,
+export async function typedSelectByField(
+  table: string,
   field: string,
   value: any,
   columns: string = '*'
 ) {
   return supabase
-    .from(table as string)
+    .from(table as any)
     .select(columns)
     .eq(field, value);
 }
@@ -52,10 +42,8 @@ export async function typedSelectByField<
 /**
  * Type-safe wrapper for selecting data from a specific Supabase table by id
  */
-export async function typedSelectById<
-  T extends keyof Database['public']['Tables']
->(
-  table: T,
+export async function typedSelectById(
+  table: string,
   id: string,
   columns: string = '*'
 ) {
@@ -65,14 +53,12 @@ export async function typedSelectById<
 /**
  * Type-safe wrapper for deleting data from a specific Supabase table
  */
-export async function typedDelete<
-  T extends keyof Database['public']['Tables']
->(
-  table: T,
+export async function typedDelete(
+  table: string,
   id: string
 ) {
   return supabase
-    .from(table as string)
+    .from(table as any)
     .delete()
     .eq('id', id);
 }

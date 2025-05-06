@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, hasError, safeData } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import type { Database } from '@/integrations/supabase/types';
 
 type Order = {
   id: string;
@@ -34,7 +33,7 @@ export function useFetchOrders() {
       setError(null);
       
       // Use a more efficient Promise.all for parallel requests
-      console.log('Making parallel requests to Supabase...');
+      console.log('Making request to Supabase for orders...');
       
       // 1. Fetch orders data
       const ordersResponse = await supabase
@@ -50,8 +49,10 @@ export function useFetchOrders() {
         `)
         .order('created_at', { ascending: false });
       
+      console.log('Orders response received:', ordersResponse);
+      
       // Check for orders response error early
-      if (hasError(ordersResponse)) {
+      if (ordersResponse.error) {
         const errorMessage = ordersResponse.error?.message || 'Desconhecido';
         console.error('Erro ao buscar ordens:', ordersResponse.error);
         toast.error('Erro ao carregar as ordens de serviço.');
@@ -60,10 +61,10 @@ export function useFetchOrders() {
         return [];
       }
       
-      console.log('Orders response:', ordersResponse);
-      
       // 2. Only fetch related data if we have orders
-      const ordersData = safeData<any[]>(ordersResponse, []);
+      const ordersData = ordersResponse.data || [];
+      console.log('Orders data received:', ordersData.length);
+      
       if (ordersData.length === 0) {
         console.log('No orders data found');
         setLoading(false);
@@ -71,6 +72,7 @@ export function useFetchOrders() {
       }
       
       // 3. Fetch related data in parallel
+      console.log('Fetching related data (clients, order items, services)...');
       const [clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
         supabase
           .from('clients')
@@ -89,31 +91,27 @@ export function useFetchOrders() {
           .select('id, name')
       ]);
       
+      console.log('Related data received');
       console.log('Clients response:', clientsResponse);
       console.log('Order items response:', orderItemsResponse);
       console.log('Services response:', servicesResponse);
       
       // Check for other response errors but continue with what we have
-      if (hasError(clientsResponse)) {
+      if (clientsResponse.error) {
         console.warn('Erro ao buscar clientes:', clientsResponse.error);
       }
       
-      if (hasError(orderItemsResponse)) {
+      if (orderItemsResponse.error) {
         console.warn('Erro ao buscar itens de ordem:', orderItemsResponse.error);
       }
       
-      if (hasError(servicesResponse)) {
+      if (servicesResponse.error) {
         console.warn('Erro ao buscar serviços:', servicesResponse.error);
       }
       
-      type OrderRow = Database['public']['Tables']['orders']['Row'];
-      type ClientRow = Database['public']['Tables']['clients']['Row'];
-      type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
-      type ServiceRow = Database['public']['Tables']['services']['Row'];
-      
-      const clientsData = hasError(clientsResponse) ? [] : safeData<ClientRow[]>(clientsResponse, []);
-      const orderItemsData = hasError(orderItemsResponse) ? [] : safeData<OrderItemRow[]>(orderItemsResponse, []);
-      const servicesData = hasError(servicesResponse) ? [] : safeData<ServiceRow[]>(servicesResponse, []);
+      const clientsData = clientsResponse.data || [];
+      const orderItemsData = orderItemsResponse.data || [];
+      const servicesData = servicesResponse.data || [];
       
       console.log('Extracted data:', {
         orders: ordersData.length,
