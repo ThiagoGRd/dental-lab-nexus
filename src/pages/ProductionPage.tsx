@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -142,16 +141,18 @@ export default function ProductionPage() {
     setIsViewDialogOpen(true);
   };
 
-  // Função para criar conta a receber quando uma ordem for finalizada
+  // Função para criar conta a receber quando uma ordem for marcada como entregue
   const createReceivableAccount = async (order: any) => {
     try {
+      console.log('Criando conta a receber para ordem:', order.id, 'no valor de:', order.totalValue);
+      
       // Dados para a nova conta a receber
       const receivableData = {
         description: `Receita: ${order.client}`,
         amount: order.totalValue,
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Vencimento em 7 dias
         status: 'pending',
-        notes: `Ordem de serviço #${order.id.substring(0, 8)} finalizada`,
+        notes: `Ordem de serviço #${order.id.substring(0, 8)} entregue`,
         type: 'revenue',
         related_order_id: order.originalData?.orderId || order.id
       };
@@ -192,8 +193,8 @@ export default function ProductionPage() {
         return;
       }
       
-      // Se a ordem está sendo finalizada (status completed), criar conta a receber
-      if (newStatus === 'completed') {
+      // Se a ordem está sendo entregue (status delivered), criar conta a receber
+      if (newStatus === 'delivered') {
         await createReceivableAccount(order);
       }
       

@@ -9,6 +9,7 @@ interface FinancialSummaryProps {
 }
 
 export default function FinancialSummary({ payableAccounts = [], receivableAccounts = [] }: FinancialSummaryProps) {
+  // Formatar valores monetários no formato pt-BR (R$)
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -16,20 +17,33 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
     }).format(value);
   };
 
+  // Formatar datas no formato pt-BR
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  // Filtrar apenas contas pendentes
   const pendingPayables = (payableAccounts || []).filter(acc => acc.status === 'pending');
   const pendingReceivables = (receivableAccounts || []).filter(acc => acc.status === 'pending');
   
+  // Calcular totais
   const totalToPay = pendingPayables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const totalToReceive = pendingReceivables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const balance = totalToReceive - totalToPay;
 
-  // Get upcoming due accounts (both payable and receivable) sorted by date
+  console.log('FinancialSummary - Pending Receivables:', pendingReceivables.length);
+  console.log('FinancialSummary - Pending Payables:', pendingPayables.length);
+  console.log('FinancialSummary - Total to Receive:', totalToReceive);
+  console.log('FinancialSummary - Total to Pay:', totalToPay);
+  
+  // Obter próximas contas a vencer, ordenadas por data
   const upcomingDueAccounts = [...pendingPayables, ...pendingReceivables]
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .sort((a, b) => {
+      const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return dateA - dateB;
+    })
     .slice(0, 5);
 
   return (
@@ -79,7 +93,7 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
           {upcomingDueAccounts.length > 0 ? (
             <div className="space-y-3">
               {upcomingDueAccounts.map((item, idx) => {
-                const isPayable = 'category' in item;
+                const isPayable = 'category' in item || item.type === 'expense';
                 return (
                   <div key={idx} className="flex justify-between items-center p-2 rounded-md border">
                     <div className="flex items-start gap-3">
@@ -91,7 +105,7 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
                       </div>
                       <div>
                         <p className="font-medium text-sm">
-                          {isPayable ? item.description : item.client}
+                          {isPayable ? item.description : (item.client || item.description)}
                         </p>
                         <p className="text-xs text-gray-500">
                           Vencimento: {formatDate(item.dueDate)}
