@@ -44,6 +44,7 @@ export default function FinancePage() {
 
   // Refresh data when the component is mounted to ensure we have the latest data
   useEffect(() => {
+    console.log("FinancePage useEffect - chamando refreshData");
     refreshData();
   }, [refreshData]);
   
@@ -58,6 +59,7 @@ export default function FinancePage() {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
+      console.log("Tentando novamente buscar dados financeiros...");
       await refreshData();
       toast.success("Dados financeiros atualizados com sucesso!");
     } catch (err) {

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { safeFinanceOperations, safeExtract } from '@/utils/supabaseHelpers';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useFinanceData() {
   const [payableAccounts, setPayableAccounts] = useState<any[]>([]);
@@ -20,6 +21,35 @@ export function useFinanceData() {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log("Iniciando busca de dados financeiros...");
+
+      // Buscar diretamente da tabela finances com Supabase client para debug
+      const { data: expensesRawData, error: expensesRawError } = await supabase
+        .from('finances')
+        .select('*')
+        .eq('type', 'expense')
+        .order('due_date', { ascending: true });
+        
+      if (expensesRawError) {
+        console.error('Erro direto Supabase (despesas):', expensesRawError);
+        throw expensesRawError;
+      }
+      
+      console.log("Dados de despesas obtidos diretamente:", expensesRawData);
+      
+      const { data: revenuesRawData, error: revenuesRawError } = await supabase
+        .from('finances')
+        .select('*')
+        .eq('type', 'revenue')
+        .order('due_date', { ascending: true });
+        
+      if (revenuesRawError) {
+        console.error('Erro direto Supabase (receitas):', revenuesRawError);
+        throw revenuesRawError;
+      }
+      
+      console.log("Dados de receitas obtidos diretamente:", revenuesRawData);
 
       const financeOps = await safeFinanceOperations();
       
@@ -44,6 +74,9 @@ export function useFinanceData() {
       // Extrair valores seguros
       const expenses = safeExtract(expensesData, []);
       const revenues = safeExtract(revenuesData, []);
+      
+      console.log("Despesas após extração segura:", expenses);
+      console.log("Receitas após extração segura:", revenues);
 
       // Buscar ordens relacionadas às receitas que têm related_order_id
       const orderIds = revenues
@@ -123,6 +156,9 @@ export function useFinanceData() {
           originalData: revenue
         };
       });
+      
+      console.log("Dados formatados - Payables:", formattedPayables);
+      console.log("Dados formatados - Receivables:", formattedReceivables);
 
       setPayableAccounts(formattedPayables);
       setReceivableAccounts(formattedReceivables);
@@ -137,6 +173,7 @@ export function useFinanceData() {
   }, []);
 
   useEffect(() => {
+    console.log("useEffect em useFinanceData sendo chamado");
     fetchFinanceData();
   }, [fetchFinanceData]);
 
