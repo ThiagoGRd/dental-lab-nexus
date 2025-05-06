@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUp, ArrowDown, Eye, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
+import { TableRow, TableCell } from '@/components/ui/table';
 
 interface FinancialAccountItemProps {
   account: any;
@@ -80,8 +81,8 @@ export default function FinancialAccountItem({
   }
 
   return (
-    <tr className="hover:bg-muted/50">
-      <td className="p-4">
+    <TableRow className="hover:bg-muted/50">
+      <TableCell className="p-4">
         <div className="flex flex-col">
           <span className="font-medium">
             {isPayable ? account.description : account.client}
@@ -92,19 +93,21 @@ export default function FinancialAccountItem({
             <>
               <span className="text-sm text-muted-foreground">#{account.orderNumber}</span>
               {serviceName && (
-                <span className="text-xs text-blue-600">{serviceName}</span>
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 mt-1 inline-block">
+                  {serviceName}
+                </span>
               )}
             </>
           )}
         </div>
-      </td>
-      <td className="p-4">
+      </TableCell>
+      <TableCell className="p-4">
         <span className="font-medium">{formatCurrency(account.value)}</span>
-      </td>
-      <td className="p-4">
+      </TableCell>
+      <TableCell className="p-4">
         <span>{account.dueDate ? formatDate(account.dueDate) : 'Sem data'}</span>
-      </td>
-      <td className="p-4">
+      </TableCell>
+      <TableCell className="p-4">
         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${
           (account.status === 'paid' || account.status === 'received') 
             ? 'bg-green-100 text-green-800 border-green-300' 
@@ -114,8 +117,8 @@ export default function FinancialAccountItem({
             ? (account.status === 'paid' ? 'Pago' : 'Pendente') 
             : (account.status === 'received' ? 'Recebido' : 'Pendente')}
         </span>
-      </td>
-      <td className="p-4">
+      </TableCell>
+      <TableCell className="p-4">
         <div className="flex space-x-1">
           <Button 
             variant="ghost" 
@@ -144,7 +147,7 @@ export default function FinancialAccountItem({
             </Button>
           )}
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
