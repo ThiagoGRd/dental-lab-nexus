@@ -17,6 +17,8 @@ export default function FinancePage() {
   const [activeTab, setActiveTab] = useState('receivable');
   const [isRetrying, setIsRetrying] = useState(false);
   const {
+    payableAccounts, // Add this line to extract payableAccounts
+    receivableAccounts, // Add this line to extract receivableAccounts
     filteredPayables,
     filteredReceivables,
     searchTerm,
