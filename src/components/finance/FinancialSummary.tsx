@@ -32,8 +32,8 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
   const totalToReceive = pendingReceivables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const balance = totalToReceive - totalToPay;
 
-  console.log('FinancialSummary - Pending Receivables:', pendingReceivables.length);
-  console.log('FinancialSummary - Pending Payables:', pendingPayables.length);
+  console.log('FinancialSummary - Pending Receivables:', pendingReceivables);
+  console.log('FinancialSummary - Pending Payables:', pendingPayables);
   console.log('FinancialSummary - Total to Receive:', totalToReceive);
   console.log('FinancialSummary - Total to Pay:', totalToPay);
   

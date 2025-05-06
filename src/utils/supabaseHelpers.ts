@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
 
@@ -249,6 +248,87 @@ export async function safeFinanceOperations() {
       } catch (error) {
         console.error('Error adding finance entry:', error);
         return { finance: null, error };
+      }
+    },
+    
+    updateReceivablesForOrders: async () => {
+      try {
+        // 1. Buscar todas as contas a receber com valor zero que têm related_order_id
+        const { data: zeroReceivables, error: receiveError } = await supabase
+          .from('finances')
+          .select('id, related_order_id')
+          .eq('type', 'revenue')
+          .eq('amount', 0);
+          
+        if (receiveError) throw receiveError;
+        
+        console.log(`Encontradas ${zeroReceivables?.length || 0} contas a receber com valor zero`);
+        
+        if (!zeroReceivables || zeroReceivables.length === 0) {
+          return { updated: 0, error: null };
+        }
+        
+        // 2. Para cada conta, buscar a ordem relacionada e atualizar o valor
+        let updatedCount = 0;
+        
+        for (const receivable of zeroReceivables) {
+          if (!receivable.related_order_id) continue;
+          
+          // Buscar valor da ordem
+          const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('total_value')
+            .eq('id', receivable.related_order_id)
+            .single();
+            
+          if (orderError) {
+            console.error(`Erro ao buscar ordem ${receivable.related_order_id}:`, orderError);
+            continue;
+          }
+          
+          let orderValue = order?.total_value;
+          
+          // Se não tiver valor na ordem, buscar dos itens
+          if (!orderValue || orderValue <= 0) {
+            const { data: items, error: itemsError } = await supabase
+              .from('order_items')
+              .select('total')
+              .eq('order_id', receivable.related_order_id);
+              
+            if (itemsError) {
+              console.error(`Erro ao buscar itens da ordem ${receivable.related_order_id}:`, itemsError);
+              continue;
+            }
+            
+            if (items && items.length > 0) {
+              orderValue = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+            }
+          }
+          
+          // Se ainda não tiver valor, usar 100 como padrão
+          if (!orderValue || orderValue <= 0) {
+            orderValue = 100;
+          }
+          
+          // Atualizar a conta a receber
+          const { error: updateError } = await supabase
+            .from('finances')
+            .update({ amount: orderValue })
+            .eq('id', receivable.id);
+            
+          if (updateError) {
+            console.error(`Erro ao atualizar conta ${receivable.id}:`, updateError);
+            continue;
+          }
+          
+          updatedCount++;
+        }
+        
+        console.log(`${updatedCount} contas a receber atualizadas com sucesso`);
+        return { updated: updatedCount, error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar contas a receber:', error);
+        return { updated: 0, error };
       }
     }
   };

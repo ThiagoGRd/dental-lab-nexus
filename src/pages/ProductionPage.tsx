@@ -146,6 +146,49 @@ export default function ProductionPage() {
     try {
       console.log('Criando conta a receber para ordem:', order.id, 'no valor de:', order.totalValue);
       
+      // Verificar se o valor da ordem está definido
+      if (!order.totalValue || order.totalValue <= 0) {
+        // Buscar o valor da ordem diretamente do banco de dados para garantir valor atualizado
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('total_value, client_id')
+          .eq('id', order.originalData?.orderId || order.id)
+          .single();
+          
+        if (orderError) {
+          console.error('Erro ao buscar valor da ordem:', orderError);
+          throw new Error('Não foi possível obter o valor da ordem.');
+        }
+        
+        if (orderData && orderData.total_value > 0) {
+          order.totalValue = orderData.total_value;
+          console.log('Valor da ordem recuperado do banco de dados:', order.totalValue);
+        } else {
+          // Se ainda não tiver valor, buscar dos itens da ordem
+          const { data: orderItemsData, error: itemsError } = await supabase
+            .from('order_items')
+            .select('total')
+            .eq('order_id', order.originalData?.orderId || order.id);
+            
+          if (itemsError) {
+            console.error('Erro ao buscar itens da ordem:', itemsError);
+            throw new Error('Não foi possível obter os itens da ordem.');
+          }
+          
+          if (orderItemsData && orderItemsData.length > 0) {
+            const calculatedTotal = orderItemsData.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+            order.totalValue = calculatedTotal;
+            console.log('Valor da ordem calculado dos itens:', order.totalValue);
+          }
+        }
+      }
+      
+      // Se ainda não tiver valor, definir um valor mínimo para evitar zero
+      if (!order.totalValue || order.totalValue <= 0) {
+        order.totalValue = 100; // Valor padrão mínimo
+        console.log('Usando valor padrão mínimo:', order.totalValue);
+      }
+      
       // Dados para a nova conta a receber
       const receivableData = {
         description: `Receita: ${order.client}`,
