@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 interface FinancialAccountItemProps {
   account: any;
   type: 'payable' | 'receivable';
-  onPayOrReceive: (id: string) => void;  // Renamed from onAction for clarity
+  onPayOrReceive: (id: string) => void;
   onView: (account: any) => void;
   onEdit: (account: any) => void;
 }
@@ -28,7 +28,7 @@ export default function FinancialAccountItem({
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy');
+      return format(new Date(dateString), 'yyyy-MM-dd');
     } catch (e) {
       console.error('Error formatting date:', e);
       return 'Data inválida';
@@ -80,30 +80,31 @@ export default function FinancialAccountItem({
   }
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 p-4">
-      <div>
-        {isPayable ? (
-          <>
-            <div className="font-medium">{account.description}</div>
-            <div className="text-sm text-muted-foreground">{account.category}</div>
-          </>
-        ) : (
-          <>
-            <div className="font-medium">{account.client}</div>
-            <div className="text-sm text-muted-foreground">#{account.orderNumber}</div>
-            {serviceName && (
-              <div className="text-xs text-blue-600 mt-1">{serviceName}</div>
-            )}
-          </>
-        )}
-      </div>
-      <div className="text-right font-medium">
-        {formatCurrency(account.value)}
-      </div>
-      <div className="text-sm">
-        {account.dueDate ? formatDate(account.dueDate) : 'Sem data'}
-      </div>
-      <div>
+    <tr className="hover:bg-muted/50">
+      <td className="p-4">
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {isPayable ? account.description : account.client}
+          </span>
+          {isPayable ? (
+            <span className="text-sm text-muted-foreground">{account.category}</span>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">#{account.orderNumber}</span>
+              {serviceName && (
+                <span className="text-xs text-blue-600">{serviceName}</span>
+              )}
+            </>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <span className="font-medium">{formatCurrency(account.value)}</span>
+      </td>
+      <td className="p-4">
+        <span>{account.dueDate ? formatDate(account.dueDate) : 'Sem data'}</span>
+      </td>
+      <td className="p-4">
         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${
           (account.status === 'paid' || account.status === 'received') 
             ? 'bg-green-100 text-green-800 border-green-300' 
@@ -113,47 +114,37 @@ export default function FinancialAccountItem({
             ? (account.status === 'paid' ? 'Pago' : 'Pendente') 
             : (account.status === 'received' ? 'Recebido' : 'Pendente')}
         </span>
-      </div>
-      <div className="flex gap-1">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => onView(account)}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => onEdit(account)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </div>
-      <div>
-        {isPending && (
+      </td>
+      <td className="p-4">
+        <div className="flex space-x-1">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => onView(account)}
+          >
+            Ver
+          </Button>
           <Button 
             variant="outline" 
-            size="sm" 
-            className={`${isPayable 
-              ? 'text-blue-600 border-blue-200 hover:bg-blue-50' 
-              : 'text-green-600 border-green-200 hover:bg-green-50'}`}
-            onClick={() => onPayOrReceive(account.id)}
+            size="sm"
+            onClick={() => onEdit(account)}
           >
-            {isPayable ? (
-              <>
-                <ArrowUp className="h-4 w-4 mr-1" />
-                Pagar
-              </>
-            ) : (
-              <>
-                <ArrowDown className="h-4 w-4 mr-1" />
-                Receber
-              </>
-            )}
+            Editar
           </Button>
-        )}
-      </div>
-    </div>
+          {isPending && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={`ml-1 ${isPayable 
+                ? 'text-blue-600 border-blue-200 hover:bg-blue-50' 
+                : 'text-green-600 border-green-200 hover:bg-green-50'}`}
+              onClick={() => onPayOrReceive(account.id)}
+            >
+              {isPayable ? 'Pagar' : 'Receber'}
+            </Button>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }

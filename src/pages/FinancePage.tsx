@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import FinancialSummary from "@/components/finance/FinancialSummary";
 import FinancialAccountItem from "@/components/finance/FinancialAccountItem";
@@ -10,6 +11,7 @@ import ViewAccountDialog from "@/components/finance/ViewAccountDialog";
 import EditAccountDialog from "@/components/finance/EditAccountDialog";
 import NewFinancialEntryForm from "@/components/finance/NewFinancialEntryForm";
 import UpdateZeroReceivables from "@/components/finance/UpdateZeroReceivables";
+import { RefreshCw } from "lucide-react";
 
 export default function FinancePage() {
   const [showNewForm, setShowNewForm] = useState(false);
@@ -98,13 +100,13 @@ export default function FinancePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-64"
               />
-              <Button onClick={refreshData} variant="outline" size="icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 2v6h-6"></path>
-                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-                  <path d="M3 22v-6h6"></path>
-                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-                </svg>
+              <Button 
+                onClick={refreshData} 
+                variant="outline" 
+                size="icon"
+                title="Atualizar dados"
+              >
+                <RefreshCw className="h-4 w-4" />
               </Button>
               <UpdateZeroReceivables onComplete={refreshData} />
             </div>
@@ -120,26 +122,51 @@ export default function FinancePage() {
               </NewFinancialEntryForm>
             </div>
             
-            {loading ? (
-              <div className="text-center py-4">Carregando contas a receber...</div>
-            ) : error ? (
-              <div className="text-center py-4 text-red-500">Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}</div>
-            ) : filteredReceivables.length === 0 ? (
-              <div className="text-center py-4">Nenhuma conta a receber encontrada.</div>
-            ) : (
-              <div className="space-y-4">
-                {filteredReceivables.map(account => (
-                  <FinancialAccountItem
-                    key={account.id}
-                    account={account}
-                    onPayOrReceive={handleReceive}
-                    onView={handleViewAccount}
-                    onEdit={handleEditSetup}
-                    type="receivable"
-                  />
-                ))}
-              </div>
-            )}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente / Serviço</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Data de Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4">
+                        Carregando contas a receber...
+                      </td>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4 text-red-500">
+                        Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
+                      </td>
+                    </TableRow>
+                  ) : filteredReceivables.length === 0 ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
+                        Nenhuma conta a receber encontrada.
+                      </td>
+                    </TableRow>
+                  ) : (
+                    filteredReceivables.map(account => (
+                      <FinancialAccountItem
+                        key={account.id}
+                        account={account}
+                        onPayOrReceive={handleReceive}
+                        onView={handleViewAccount}
+                        onEdit={handleEditSetup}
+                        type="receivable"
+                      />
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </TabsContent>
           
           <TabsContent value="payable" className="mt-4">
@@ -152,26 +179,51 @@ export default function FinancePage() {
               </NewFinancialEntryForm>
             </div>
             
-            {loading ? (
-              <div className="text-center py-4">Carregando contas a pagar...</div>
-            ) : error ? (
-              <div className="text-center py-4 text-red-500">Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}</div>
-            ) : filteredPayables.length === 0 ? (
-              <div className="text-center py-4">Nenhuma conta a pagar encontrada.</div>
-            ) : (
-              <div className="space-y-4">
-                {filteredPayables.map(account => (
-                  <FinancialAccountItem
-                    key={account.id}
-                    account={account}
-                    onPayOrReceive={handlePayment}
-                    onView={handleViewAccount}
-                    onEdit={handleEditSetup}
-                    type="payable"
-                  />
-                ))}
-              </div>
-            )}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Descrição / Categoria</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Data de Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4">
+                        Carregando contas a pagar...
+                      </td>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4 text-red-500">
+                        Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
+                      </td>
+                    </TableRow>
+                  ) : filteredPayables.length === 0 ? (
+                    <TableRow>
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
+                        Nenhuma conta a pagar encontrada.
+                      </td>
+                    </TableRow>
+                  ) : (
+                    filteredPayables.map(account => (
+                      <FinancialAccountItem
+                        key={account.id}
+                        account={account}
+                        onPayOrReceive={handlePayment}
+                        onView={handleViewAccount}
+                        onEdit={handleEditSetup}
+                        type="payable"
+                      />
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </TabsContent>
         </Tabs>
       )}
