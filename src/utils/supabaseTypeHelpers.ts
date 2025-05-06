@@ -8,14 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export async function typedInsert<
   T extends keyof Database['public']['Tables'],
-  U extends Partial<Database['public']['Tables'][T]['Insert']>
+  U extends Database['public']['Tables'][T]['Insert']
 >(
   table: T,
   data: U
 ) {
   return supabase
     .from(table)
-    .insert(data as any);
+    .insert(data);
 }
 
 /**
@@ -23,7 +23,7 @@ export async function typedInsert<
  */
 export async function typedUpdate<
   T extends keyof Database['public']['Tables'],
-  U extends Partial<Database['public']['Tables'][T]['Update']>
+  U extends Database['public']['Tables'][T]['Update']
 >(
   table: T,
   id: string,
@@ -31,8 +31,8 @@ export async function typedUpdate<
 ) {
   return supabase
     .from(table)
-    .update(data as any)
-    .eq('id', id as any);
+    .update(data)
+    .eq('id', id);
 }
 
 /**
@@ -49,7 +49,7 @@ export async function typedSelectByField<
   return supabase
     .from(table)
     .select(columns)
-    .eq(field as any, value);
+    .eq(field, value);
 }
 
 /**
@@ -77,7 +77,7 @@ export async function typedDelete<
   return supabase
     .from(table)
     .delete()
-    .eq('id', id as any);
+    .eq('id', id);
 }
 
 /**
