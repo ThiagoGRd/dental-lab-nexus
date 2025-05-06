@@ -27,13 +27,16 @@ export default function FinancialAccountItem({
   };
 
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy');
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy');
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return 'Data inválida';
+    }
   };
 
   const isPayable = type === 'payable';
-  const isPending = isPayable 
-    ? account.status === 'pending' 
-    : account.status === 'pending';
+  const isPending = account.status === 'pending';
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 p-4">
@@ -54,7 +57,7 @@ export default function FinancialAccountItem({
         {formatCurrency(account.value)}
       </div>
       <div className="text-sm">
-        {formatDate(account.dueDate)}
+        {account.dueDate ? formatDate(account.dueDate) : 'Sem data'}
       </div>
       <div>
         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${

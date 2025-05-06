@@ -13,11 +13,13 @@ export function useFinanceData() {
   const [currentAccount, setCurrentAccount] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
   // Use useCallback to make refreshData available as dependency
   const fetchFinanceData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const financeOps = await safeFinanceOperations();
       
@@ -26,7 +28,7 @@ export function useFinanceData() {
         
       if (expensesError) {
         console.error('Erro ao buscar despesas:', expensesError);
-        toast.error('Erro ao carregar dados financeiros.');
+        setError('Erro ao buscar despesas: ' + (expensesError.message || 'Erro desconhecido'));
         return;
       }
 
@@ -35,7 +37,7 @@ export function useFinanceData() {
         
       if (revenuesError) {
         console.error('Erro ao buscar receitas:', revenuesError);
-        toast.error('Erro ao carregar dados financeiros.');
+        setError('Erro ao buscar receitas: ' + (revenuesError.message || 'Erro desconhecido'));
         return;
       }
 
@@ -52,13 +54,25 @@ export function useFinanceData() {
 
       if (orderIds.length > 0) {
         // Buscar ordens
-        const { orders: ordersData } = await financeOps.getRelatedOrders(orderIds);
+        const { orders: ordersData, error: ordersError } = await financeOps.getRelatedOrders(orderIds);
+        
+        if (ordersError) {
+          console.error('Erro ao buscar ordens relacionadas:', ordersError);
+          // Continue anyway with empty orders
+        }
+        
         const orders = safeExtract(ordersData, []);
           
         if (orders.length > 0) {
           // Buscar clientes
           const clientIds = orders.map(order => order.client_id);
-          const { clients: clientsData } = await financeOps.getClientsByIds(clientIds);
+          const { clients: clientsData, error: clientsError } = await financeOps.getClientsByIds(clientIds);
+          
+          if (clientsError) {
+            console.error('Erro ao buscar clientes:', clientsError);
+            // Continue anyway with empty clients
+          }
+          
           const clients = safeExtract(clientsData, []);
             
           if (clients.length > 0) {
@@ -115,6 +129,7 @@ export function useFinanceData() {
       
     } catch (error) {
       console.error('Erro ao buscar dados financeiros:', error);
+      setError(error);
       toast.error('Ocorreu um erro inesperado ao carregar os dados financeiros.');
     } finally {
       setLoading(false);
@@ -401,6 +416,7 @@ export function useFinanceData() {
     currentAccount,
     editFormData,
     loading,
+    error,
     handlePayment,
     handleReceive,
     handleViewAccount,
