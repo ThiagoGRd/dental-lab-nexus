@@ -97,7 +97,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*')
-          .eq('active', true)
+          .filter('active', 'eq', true)  // Fixing the type issue here
           .order('name');
         
         if (servicesError) {

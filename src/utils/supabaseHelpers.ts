@@ -25,7 +25,7 @@ export async function safeServiceOperations() {
         const { data, error } = await supabase
           .from('services')
           .select('*')
-          .eq('active', true)
+          .filter('active', 'eq', true)
           .order('name');
           
         if (error) throw error;
@@ -36,14 +36,16 @@ export async function safeServiceOperations() {
       }
     },
     
-    add: async (serviceData: Omit<Database['public']['Tables']['services']['Insert'], 'id' | 'created_at' | 'updated_at'>) => {
+    add: async (serviceData: Partial<Database['public']['Tables']['services']['Insert']>) => {
       try {
+        const insertData = {
+          ...serviceData,
+          active: serviceData.active !== undefined ? serviceData.active : true
+        } as Database['public']['Tables']['services']['Insert'];
+        
         const { data, error } = await supabase
           .from('services')
-          .insert({
-            ...serviceData,
-            active: serviceData.active !== undefined ? serviceData.active : true
-          })
+          .insert(insertData)
           .select();
           
         if (error) throw error;
@@ -54,11 +56,11 @@ export async function safeServiceOperations() {
       }
     },
     
-    update: async (id: string, serviceData: Omit<Database['public']['Tables']['services']['Update'], 'id' | 'created_at' | 'updated_at'>) => {
+    update: async (id: string, serviceData: Partial<Database['public']['Tables']['services']['Update']>) => {
       try {
         const { data, error } = await supabase
           .from('services')
-          .update(serviceData)
+          .update(serviceData as Database['public']['Tables']['services']['Update'])
           .eq('id', id)
           .select();
           
@@ -124,7 +126,7 @@ export async function safeProfileOperations() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .update(profileData)
+          .update(profileData as Database['public']['Tables']['profiles']['Update'])
           .eq('id', id)
           .select();
           
@@ -193,9 +195,9 @@ export async function safeFinanceOperations() {
     
     updateStatus: async (id: string, status: string) => {
       try {
-        const updateData: Database['public']['Tables']['finances']['Update'] = {
+        const updateData = {
           status: status
-        };
+        } as Database['public']['Tables']['finances']['Update'];
         
         if (status === 'paid' || status === 'received') {
           updateData.payment_date = new Date().toISOString();
@@ -218,7 +220,7 @@ export async function safeFinanceOperations() {
       try {
         const { error } = await supabase
           .from('finances')
-          .update(data)
+          .update(data as Database['public']['Tables']['finances']['Update'])
           .eq('id', id);
           
         if (error) throw error;
@@ -229,11 +231,11 @@ export async function safeFinanceOperations() {
       }
     },
     
-    add: async (financeData: Omit<Database['public']['Tables']['finances']['Insert'], 'id' | 'created_at' | 'updated_at'>) => {
+    add: async (financeData: Partial<Database['public']['Tables']['finances']['Insert']>) => {
       try {
         const { data, error } = await supabase
           .from('finances')
-          .insert(financeData)
+          .insert(financeData as Database['public']['Tables']['finances']['Insert'])
           .select();
           
         if (error) throw error;

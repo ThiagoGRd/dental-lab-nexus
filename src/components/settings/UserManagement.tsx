@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { User, Edit, Check, UserMinus, UserPlus } from 'lucide-react';
-import { supabase, profileOperations } from '@/integrations/supabase/client';
+import { supabase, checkAuthSession } from '@/integrations/supabase/client';
+import { safeProfileOperations } from '@/utils/supabaseHelpers';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserProfile = {
@@ -62,28 +63,24 @@ export default function UserManagement() {
     
     try {
       // Buscar apenas os perfis com informações de usuários
-      const profileUtils = await profileOperations();
+      const profileUtils = await safeProfileOperations();
       const { profiles, error } = await profileUtils.getAll();
       
       if (error) throw error;
       
       // Para cada perfil, buscar o e-mail do usuário correspondente (precisamos usar a sessão atual)
-      const { data: { session } } = await supabase.auth.getSession();
+      const { session, error: sessionError } = await checkAuthSession();
       
-      if (!session) {
+      if (sessionError || !session) {
         toast.error('Você precisa estar autenticado para visualizar os usuários');
         setLoading(false);
         return;
       }
       
       // Verificar se o usuário atual é um admin
-      const { profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
+      const { profile: currentProfile, error: profileError } = await profileUtils.getById(session.user.id);
       
-      if (!profile || profile.role !== 'admin') {
+      if (profileError || !currentProfile || currentProfile.role !== 'admin') {
         toast.error('Você não tem permissão para gerenciar usuários');
         setLoading(false);
         return;
@@ -150,7 +147,7 @@ export default function UserManagement() {
 
     try {
       // Atualizar informações do perfil
-      const profileUtils = await profileOperations();
+      const profileUtils = await safeProfileOperations();
       const { error: profileError } = await profileUtils.update(currentUser.id, { 
         name: formData.name,
         role: formData.role as 'admin' | 'user'
@@ -194,7 +191,7 @@ export default function UserManagement() {
       if (data?.user && formData.role !== 'user') {
         // Nota: Pode ser necessário esperar um pouco para que o trigger crie o perfil
         setTimeout(async () => {
-          const profileUtils = await profileOperations();
+          const profileUtils = await safeProfileOperations();
           const { error: updateError } = await profileUtils.update(data.user!.id, { 
             role: formData.role as 'admin' | 'user'
           });
@@ -219,7 +216,7 @@ export default function UserManagement() {
       const newStatus = !user.is_active;
       
       // Atualizar status no perfil
-      const profileUtils = await profileOperations();
+      const profileUtils = await safeProfileOperations();
       const { error: profileError } = await profileUtils.update(user.id, { 
         is_active: newStatus 
       });

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { supabase, serviceOperations } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { safeServiceOperations } from "@/utils/supabaseHelpers";
 import type { Database } from '@/integrations/supabase/types';
 
 // Updated interface to match Supabase data structure
@@ -60,7 +62,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentService, setCurrentService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(loading);
-  const [formData, setFormData] = useState<Omit<Service, 'id' | 'created_at' | 'updated_at' | 'active'>>({
+  const [formData, setFormData] = useState<Partial<Service>>({
     name: '',
     description: '',
     price: 0,
@@ -107,7 +109,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     try {
       setIsLoading(true);
       
-      const serviceUtils = await serviceOperations();
+      const serviceUtils = await safeServiceOperations();
       const { service, error } = await serviceUtils.add({
         name: formData.name,
         description: formData.description,
@@ -159,7 +161,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     try {
       setIsLoading(true);
       
-      const serviceUtils = await serviceOperations();
+      const serviceUtils = await safeServiceOperations();
       const { service, error } = await serviceUtils.update(currentService.id, {
         name: formData.name,
         description: formData.description,
@@ -193,7 +195,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     try {
       setIsLoading(true);
       
-      const serviceUtils = await serviceOperations();
+      const serviceUtils = await safeServiceOperations();
       const { error } = await serviceUtils.delete(id);
         
       if (error) {

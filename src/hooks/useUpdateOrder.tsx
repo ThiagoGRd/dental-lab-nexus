@@ -12,12 +12,12 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         : updatedOrder.notes;
       
       // Create update object once to avoid repetition
-      const updateData: Database['public']['Tables']['orders']['Update'] = {
+      const updateData = {
         status: updatedOrder.status,
         deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
         priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
         notes: notes
-      };
+      } as Database['public']['Tables']['orders']['Update'];
       
       // Update in Supabase
       const { error } = await supabase
