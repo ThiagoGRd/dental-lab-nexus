@@ -59,17 +59,6 @@ export function castData<T>(data: any): T {
   return data as T;
 }
 
-// Improved filterByField function with proper type handling
-export function filterByField<T extends keyof Database['public']['Tables']>(
-  table: T,
-  field: keyof Database['public']['Tables'][T]['Row'] | string,
-  value: any
-) {
-  return supabase
-    .from(table)
-    .eq(field as string, value);
-}
-
 // Get a record by ID from a specific table with proper typing
 export function getById<T extends keyof Database['public']['Tables']>(
   table: T,
@@ -80,6 +69,18 @@ export function getById<T extends keyof Database['public']['Tables']>(
     .select('*')
     .eq('id', id)
     .single();
+}
+
+// Improved filterByField function with proper type handling
+export function filterByField<T extends keyof Database['public']['Tables']>(
+  table: T,
+  field: string,
+  value: any
+) {
+  return supabase
+    .from(table)
+    .select('*')
+    .eq(field, value);
 }
 
 // Safely cast ordered data to the expected type
@@ -100,10 +101,17 @@ export async function typeSafeInsert<T extends keyof Database['public']['Tables'
 export async function typeSafeUpdate<T extends keyof Database['public']['Tables']>(
   table: T,
   data: Database['public']['Tables'][T]['Update'],
-  field: string,
-  value: any
+  id: string
 ) {
-  return await supabase.from(table).update(data).eq(field, value);
+  return await supabase.from(table).update(data).eq('id', id);
+}
+
+// Type-safe delete function for Supabase tables
+export async function typeSafeDelete<T extends keyof Database['public']['Tables']>(
+  table: T,
+  id: string
+) {
+  return await supabase.from(table).delete().eq('id', id);
 }
 
 // Function to safely handle auth session checking
@@ -121,14 +129,14 @@ export async function checkAuthSession() {
 // Function to safely get user profile
 export async function getUserProfile(userId: string) {
   try {
-    const response = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
     
-    if (response.error) throw response.error;
-    return { profile: response.data, error: null };
+    if (error) throw error;
+    return { profile: data, error: null };
   } catch (error) {
     console.error('Erro ao obter perfil do usuário:', error);
     return { profile: null, error };
@@ -181,4 +189,126 @@ export async function signOut() {
     console.error('Erro ao fazer logout:', error);
     return { error };
   }
+}
+
+// Type-safe function for getting active services
+export async function getActiveServices() {
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('active', true);
+
+    if (error) throw error;
+    return { services: data, error: null };
+  } catch (error) {
+    console.error('Erro ao buscar serviços ativos:', error);
+    return { services: null, error };
+  }
+}
+
+// Type-safe function for service operations
+export async function serviceOperations() {
+  return {
+    // Get all services
+    getAll: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('name');
+          
+        if (error) throw error;
+        return { services: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar serviços:', error);
+        return { services: null, error };
+      }
+    },
+    
+    // Add new service
+    add: async (serviceData: Database['public']['Tables']['services']['Insert']) => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .insert(serviceData)
+          .select();
+          
+        if (error) throw error;
+        return { service: data?.[0] || null, error: null };
+      } catch (error) {
+        console.error('Erro ao adicionar serviço:', error);
+        return { service: null, error };
+      }
+    },
+    
+    // Update existing service
+    update: async (id: string, serviceData: Database['public']['Tables']['services']['Update']) => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', id)
+          .select();
+          
+        if (error) throw error;
+        return { service: data?.[0] || null, error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar serviço:', error);
+        return { service: null, error };
+      }
+    },
+    
+    // Delete service
+    delete: async (id: string) => {
+      try {
+        const { error } = await supabase
+          .from('services')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        return { error: null };
+      } catch (error) {
+        console.error('Erro ao excluir serviço:', error);
+        return { error };
+      }
+    }
+  };
+}
+
+// Type-safe functions for profile operations
+export async function profileOperations() {
+  return {
+    // Get all profiles
+    getAll: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (error) throw error;
+        return { profiles: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar perfis:', error);
+        return { profiles: null, error };
+      }
+    },
+    
+    // Update existing profile
+    update: async (id: string, profileData: Database['public']['Tables']['profiles']['Update']) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', id);
+          
+        if (error) throw error;
+        return { error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        return { error };
+      }
+    }
+  };
 }

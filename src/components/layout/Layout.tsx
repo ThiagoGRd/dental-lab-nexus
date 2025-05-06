@@ -88,16 +88,20 @@ export default function Layout({ children }: LayoutProps) {
           localStorage.removeItem('user');
           navigate('/login');
         } else if (event === 'SIGNED_IN' && session) {
-          // Use our safe function to get profile
-          const { profile } = await getUserProfile(session.user.id);
-            
-          localStorage.setItem('user', JSON.stringify({
-            id: session.user.id,
-            name: session.user.user_metadata.name || session.user.email?.split('@')[0],
-            email: session.user.email,
-            avatar: session.user.user_metadata.avatar_url,
-            role: profile?.role || 'user'
-          }));
+          try {
+            // Use our safe function to get profile
+            const { profile } = await getUserProfile(session.user.id);
+              
+            localStorage.setItem('user', JSON.stringify({
+              id: session.user.id,
+              name: session.user.user_metadata.name || session.user.email?.split('@')[0],
+              email: session.user.email,
+              avatar: session.user.user_metadata.avatar_url,
+              role: profile?.role || 'user'
+            }));
+          } catch (error) {
+            console.error('Erro ao obter perfil do usuário após login:', error);
+          }
         }
       }
     );

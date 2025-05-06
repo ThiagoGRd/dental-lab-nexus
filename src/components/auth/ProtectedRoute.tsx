@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
-  supabase, 
   checkAuthSession, 
   getUserProfile
 } from '@/integrations/supabase/client';

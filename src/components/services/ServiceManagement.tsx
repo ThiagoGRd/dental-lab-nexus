@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,11 +33,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, serviceOperations } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
 
 // Updated interface to match Supabase data structure
 interface Service {
-  id: string; // Changed from number to string to match Supabase's UUID
+  id: string;
   name: string;
   description: string | null;
   price: number;
@@ -106,23 +106,22 @@ export default function ServiceManagement({ initialServices = [], loading = fals
   const handleAddService = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('services')
-        .insert({
-          name: formData.name,
-          description: formData.description,
-          price: formData.price,
-          category: formData.category
-        })
-        .select();
+      
+      const serviceUtils = await serviceOperations();
+      const { service, error } = await serviceUtils.add({
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category,
+        active: true
+      });
 
       if (error) {
         throw error;
       }
 
-      if (data && data.length > 0) {
-        const newService = data[0] as Service;
-        setServices([...services, newService]);
+      if (service) {
+        setServices([...services, service as Service]);
         setIsAddDialogOpen(false);
         toast.success('Serviço adicionado com sucesso!');
         resetForm();
@@ -160,25 +159,21 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('services')
-        .update({
-          name: formData.name,
-          description: formData.description,
-          price: formData.price,
-          category: formData.category
-        })
-        .eq('id', currentService.id)
-        .select();
+      const serviceUtils = await serviceOperations();
+      const { service, error } = await serviceUtils.update(currentService.id, {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category
+      });
         
       if (error) {
         throw error;
       }
       
-      if (data && data.length > 0) {
-        const updatedService = data[0] as Service;
-        setServices(services.map((service) =>
-          service.id === currentService.id ? updatedService : service
+      if (service) {
+        setServices(services.map((s) =>
+          s.id === currentService.id ? service as Service : s
         ));
         
         setIsEditDialogOpen(false);
@@ -198,10 +193,8 @@ export default function ServiceManagement({ initialServices = [], loading = fals
     try {
       setIsLoading(true);
       
-      const { error } = await supabase
-        .from('services')
-        .delete()
-        .eq('id', id);
+      const serviceUtils = await serviceOperations();
+      const { error } = await serviceUtils.delete(id);
         
       if (error) {
         throw error;

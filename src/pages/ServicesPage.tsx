@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ServiceManagement from '@/components/services/ServiceManagement';
-import { supabase } from "@/integrations/supabase/client";
+import { serviceOperations } from "@/integrations/supabase/client";
 
 // This type matches the updated Service interface in ServiceManagement.tsx
 interface Service {
@@ -22,19 +22,17 @@ export default function ServicesPage() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const { data, error } = await supabase
-          .from('services')
-          .select('*')
-          .order('name');
+        const serviceUtils = await serviceOperations();
+        const { services: serviceData, error } = await serviceUtils.getAll();
           
         if (error) {
           console.error('Erro ao buscar serviços:', error);
         } else {
-          console.log('Serviços carregados com sucesso:', data);
+          console.log('Serviços carregados com sucesso:', serviceData);
           // Armazenar os serviços no localStorage para uso em componentes que 
           // ainda não foram migrados para consultas diretas
-          localStorage.setItem('services', JSON.stringify(data));
-          setServices(data as Service[]);
+          localStorage.setItem('services', JSON.stringify(serviceData));
+          setServices(serviceData as Service[]);
         }
       } catch (error) {
         console.error('Erro inesperado:', error);

@@ -109,26 +109,42 @@ export async function updateWorkflow(
 
 // Type-safe function to get active services
 export async function getActiveServices() {
-  return await supabase
-    .from('services')
-    .select('*')
-    .eq('active', true);
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('active', true);
+      
+    if (error) throw error;
+    return { services: data, error: null };
+  } catch (error) {
+    console.error('Erro ao buscar serviços ativos:', error);
+    return { services: null, error };
+  }
 }
 
 // Type-safe function to get workflow by order ID
 export async function getWorkflowByOrderId(orderId: string) {
-  return await supabase
-    .from('order_workflows')
-    .select(`
-      id,
-      template_id,
-      current_step,
-      history,
-      notes,
-      workflow_templates (*)
-    `)
-    .eq('order_id', orderId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('order_workflows')
+      .select(`
+        id,
+        template_id,
+        current_step,
+        history,
+        notes,
+        workflow_templates (*)
+      `)
+      .eq('order_id', orderId)
+      .single();
+      
+    if (error) throw error;
+    return { workflow: data, error: null };
+  } catch (error) {
+    console.error('Erro ao buscar workflow por ID de ordem:', error);
+    return { workflow: null, error };
+  }
 }
 
 // Type-safe function to update workflow with proper type handling
@@ -137,36 +153,115 @@ export async function updateWorkflowStep(
   currentStep: number,
   history: Json[]
 ) {
-  const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
-    current_step: currentStep,
-    history: history as Json,
-    updated_at: new Date().toISOString()
-  };
-  
-  return await supabase
-    .from('order_workflows')
-    .update(workflowUpdate)
-    .eq('id', workflowId);
+  try {
+    const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
+      current_step: currentStep,
+      history: history as Json,
+      updated_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+      .from('order_workflows')
+      .update(workflowUpdate)
+      .eq('id', workflowId);
+      
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Erro ao atualizar etapa do workflow:', error);
+    return { data: null, error };
+  }
 }
 
 // Type-safe function to handle service related operations
 export async function updateServiceById(
   serviceId: string,
-  serviceData: Partial<Database['public']['Tables']['services']['Update']>
+  serviceData: Database['public']['Tables']['services']['Update']
 ) {
-  return await supabase
-    .from('services')
-    .update(serviceData)
-    .eq('id', serviceId);
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .update(serviceData)
+      .eq('id', serviceId);
+      
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Erro ao atualizar serviço:', error);
+    return { data: null, error };
+  }
 }
 
 // Type-safe function to handle profile related operations
 export async function updateProfileById(
   profileId: string,
-  profileData: Partial<Database['public']['Tables']['profiles']['Update']>
+  profileData: Database['public']['Tables']['profiles']['Update']
 ) {
-  return await supabase
-    .from('profiles')
-    .update(profileData)
-    .eq('id', profileId);
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(profileData)
+      .eq('id', profileId);
+      
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    return { data: null, error };
+  }
+}
+
+// Function to handle order workflow operations
+export async function orderWorkflowOperations() {
+  return {
+    // Get workflow by order ID
+    getByOrderId: async (orderId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('order_workflows')
+          .select(`
+            id,
+            template_id,
+            current_step,
+            history,
+            notes,
+            workflow_templates (*)
+          `)
+          .eq('order_id', orderId)
+          .single();
+          
+        if (error) throw error;
+        return { workflow: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar workflow por ID de ordem:', error);
+        return { workflow: null, error };
+      }
+    },
+    
+    // Update workflow step
+    updateStep: async (
+      workflowId: string,
+      currentStep: number,
+      history: Json[]
+    ) => {
+      try {
+        const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
+          current_step: currentStep,
+          history: history as Json,
+          updated_at: new Date().toISOString()
+        };
+        
+        const { error } = await supabase
+          .from('order_workflows')
+          .update(workflowUpdate)
+          .eq('id', workflowId);
+          
+        if (error) throw error;
+        return { error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar etapa do workflow:', error);
+        return { error };
+      }
+    }
+  };
 }
