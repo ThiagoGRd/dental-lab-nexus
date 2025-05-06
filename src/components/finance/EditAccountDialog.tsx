@@ -34,8 +34,8 @@ export default function EditAccountDialog({
 
   const isPayable = 'description' in currentAccount;
   
-  // Extract service name using the utility function
-  const serviceInfo = currentAccount.originalData?.notes;
+  // Extract service name using the improved utility function
+  const serviceInfo = currentAccount.originalData?.notes || '';
   const serviceName = extractServiceName(serviceInfo);
 
   return (

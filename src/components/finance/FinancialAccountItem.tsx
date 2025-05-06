@@ -40,7 +40,7 @@ export default function FinancialAccountItem({
   const isPending = account.status === 'pending';
   
   // Extract service name using the utility function
-  const serviceInfo = account.originalData?.notes;
+  const serviceInfo = account.originalData?.notes || '';
   const serviceName = extractServiceName(serviceInfo);
 
   return (
