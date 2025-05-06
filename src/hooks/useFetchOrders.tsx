@@ -24,13 +24,17 @@ type Order = {
 export function useFetchOrders() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Use useCallback to avoid recreating this function on each render
   const fetchOrders = useCallback(async () => {
     try {
+      console.log('Fetching orders...');
       setLoading(true);
+      setError(null);
       
       // Use a more efficient Promise.all for parallel requests
+      console.log('Making parallel requests to Supabase...');
       const [ordersResponse, clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
         // Select only needed fields to reduce data transferred
         supabase
@@ -63,9 +67,15 @@ export function useFetchOrders() {
           .select('id, name')
       ]);
       
+      console.log('Orders response:', ordersResponse);
+      console.log('Clients response:', clientsResponse);
+      console.log('Order items response:', orderItemsResponse);
+      console.log('Services response:', servicesResponse);
+      
       if (hasError(ordersResponse)) {
         console.error('Erro ao buscar ordens:', ordersResponse.error);
         toast.error('Erro ao carregar as ordens de serviço.');
+        setError(`Erro ao buscar ordens: ${ordersResponse.error?.message || 'Desconhecido'}`);
         return [];
       }
       
@@ -78,6 +88,13 @@ export function useFetchOrders() {
       const clientsData = hasError(clientsResponse) ? [] : safeData<ClientRow[]>(clientsResponse, []);
       const orderItemsData = hasError(orderItemsResponse) ? [] : safeData<OrderItemRow[]>(orderItemsResponse, []);
       const servicesData = hasError(servicesResponse) ? [] : safeData<ServiceRow[]>(servicesResponse, []);
+      
+      console.log('Extracted data:', {
+        orders: ordersData.length,
+        clients: clientsData.length,
+        orderItems: orderItemsData.length,
+        services: servicesData.length
+      });
       
       // Use Maps for O(1) lookups instead of find() which is O(n)
       const clientsMap = new Map(clientsData?.map((c) => [c.id, c]));
@@ -125,10 +142,12 @@ export function useFetchOrders() {
         };
       });
 
+      console.log('Formatted orders:', formattedOrders.length);
       return formattedOrders;
     } catch (error) {
       console.error('Erro inesperado:', error);
       toast.error('Ocorreu um erro inesperado ao carregar os dados.');
+      setError(`Erro inesperado: ${(error as Error)?.message || 'Desconhecido'}`);
       return [];
     } finally {
       setLoading(false);
@@ -136,12 +155,14 @@ export function useFetchOrders() {
   }, []);
     
   useEffect(() => {
+    console.log('useEffect triggering fetchOrders');
     fetchOrders().then(formattedOrders => {
       if (formattedOrders) {
+        console.log('Setting orders:', formattedOrders.length);
         setOrders(formattedOrders);
       }
     });
   }, [fetchOrders]);
 
-  return { loading, orders };
+  return { loading, orders, error, refetch: fetchOrders };
 }

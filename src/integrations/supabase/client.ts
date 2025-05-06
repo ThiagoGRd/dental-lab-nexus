@@ -164,7 +164,7 @@ export async function getActiveServices() {
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .filter('active', 'eq', true);
+      .eq('active', true);
 
     if (error) throw error;
     return { services: data, error: null };

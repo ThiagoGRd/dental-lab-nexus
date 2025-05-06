@@ -5,7 +5,7 @@ import { useOrderFilters } from './useOrderFilters';
 import { useUpdateOrder } from './useUpdateOrder';
 
 export function useOrdersData() {
-  const { loading, orders: fetchedOrders } = useFetchOrders();
+  const { loading, orders: fetchedOrders, error, refetch } = useFetchOrders();
   const [orders, setOrders] = useState<any[]>([]);
   
   // Update orders only when fetchedOrders change
@@ -43,7 +43,9 @@ export function useOrdersData() {
     loading,
     filteredOrders,
     handleUpdateOrder,
-    handleFilter
+    handleFilter,
+    error,
+    refetch
   }), [
     searchTerm,
     statusFilter,
@@ -52,7 +54,9 @@ export function useOrdersData() {
     loading,
     filteredOrders,
     handleUpdateOrder,
-    handleFilter
+    handleFilter,
+    error,
+    refetch
   ]);
 
   return returnValue;
