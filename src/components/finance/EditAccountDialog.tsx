@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 interface EditAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentAccount: any | null;
+  currentAccount: any | null;  // Changed from account to currentAccount
   formData: any;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSubmit: () => void;

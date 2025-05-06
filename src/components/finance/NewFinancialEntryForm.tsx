@@ -53,7 +53,7 @@ const receivableFormSchema = z.object({
 interface NewFinancialEntryFormProps {
   type: 'payable' | 'receivable';
   onSubmit: (data: any) => void;
-  children: React.ReactNode;
+  children: React.ReactNode;  // Add this required prop
 }
 
 export default function NewFinancialEntryForm({ type, onSubmit, children }: NewFinancialEntryFormProps) {

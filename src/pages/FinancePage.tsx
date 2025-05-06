@@ -77,8 +77,11 @@ export default function FinancePage() {
           </div>
           <NewFinancialEntryForm 
             type={newAccountType} 
-            onSubmit={handleNewFormSubmit} 
-          />
+            onSubmit={handleNewFormSubmit}
+          >
+            {/* Empty placeholder to satisfy children prop */}
+            <div style={{ display: 'none' }}></div>
+          </NewFinancialEntryForm>
         </div>
       ) : (
         <Tabs defaultValue="receivable" className="mt-8">
@@ -109,7 +112,12 @@ export default function FinancePage() {
           
           <TabsContent value="receivable" className="mt-4">
             <div className="flex justify-end mb-4">
-              <Button onClick={handleNewReceivableClick}>Nova Conta a Receber</Button>
+              <NewFinancialEntryForm 
+                type="receivable" 
+                onSubmit={handleAddReceivable}
+              >
+                <Button>Nova Conta a Receber</Button>
+              </NewFinancialEntryForm>
             </div>
             
             {loading ? (
@@ -124,7 +132,7 @@ export default function FinancePage() {
                   <FinancialAccountItem
                     key={account.id}
                     account={account}
-                    onAction={handleReceive}
+                    onPayOrReceive={handleReceive}
                     onView={handleViewAccount}
                     onEdit={handleEditSetup}
                     type="receivable"
@@ -136,7 +144,12 @@ export default function FinancePage() {
           
           <TabsContent value="payable" className="mt-4">
             <div className="flex justify-end mb-4">
-              <Button onClick={handleNewPayableClick}>Nova Conta a Pagar</Button>
+              <NewFinancialEntryForm 
+                type="payable" 
+                onSubmit={handleAddPayable}
+              >
+                <Button>Nova Conta a Pagar</Button>
+              </NewFinancialEntryForm>
             </div>
             
             {loading ? (
@@ -151,7 +164,7 @@ export default function FinancePage() {
                   <FinancialAccountItem
                     key={account.id}
                     account={account}
-                    onAction={handlePayment}
+                    onPayOrReceive={handlePayment}
                     onView={handleViewAccount}
                     onEdit={handleEditSetup}
                     type="payable"
@@ -173,7 +186,7 @@ export default function FinancePage() {
       <EditAccountDialog 
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        account={currentAccount}
+        currentAccount={currentAccount}
         formData={editFormData}
         onInputChange={handleInputChange}
         onSubmit={handleEditSubmit}
