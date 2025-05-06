@@ -7,11 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
  * Type-safe wrapper for inserting data to a specific Supabase table
  */
 export async function typedInsert<
-  T extends keyof Database['public']['Tables'],
-  U extends Database['public']['Tables'][T]['Insert']
+  T extends keyof Database['public']['Tables']
 >(
   table: T,
-  data: U
+  data: Database['public']['Tables'][T]['Insert']
 ) {
   return supabase
     .from(table)
@@ -22,17 +21,16 @@ export async function typedInsert<
  * Type-safe wrapper for updating data in a specific Supabase table
  */
 export async function typedUpdate<
-  T extends keyof Database['public']['Tables'],
-  U extends Database['public']['Tables'][T]['Update']
+  T extends keyof Database['public']['Tables']
 >(
   table: T,
   id: string,
-  data: U
+  data: Database['public']['Tables'][T]['Update']
 ) {
   return supabase
     .from(table)
     .update(data)
-    .eq('id', id);
+    .eq('id' as any, id);
 }
 
 /**
@@ -49,7 +47,7 @@ export async function typedSelectByField<
   return supabase
     .from(table)
     .select(columns)
-    .eq(field, value);
+    .eq(field as any, value);
 }
 
 /**
@@ -77,7 +75,7 @@ export async function typedDelete<
   return supabase
     .from(table)
     .delete()
-    .eq('id', id);
+    .eq('id' as any, id);
 }
 
 /**
