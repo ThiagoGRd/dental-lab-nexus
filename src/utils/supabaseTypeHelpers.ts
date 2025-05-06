@@ -1,5 +1,5 @@
 
-import { type PostgrestFilterBuilder } from '@supabase/postgrest-js';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { type Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,7 +14,7 @@ export async function typedInsert<
 ) {
   return supabase
     .from(table)
-    .insert(data);
+    .insert(data as any);
 }
 
 /**
@@ -29,7 +29,7 @@ export async function typedUpdate<
 ) {
   return supabase
     .from(table)
-    .update(data)
+    .update(data as any)
     .eq('id' as any, id);
 }
 
