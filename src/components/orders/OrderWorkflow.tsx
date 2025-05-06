@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase, hasError, safeData, filterByField } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { updateWorkflow } from "@/utils/orderUtils";
 
 interface WorkflowStep {
@@ -56,7 +56,8 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
       setError(null);
 
       // Buscar o workflow da ordem atual
-      const { data: workflowData, error: workflowError } = await filterByField('order_workflows', 'order_id', orderId as any)
+      const { data: workflowData, error: workflowError } = await supabase
+        .from('order_workflows')
         .select(`
           id, 
           template_id,
@@ -68,6 +69,7 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
             steps
           )
         `)
+        .eq('order_id', orderId)
         .single();
 
       if (workflowError) {

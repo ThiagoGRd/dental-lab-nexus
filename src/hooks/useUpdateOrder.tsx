@@ -11,13 +11,13 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
         : updatedOrder.notes;
       
-      // Create update object once to avoid repetition
-      const updateData = {
+      // Create update object with proper typing
+      const updateData: Partial<Database['public']['Tables']['orders']['Update']> = {
         status: updatedOrder.status,
         deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
-        priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
+        priority: updatedOrder.isUrgent ? 'urgent' as const : 'normal' as const,
         notes: notes
-      } as Database['public']['Tables']['orders']['Update'];
+      };
       
       // Update in Supabase
       const { error } = await supabase

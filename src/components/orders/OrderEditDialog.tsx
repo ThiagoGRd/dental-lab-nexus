@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { supabase, hasError, safeData, filterByField } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { updateOrder, createWorkflow } from "@/utils/orderUtils";
 import type { Database } from '@/integrations/supabase/types';
 
@@ -162,8 +162,10 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       const orderId = order.originalData?.orderId || order.id;
       console.log('Verificando workflow para ordem:', orderId);
       
-      const { data, error } = await filterByField('order_workflows', 'order_id', orderId as any)
+      const { data, error } = await supabase
+        .from('order_workflows')
         .select('template_id')
+        .eq('order_id', orderId)
         .maybeSingle();
         
       if (error && error.code !== 'PGRST116') {

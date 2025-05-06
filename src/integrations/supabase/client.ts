@@ -12,10 +12,6 @@ const clientOptions = {
     persistSession: true,
     autoRefreshToken: true,
     storage: typeof window !== 'undefined' ? localStorage : undefined
-  },
-  global: {
-    // Disable real-time subscriptions by default to reduce connection overhead
-    realtime: false
   }
 };
 
@@ -65,6 +61,18 @@ export function getById<T extends keyof Database['public']['Tables']>(
     .select('*')
     .eq('id', id)
     .single();
+}
+
+// Filter by a specific field with type safety
+export function filterByField<T extends keyof Database['public']['Tables']>(
+  table: T,
+  field: string,
+  value: any
+) {
+  return supabase
+    .from(table)
+    .select('*')
+    .eq(field, value);
 }
 
 // Safely cast ordered data to the expected type
@@ -156,7 +164,7 @@ export async function getActiveServices() {
     const { data, error } = await supabase
       .from('services')
       .select('*')
-      .eq('active', true);
+      .eq('active', true as any);
 
     if (error) throw error;
     return { services: data, error: null };

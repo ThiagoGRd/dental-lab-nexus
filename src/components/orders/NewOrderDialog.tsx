@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -97,7 +98,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*')
-          .filter('active', 'eq', true)  // Fixing the type issue here
+          .eq('active', true as any)  // Fixed type issue with casting
           .order('name');
         
         if (servicesError) {
