@@ -59,7 +59,7 @@ export function castData<T>(data: any): T {
   return data as T;
 }
 
-// Filter with proper type casting for Supabase tables
+// Improved filterByField function with proper type handling
 export function filterByField<T extends keyof Database['public']['Tables']>(
   table: T,
   field: keyof Database['public']['Tables'][T]['Row'] | string,
@@ -78,7 +78,7 @@ export function getById<T extends keyof Database['public']['Tables']>(
   return supabase
     .from(table)
     .select('*')
-    .eq('id', id as any)
+    .eq('id', id)
     .single();
 }
 
@@ -88,7 +88,7 @@ export function castOrderedData<T>(data: any): T[] {
   return data as T[];
 }
 
-// Type-safe insert function for Supabase tables
+// Type-safe insert function for Supabase tables with proper casting
 export async function typeSafeInsert<T extends keyof Database['public']['Tables']>(
   table: T,
   data: Database['public']['Tables'][T]['Insert']
@@ -96,12 +96,89 @@ export async function typeSafeInsert<T extends keyof Database['public']['Tables'
   return await supabase.from(table).insert(data);
 }
 
-// Type-safe update function for Supabase tables
+// Type-safe update function for Supabase tables with proper casting
 export async function typeSafeUpdate<T extends keyof Database['public']['Tables']>(
   table: T,
   data: Database['public']['Tables'][T]['Update'],
   field: string,
   value: any
 ) {
-  return await supabase.from(table).update(data).eq(field, value as any);
+  return await supabase.from(table).update(data).eq(field, value);
+}
+
+// Function to safely handle auth session checking
+export async function checkAuthSession() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return { session, error: null };
+  } catch (error) {
+    console.error('Erro ao verificar sessão de autenticação:', error);
+    return { session: null, error };
+  }
+}
+
+// Function to safely get user profile
+export async function getUserProfile(userId: string) {
+  try {
+    const response = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (response.error) throw response.error;
+    return { profile: response.data, error: null };
+  } catch (error) {
+    console.error('Erro ao obter perfil do usuário:', error);
+    return { profile: null, error };
+  }
+}
+
+// Function to safely sign in with email/password
+export async function signInWithEmail(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Erro ao fazer login:', error);
+    return { data: null, error };
+  }
+}
+
+// Function to safely sign up with email/password
+export async function signUpWithEmail(email: string, password: string, userData?: any) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData || {},
+        emailRedirectTo: window.location.origin
+      }
+    });
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Erro ao criar conta:', error);
+    return { data: null, error };
+  }
+}
+
+// Function to safely sign out
+export async function signOut() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Erro ao fazer logout:', error);
+    return { error };
+  }
 }

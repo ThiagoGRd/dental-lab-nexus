@@ -4,7 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { supabase, hasError, safeData, filterByField } from '@/integrations/supabase/client';
+import { 
+  supabase, 
+  checkAuthSession, 
+  getUserProfile, 
+  signOut 
+} from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -30,8 +35,8 @@ export default function Layout({ children }: LayoutProps) {
       try {
         setLoading(true);
         
-        // Get session more efficiently
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Get session using our safe function
+        const { session, error } = await checkAuthSession();
         
         if (error) {
           throw error;
@@ -42,19 +47,15 @@ export default function Layout({ children }: LayoutProps) {
           return;
         }
         
-        // Check user profile with a focused query selecting only what we need
-        const profileResponse = await filterByField('profiles', 'id', session.user.id as any)
-          .select('is_active, role')
-          .single();
+        // Check user profile with our safe function
+        const { profile, error: profileError } = await getUserProfile(session.user.id);
         
-        if (hasError(profileResponse)) {
-          throw profileResponse.error;
+        if (profileError) {
+          throw profileError;
         }
         
-        const profile = safeData<Profile | null>(profileResponse, null);
-        
         if (profile && profile.is_active === false) {
-          await supabase.auth.signOut();
+          await signOut();
           toast.error('Sua conta foi desativada. Entre em contato com o administrador.');
           navigate('/login');
           return;
@@ -87,11 +88,8 @@ export default function Layout({ children }: LayoutProps) {
           localStorage.removeItem('user');
           navigate('/login');
         } else if (event === 'SIGNED_IN' && session) {
-          const profileResponse = await filterByField('profiles', 'id', session.user.id as any)
-            .select('is_active, role')
-            .single();
-            
-          const profile = safeData<{ role: string } | null>(profileResponse, null);
+          // Use our safe function to get profile
+          const { profile } = await getUserProfile(session.user.id);
             
           localStorage.setItem('user', JSON.stringify({
             id: session.user.id,

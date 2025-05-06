@@ -2,7 +2,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase, hasError, safeData, filterByField } from '@/integrations/supabase/client';
+import { 
+  supabase, 
+  checkAuthSession, 
+  getUserProfile
+} from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 interface ProtectedRouteProps {
@@ -19,8 +23,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Verificar a sessão atual
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Verificar a sessão atual usando a função segura
+        const { session, error } = await checkAuthSession();
         
         if (error) throw error;
         
@@ -38,18 +42,14 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
           return;
         }
         
-        // Verificar se o usuário tem o papel necessário
-        const profileResponse = await filterByField('profiles', 'id', session.user.id as any)
-          .select('role')
-          .single();
+        // Verificar se o usuário tem o papel necessário usando a função segura
+        const { profile, error: profileError } = await getUserProfile(session.user.id);
         
-        if (hasError(profileResponse)) {
-          throw profileResponse.error;
+        if (profileError) {
+          throw profileError;
         }
         
-        const profileData = safeData<Profile | null>(profileResponse, null);
-        
-        if (!profileData || profileData.role !== requiredRole) {
+        if (!profile || profile.role !== requiredRole) {
           setHasRequiredRole(false);
           toast.error('Você não tem permissão para acessar esta página');
           return;

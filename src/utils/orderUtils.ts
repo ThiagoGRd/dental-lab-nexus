@@ -106,3 +106,67 @@ export async function updateWorkflow(
     .update(workflowUpdate)
     .eq('id', workflowId);
 }
+
+// Type-safe function to get active services
+export async function getActiveServices() {
+  return await supabase
+    .from('services')
+    .select('*')
+    .eq('active', true);
+}
+
+// Type-safe function to get workflow by order ID
+export async function getWorkflowByOrderId(orderId: string) {
+  return await supabase
+    .from('order_workflows')
+    .select(`
+      id,
+      template_id,
+      current_step,
+      history,
+      notes,
+      workflow_templates (*)
+    `)
+    .eq('order_id', orderId)
+    .single();
+}
+
+// Type-safe function to update workflow with proper type handling
+export async function updateWorkflowStep(
+  workflowId: string,
+  currentStep: number,
+  history: Json[]
+) {
+  const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
+    current_step: currentStep,
+    history: history as Json,
+    updated_at: new Date().toISOString()
+  };
+  
+  return await supabase
+    .from('order_workflows')
+    .update(workflowUpdate)
+    .eq('id', workflowId);
+}
+
+// Type-safe function to handle service related operations
+export async function updateServiceById(
+  serviceId: string,
+  serviceData: Partial<Database['public']['Tables']['services']['Update']>
+) {
+  return await supabase
+    .from('services')
+    .update(serviceData)
+    .eq('id', serviceId);
+}
+
+// Type-safe function to handle profile related operations
+export async function updateProfileById(
+  profileId: string,
+  profileData: Partial<Database['public']['Tables']['profiles']['Update']>
+) {
+  return await supabase
+    .from('profiles')
+    .update(profileData)
+    .eq('id', profileId);
+}

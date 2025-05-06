@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  checkAuthSession, 
+  signInWithEmail, 
+  signUpWithEmail 
+} from '@/integrations/supabase/client';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -23,7 +27,12 @@ export default function LoginPage() {
     // Verificar se o usuário já está logado - apenas uma vez ao montar
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { session, error } = await checkAuthSession();
+        if (error) {
+          console.error("Erro ao verificar sessão:", error);
+          return;
+        }
+        
         if (session) {
           navigate('/');
         }
@@ -46,32 +55,24 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // Processo de registro
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              name: formData.name
-            },
-            emailRedirectTo: window.location.origin
-          }
-        });
+        // Processo de registro usando nossa função segura
+        const { data, error } = await signUpWithEmail(
+          formData.email, 
+          formData.password, 
+          { name: formData.name }
+        );
 
         if (error) throw error;
         
-        if (data.user && !data.session) {
+        if (data?.user && !data.session) {
           toast.info('Enviamos um email de confirmação. Por favor, confirme seu email para continuar.');
-        } else if (data.session) {
+        } else if (data?.session) {
           toast.success('Conta criada com sucesso!');
           navigate('/');
         }
       } else {
-        // Processo de login
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
-        });
+        // Processo de login usando nossa função segura
+        const { data, error } = await signInWithEmail(formData.email, formData.password);
 
         if (error) throw error;
         
