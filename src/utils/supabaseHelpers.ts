@@ -255,10 +255,31 @@ export async function safeFinanceOperations() {
 }
 
 // Safe data extraction helper - extracts data or returns fallback
-export function safeExtract<T>(response: { data?: T, error?: any } | null | undefined, fallback: T): T {
-  if (!response || response.error || !response.data) {
-    console.log("safeExtract: retornando fallback para resposta:", response);
+export function safeExtract<T>(response: { finances?: T, data?: T, error?: any } | null | undefined, fallback: T): T {
+  // Direct data access for standard Supabase responses
+  if (response?.data) {
+    console.log("safeExtract: returning data from response.data", response.data);
+    return response.data as T;
+  }
+  
+  // Access finances field for our custom finance operations
+  if (response?.finances) {
+    console.log("safeExtract: returning data from response.finances", response.finances);
+    return response.finances as T;
+  }
+  
+  // Fallback if no valid data found
+  if (!response || response.error) {
+    console.log("safeExtract: returning fallback for response:", response);
     return fallback;
   }
-  return response.data;
+  
+  // If we have a direct response that's not in data or finances field
+  if (response && typeof response === 'object' && !('data' in response) && !('error' in response) && !('finances' in response)) {
+    console.log("safeExtract: returning direct response", response);
+    return response as T;
+  }
+  
+  console.log("safeExtract: unable to extract data, returning fallback", fallback);
+  return fallback;
 }

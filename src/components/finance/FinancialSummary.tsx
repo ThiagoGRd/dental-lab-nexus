@@ -8,7 +8,7 @@ interface FinancialSummaryProps {
   receivableAccounts: any[];
 }
 
-export default function FinancialSummary({ payableAccounts, receivableAccounts }: FinancialSummaryProps) {
+export default function FinancialSummary({ payableAccounts = [], receivableAccounts = [] }: FinancialSummaryProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -20,11 +20,11 @@ export default function FinancialSummary({ payableAccounts, receivableAccounts }
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const pendingPayables = payableAccounts.filter(acc => acc.status === 'pending');
-  const pendingReceivables = receivableAccounts.filter(acc => acc.status === 'pending');
+  const pendingPayables = (payableAccounts || []).filter(acc => acc.status === 'pending');
+  const pendingReceivables = (receivableAccounts || []).filter(acc => acc.status === 'pending');
   
-  const totalToPay = pendingPayables.reduce((sum, acc) => sum + acc.value, 0);
-  const totalToReceive = pendingReceivables.reduce((sum, acc) => sum + acc.value, 0);
+  const totalToPay = pendingPayables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
+  const totalToReceive = pendingReceivables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const balance = totalToReceive - totalToPay;
 
   // Get upcoming due accounts (both payable and receivable) sorted by date
@@ -76,34 +76,40 @@ export default function FinancialSummary({ payableAccounts, receivableAccounts }
           <CardTitle className="text-lg">Próximos Vencimentos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {upcomingDueAccounts.map((item, idx) => {
-              const isPayable = 'category' in item;
-              return (
-                <div key={idx} className="flex justify-between items-center p-2 rounded-md border">
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-full p-2 ${isPayable ? 'bg-red-100' : 'bg-blue-100'}`}>
-                      {isPayable ? 
-                        <FileUp className="h-4 w-4 text-red-600" /> : 
-                        <FileDown className="h-4 w-4 text-blue-600" />
-                      }
+          {upcomingDueAccounts.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingDueAccounts.map((item, idx) => {
+                const isPayable = 'category' in item;
+                return (
+                  <div key={idx} className="flex justify-between items-center p-2 rounded-md border">
+                    <div className="flex items-start gap-3">
+                      <div className={`rounded-full p-2 ${isPayable ? 'bg-red-100' : 'bg-blue-100'}`}>
+                        {isPayable ? 
+                          <FileUp className="h-4 w-4 text-red-600" /> : 
+                          <FileDown className="h-4 w-4 text-blue-600" />
+                        }
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {isPayable ? item.description : item.client}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Vencimento: {formatDate(item.dueDate)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {isPayable ? item.description : item.client}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Vencimento: {formatDate(item.dueDate)}
-                      </p>
+                    <div className={`font-medium ${isPayable ? 'text-red-600' : 'text-blue-600'}`}>
+                      {formatCurrency(Number(item.value) || 0)}
                     </div>
                   </div>
-                  <div className={`font-medium ${isPayable ? 'text-red-600' : 'text-blue-600'}`}>
-                    {formatCurrency(item.value)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              Nenhum vencimento próximo encontrado.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

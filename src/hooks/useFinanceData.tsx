@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -24,59 +23,34 @@ export function useFinanceData() {
       
       console.log("Iniciando busca de dados financeiros...");
 
-      // Buscar diretamente da tabela finances com Supabase client para debug
-      const { data: expensesRawData, error: expensesRawError } = await supabase
-        .from('finances')
-        .select('*')
-        .eq('type', 'expense')
-        .order('due_date', { ascending: true });
-        
-      if (expensesRawError) {
-        console.error('Erro direto Supabase (despesas):', expensesRawError);
-        throw expensesRawError;
-      }
-      
-      console.log("Dados de despesas obtidos diretamente:", expensesRawData);
-      
-      const { data: revenuesRawData, error: revenuesRawError } = await supabase
-        .from('finances')
-        .select('*')
-        .eq('type', 'revenue')
-        .order('due_date', { ascending: true });
-        
-      if (revenuesRawError) {
-        console.error('Erro direto Supabase (receitas):', revenuesRawError);
-        throw revenuesRawError;
-      }
-      
-      console.log("Dados de receitas obtidos diretamente:", revenuesRawData);
-
       const financeOps = await safeFinanceOperations();
       
       // Buscar contas a pagar (despesas)
-      const { finances: expensesData, error: expensesError } = await financeOps.getByType('expense');
-        
-      if (expensesError) {
-        console.error('Erro ao buscar despesas:', expensesError);
-        setError('Erro ao buscar despesas: ' + (expensesError.message || 'Erro desconhecido'));
+      const expensesResponse = await financeOps.getByType('expense');
+      
+      if (expensesResponse.error) {
+        console.error('Erro ao buscar despesas:', expensesResponse.error);
+        setError('Erro ao buscar despesas: ' + (expensesResponse.error.message || 'Erro desconhecido'));
+        setLoading(false);
         return;
       }
 
       // Buscar contas a receber (receitas)
-      const { finances: revenuesData, error: revenuesError } = await financeOps.getByType('revenue');
-        
-      if (revenuesError) {
-        console.error('Erro ao buscar receitas:', revenuesError);
-        setError('Erro ao buscar receitas: ' + (revenuesError.message || 'Erro desconhecido'));
+      const revenuesResponse = await financeOps.getByType('revenue');
+      
+      if (revenuesResponse.error) {
+        console.error('Erro ao buscar receitas:', revenuesResponse.error);
+        setError('Erro ao buscar receitas: ' + (revenuesResponse.error.message || 'Erro desconhecido'));
+        setLoading(false);
         return;
       }
 
-      // Extrair valores seguros
-      const expenses = safeExtract(expensesData, []);
-      const revenues = safeExtract(revenuesData, []);
+      // Extrair valores - usando acesso direto para garantir que estamos pegando os dados corretos
+      const expenses = expensesResponse.finances || [];
+      const revenues = revenuesResponse.finances || [];
       
-      console.log("Despesas após extração segura:", expenses);
-      console.log("Receitas após extração segura:", revenues);
+      console.log("Despesas obtidas:", expenses);
+      console.log("Receitas obtidas:", revenues);
 
       // Buscar ordens relacionadas às receitas que têm related_order_id
       const orderIds = revenues
@@ -87,26 +61,26 @@ export function useFinanceData() {
 
       if (orderIds.length > 0) {
         // Buscar ordens
-        const { orders: ordersData, error: ordersError } = await financeOps.getRelatedOrders(orderIds);
+        const ordersResponse = await financeOps.getRelatedOrders(orderIds);
         
-        if (ordersError) {
-          console.error('Erro ao buscar ordens relacionadas:', ordersError);
+        if (ordersResponse.error) {
+          console.error('Erro ao buscar ordens relacionadas:', ordersResponse.error);
           // Continue anyway with empty orders
         }
         
-        const orders = safeExtract(ordersData, []);
+        const orders = ordersResponse.orders || [];
           
         if (orders.length > 0) {
           // Buscar clientes
           const clientIds = orders.map(order => order.client_id);
-          const { clients: clientsData, error: clientsError } = await financeOps.getClientsByIds(clientIds);
+          const clientsResponse = await financeOps.getClientsByIds(clientIds);
           
-          if (clientsError) {
-            console.error('Erro ao buscar clientes:', clientsError);
+          if (clientsResponse.error) {
+            console.error('Erro ao buscar clientes:', clientsResponse.error);
             // Continue anyway with empty clients
           }
           
-          const clients = safeExtract(clientsData, []);
+          const clients = clientsResponse.clients || [];
             
           if (clients.length > 0) {
             // Criar mapa de ordens para clientes
@@ -172,6 +146,7 @@ export function useFinanceData() {
     }
   }, []);
 
+  // Fetch data on component mount
   useEffect(() => {
     console.log("useEffect em useFinanceData sendo chamado");
     fetchFinanceData();
