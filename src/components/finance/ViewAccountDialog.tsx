@@ -62,6 +62,12 @@ export default function ViewAccountDialog({ open, onOpenChange, account }: ViewA
         const finalizedMatch = serviceInfo?.match(/finalizada:?\s*([^.\n]+)/i);
         if (finalizedMatch && finalizedMatch[1]) {
           serviceName = finalizedMatch[1].trim();
+        } else {
+          // Fourth try - if we see "Ordem de serviço" attempt to extract any service name
+          const orderMatch = serviceInfo?.match(/ordem\s+de\s+serviço\s+.*?\s+([^,.:;\n]+)(?:[,.:;\n]|$)/i);
+          if (orderMatch && orderMatch[1]) {
+            serviceName = orderMatch[1].trim();
+          }
         }
       }
     }

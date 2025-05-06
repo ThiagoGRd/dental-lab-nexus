@@ -32,6 +32,41 @@ export default function EditAccountDialog({
   if (!currentAccount || !formData) return null;
 
   const isPayable = 'description' in currentAccount;
+  
+  // Extract service information
+  const serviceInfo = currentAccount.originalData?.notes;
+  
+  // Parse the service name from the notes if available
+  let serviceName = null;
+  if (serviceInfo) {
+    // First try - look for common service identifiers
+    if (serviceInfo.includes('prótese')) {
+      serviceName = 'Prótese';
+      
+      // Check for additional qualifiers
+      if (serviceInfo.includes('provisória') || serviceInfo.includes('provisoria')) {
+        serviceName = 'Prótese Provisória';
+      } else if (serviceInfo.includes('definitiva')) {
+        serviceName = 'Prótese Definitiva';
+      }
+    } else if (serviceInfo.includes('guia cirúrgico') || serviceInfo.includes('guia cirurgico')) {
+      serviceName = 'Guia Cirúrgico';
+    } else if (serviceInfo.includes('implante')) {
+      serviceName = 'Implante Dentário';
+    } else {
+      // Second try - extract from "serviço: X" pattern
+      const serviceMatch = serviceInfo?.match(/serviço:\s*([^()\n]+?)(?:\s*\(|$)/i);
+      if (serviceMatch && serviceMatch[1]) {
+        serviceName = serviceMatch[1].trim();
+      } else {
+        // Third try - extract service name after "finalizada:" or similar markers
+        const finalizedMatch = serviceInfo?.match(/finalizada:?\s*([^.\n]+)/i);
+        if (finalizedMatch && finalizedMatch[1]) {
+          serviceName = finalizedMatch[1].trim();
+        }
+      }
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -83,6 +118,14 @@ export default function EditAccountDialog({
                   onChange={onInputChange}
                 />
               </div>
+              {serviceName && (
+                <div className="grid gap-2">
+                  <Label>Serviço</Label>
+                  <div className="text-blue-600 py-2 px-3 border rounded bg-blue-50">
+                    {serviceName}
+                  </div>
+                </div>
+              )}
             </>
           )}
           <div className="grid gap-2">
