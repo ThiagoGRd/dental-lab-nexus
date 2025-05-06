@@ -59,7 +59,7 @@ export function castData<T>(data: any): T {
   return data as T;
 }
 
-// Improved type-safe filter function that works better with TypeScript
+// Filter with proper type casting for Supabase tables
 export function filterByField<T extends keyof Database['public']['Tables']>(
   table: T,
   field: keyof Database['public']['Tables'][T]['Row'] | string,
@@ -68,6 +68,18 @@ export function filterByField<T extends keyof Database['public']['Tables']>(
   return supabase
     .from(table)
     .eq(field as string, value);
+}
+
+// Get a record by ID from a specific table with proper typing
+export function getById<T extends keyof Database['public']['Tables']>(
+  table: T,
+  id: string
+) {
+  return supabase
+    .from(table)
+    .select('*')
+    .eq('id', id as any)
+    .single();
 }
 
 // Safely cast ordered data to the expected type
@@ -91,5 +103,5 @@ export async function typeSafeUpdate<T extends keyof Database['public']['Tables'
   field: string,
   value: any
 ) {
-  return await supabase.from(table).update(data).eq(field, value);
+  return await supabase.from(table).update(data).eq(field, value as any);
 }

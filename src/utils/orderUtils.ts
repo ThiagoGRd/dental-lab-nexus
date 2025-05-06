@@ -88,3 +88,21 @@ export async function updateOrder(
     .update(orderUpdate)
     .eq('id', orderId);
 }
+
+// Type-safe update workflow function
+export async function updateWorkflow(
+  workflowId: string,
+  currentStep: number,
+  history: Json
+) {
+  const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
+    current_step: currentStep,
+    history: history,
+    updated_at: new Date().toISOString()
+  };
+  
+  return await supabase
+    .from('order_workflows')
+    .update(workflowUpdate)
+    .eq('id', workflowId);
+}

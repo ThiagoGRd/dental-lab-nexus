@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData, filterByField } from "@/integrations/supabase/client";
+import { updateWorkflow } from "@/utils/orderUtils";
 
 interface WorkflowStep {
   name: string;
@@ -55,8 +56,7 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
       setError(null);
 
       // Buscar o workflow da ordem atual
-      const { data: workflowData, error: workflowError } = await supabase
-        .from('order_workflows')
+      const { data: workflowData, error: workflowError } = await filterByField('order_workflows', 'order_id', orderId as any)
         .select(`
           id, 
           template_id,
@@ -68,7 +68,6 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
             steps
           )
         `)
-        .eq('order_id', orderId)
         .single();
 
       if (workflowError) {
@@ -83,17 +82,18 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
       }
 
       // Formatar os dados - corrigindo o problema de tipo
-      const steps = workflowData.workflow_templates.steps as unknown as WorkflowStep[];
-      const history = workflowData.history ? (workflowData.history as unknown as any[]) : [];
+      const typedWorkflowData = workflowData as any;
+      const steps = typedWorkflowData.workflow_templates.steps as WorkflowStep[];
+      const history = typedWorkflowData.history ? (typedWorkflowData.history as any[]) : [];
 
       setWorkflow({
-        id: workflowData.id,
-        templateId: workflowData.template_id,
-        currentStep: workflowData.current_step,
-        templateName: workflowData.workflow_templates.name,
+        id: typedWorkflowData.id,
+        templateId: typedWorkflowData.template_id,
+        currentStep: typedWorkflowData.current_step,
+        templateName: typedWorkflowData.workflow_templates.name,
         steps,
         history,
-        notes: workflowData.notes
+        notes: typedWorkflowData.notes
       });
     } catch (error) {
       console.error('Erro ao carregar workflow:', error);
@@ -115,17 +115,14 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
         action: 'advance'
       }];
 
-      const { error } = await supabase
-        .from('order_workflows')
-        .update({
-          current_step: nextStep,
-          history: updatedHistory,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', workflow.id);
+      const result = await updateWorkflow(
+        workflow.id,
+        nextStep,
+        updatedHistory
+      );
 
-      if (error) {
-        console.error('Erro ao avançar etapa:', error);
+      if (hasError(result)) {
+        console.error('Erro ao avançar etapa:', result.error);
         toast.error('Não foi possível avançar para a próxima etapa.');
         return;
       }
@@ -159,17 +156,14 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
         action: 'revert'
       }];
 
-      const { error } = await supabase
-        .from('order_workflows')
-        .update({
-          current_step: prevStep,
-          history: updatedHistory,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', workflow.id);
+      const result = await updateWorkflow(
+        workflow.id,
+        prevStep,
+        updatedHistory
+      );
 
-      if (error) {
-        console.error('Erro ao retroceder etapa:', error);
+      if (hasError(result)) {
+        console.error('Erro ao retroceder etapa:', result.error);
         toast.error('Não foi possível retroceder para a etapa anterior.');
         return;
       }

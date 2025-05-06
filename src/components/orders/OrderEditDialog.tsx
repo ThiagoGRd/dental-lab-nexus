@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -41,7 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { supabase, safeData } from "@/integrations/supabase/client";
+import { supabase, hasError, safeData, filterByField } from "@/integrations/supabase/client";
 import { updateOrder, createWorkflow } from "@/utils/orderUtils";
 import type { Database } from '@/integrations/supabase/types';
 
@@ -163,10 +162,8 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       const orderId = order.originalData?.orderId || order.id;
       console.log('Verificando workflow para ordem:', orderId);
       
-      const { data, error } = await supabase
-        .from('order_workflows')
+      const { data, error } = await filterByField('order_workflows', 'order_id', orderId as any)
         .select('template_id')
-        .eq('order_id', orderId)
         .maybeSingle();
         
       if (error && error.code !== 'PGRST116') {
@@ -174,7 +171,8 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         setCurrentWorkflow(null);
       } else if (data) {
         console.log('Workflow existente encontrado:', data);
-        setCurrentWorkflow(data.template_id);
+        const typedData = data as any;
+        setCurrentWorkflow(typedData.template_id);
       } else {
         console.log('Nenhum workflow encontrado para esta ordem');
         setCurrentWorkflow(null);
@@ -209,7 +207,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         notes
       );
         
-      if (updateResult.error) {
+      if (hasError(updateResult)) {
         console.error("Erro ao atualizar ordem:", updateResult.error);
         toast.error("Erro ao salvar as alterações.");
         setLoading(false);
@@ -233,7 +231,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
             workflowNotes
           );
             
-          if (workflowResult.error) {
+          if (hasError(workflowResult)) {
             console.error("Erro ao criar workflow:", workflowResult.error);
             toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
           } else {

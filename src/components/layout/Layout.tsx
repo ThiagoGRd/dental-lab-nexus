@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { supabase, hasError, safeData } from '@/integrations/supabase/client';
+import { supabase, hasError, safeData, filterByField } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -43,10 +43,8 @@ export default function Layout({ children }: LayoutProps) {
         }
         
         // Check user profile with a focused query selecting only what we need
-        const profileResponse = await supabase
-          .from('profiles')
+        const profileResponse = await filterByField('profiles', 'id', session.user.id as any)
           .select('is_active, role')
-          .eq('id', session.user.id as string)
           .single();
         
         if (hasError(profileResponse)) {
@@ -89,10 +87,8 @@ export default function Layout({ children }: LayoutProps) {
           localStorage.removeItem('user');
           navigate('/login');
         } else if (event === 'SIGNED_IN' && session) {
-          const profileResponse = await supabase
-            .from('profiles')
+          const profileResponse = await filterByField('profiles', 'id', session.user.id as any)
             .select('is_active, role')
-            .eq('id', session.user.id as string)
             .single();
             
           const profile = safeData<{ role: string } | null>(profileResponse, null);
