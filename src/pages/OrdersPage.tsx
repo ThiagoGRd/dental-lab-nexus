@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderList } from '@/components/orders/OrderList';
 import { useOrdersData } from '@/hooks/useOrdersData';
@@ -30,6 +31,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -46,6 +48,19 @@ export default function OrdersPage() {
   const handleEditOrder = (order: any) => {
     setSelectedOrder(order);
     setIsEditDialogOpen(true);
+  };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await refetch();
+      toast.success("Dados atualizados com sucesso!");
+    } catch (err) {
+      console.error("Erro ao tentar novamente:", err);
+      toast.error("Falha ao tentar recarregar. Tente novamente mais tarde.");
+    } finally {
+      setIsRetrying(false);
+    }
   };
 
   return (
@@ -77,9 +92,26 @@ export default function OrdersPage() {
       <div className="mt-6">
         {error ? (
           <div className="p-6 text-center bg-white rounded-lg shadow border border-red-100">
-            <p className="text-red-500 mb-4">Erro ao carregar dados: {error}</p>
-            <Button onClick={() => refetch()} variant="default" className="bg-dentalblue-600 hover:bg-dentalblue-700">
-              Tentar novamente
+            <p className="text-red-500 mb-4">
+              Erro ao carregar dados: {typeof error === 'string' ? error : 'Erro desconhecido. Verifique o console para mais detalhes.'}
+            </p>
+            <Button 
+              onClick={handleRetry} 
+              variant="default" 
+              className="bg-dentalblue-600 hover:bg-dentalblue-700"
+              disabled={isRetrying}
+            >
+              {isRetrying ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 
+                  Carregando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" /> 
+                  Tentar novamente
+                </>
+              )}
             </Button>
           </div>
         ) : (

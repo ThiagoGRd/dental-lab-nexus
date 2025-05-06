@@ -2,8 +2,7 @@
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { supabase } from '@/integrations/supabase/client';
 
-// Use a simpler approach with direct type assertions
-// This avoids excessive type depth while maintaining basic type safety
+// Use explicit type assertions to avoid TypeScript errors
 export async function typedInsert(table: string, data: any) {
   return supabase
     .from(table as any)
