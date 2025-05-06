@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -35,15 +34,9 @@ export default function OrdersPage() {
   useEffect(() => {
     if (error) {
       console.error("Erro ao carregar ordens:", error);
-      toast.error("Erro ao carregar ordens de serviço. Tentando novamente...");
-      // Try to refetch after a short delay
-      const timer = setTimeout(() => {
-        refetch();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+      toast.error("Erro ao carregar ordens de serviço. Tente novamente com o botão abaixo.");
     }
-  }, [error, refetch]);
+  }, [error]);
 
   const handleViewOrder = (order: any) => {
     setSelectedOrder(order);
@@ -83,9 +76,9 @@ export default function OrdersPage() {
 
       <div className="mt-6">
         {error ? (
-          <div className="p-6 text-center">
-            <p className="text-red-500 mb-2">Erro ao carregar dados: {error}</p>
-            <Button onClick={() => refetch()} variant="outline">
+          <div className="p-6 text-center bg-white rounded-lg shadow border border-red-100">
+            <p className="text-red-500 mb-4">Erro ao carregar dados: {error}</p>
+            <Button onClick={() => refetch()} variant="default" className="bg-dentalblue-600 hover:bg-dentalblue-700">
               Tentar novamente
             </Button>
           </div>

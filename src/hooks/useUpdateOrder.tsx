@@ -2,7 +2,6 @@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-import { typedUpdate } from '@/utils/supabaseTypeHelpers';
 
 export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void) {
   const handleUpdateOrder = async (updatedOrder: any) => {
@@ -12,17 +11,20 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
         : updatedOrder.notes;
       
-      // Create update object with proper typing
+      // Create update object
       const updateData = {
         status: updatedOrder.status,
         deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
         priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
         notes: notes
-      } as Database['public']['Tables']['orders']['Update'];
+      };
       
-      // Update in Supabase using type-safe helper
+      // Update in Supabase
       const orderId = updatedOrder.originalData?.orderId || updatedOrder.id;
-      const { error } = await typedUpdate('orders', orderId, updateData);
+      const { error } = await supabase
+        .from('orders')
+        .update(updateData as any)
+        .eq('id', orderId);
         
       if (error) {
         console.error('Erro ao atualizar ordem:', error);

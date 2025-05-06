@@ -35,21 +35,43 @@ export function useFetchOrders() {
       
       // Use a more efficient Promise.all for parallel requests
       console.log('Making parallel requests to Supabase...');
-      const [ordersResponse, clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
-        // Select only needed fields to reduce data transferred
-        supabase
-          .from('orders')
-          .select(`
-            id, 
-            status, 
-            priority, 
-            created_at, 
-            deadline, 
-            notes,
-            client_id
-          `)
-          .order('created_at', { ascending: false }),
-          
+      
+      // 1. Fetch orders data
+      const ordersResponse = await supabase
+        .from('orders')
+        .select(`
+          id, 
+          status, 
+          priority, 
+          created_at, 
+          deadline, 
+          notes,
+          client_id
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Check for orders response error early
+      if (hasError(ordersResponse)) {
+        const errorMessage = ordersResponse.error?.message || 'Desconhecido';
+        console.error('Erro ao buscar ordens:', ordersResponse.error);
+        toast.error('Erro ao carregar as ordens de serviço.');
+        setError(`Erro ao buscar ordens: ${errorMessage}`);
+        setLoading(false);
+        return [];
+      }
+      
+      console.log('Orders response:', ordersResponse);
+      
+      // 2. Only fetch related data if we have orders
+      const ordersData = safeData<any[]>(ordersResponse, []);
+      if (ordersData.length === 0) {
+        console.log('No orders data found');
+        setLoading(false);
+        return [];
+      }
+      
+      // 3. Fetch related data in parallel
+      const [clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
         supabase
           .from('clients')
           .select('id, name'),
@@ -67,16 +89,21 @@ export function useFetchOrders() {
           .select('id, name')
       ]);
       
-      console.log('Orders response:', ordersResponse);
       console.log('Clients response:', clientsResponse);
       console.log('Order items response:', orderItemsResponse);
       console.log('Services response:', servicesResponse);
       
-      if (hasError(ordersResponse)) {
-        console.error('Erro ao buscar ordens:', ordersResponse.error);
-        toast.error('Erro ao carregar as ordens de serviço.');
-        setError(`Erro ao buscar ordens: ${ordersResponse.error?.message || 'Desconhecido'}`);
-        return [];
+      // Check for other response errors but continue with what we have
+      if (hasError(clientsResponse)) {
+        console.warn('Erro ao buscar clientes:', clientsResponse.error);
+      }
+      
+      if (hasError(orderItemsResponse)) {
+        console.warn('Erro ao buscar itens de ordem:', orderItemsResponse.error);
+      }
+      
+      if (hasError(servicesResponse)) {
+        console.warn('Erro ao buscar serviços:', servicesResponse.error);
       }
       
       type OrderRow = Database['public']['Tables']['orders']['Row'];
@@ -84,7 +111,6 @@ export function useFetchOrders() {
       type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
       type ServiceRow = Database['public']['Tables']['services']['Row'];
       
-      const ordersData = safeData<OrderRow[]>(ordersResponse, []);
       const clientsData = hasError(clientsResponse) ? [] : safeData<ClientRow[]>(clientsResponse, []);
       const orderItemsData = hasError(orderItemsResponse) ? [] : safeData<OrderItemRow[]>(orderItemsResponse, []);
       const servicesData = hasError(servicesResponse) ? [] : safeData<ServiceRow[]>(servicesResponse, []);
@@ -145,9 +171,10 @@ export function useFetchOrders() {
       console.log('Formatted orders:', formattedOrders.length);
       return formattedOrders;
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      const errorMessage = (error as Error)?.message || 'Desconhecido';
+      console.error('Erro inesperado ao buscar ordens:', error);
       toast.error('Ocorreu um erro inesperado ao carregar os dados.');
-      setError(`Erro inesperado: ${(error as Error)?.message || 'Desconhecido'}`);
+      setError(`Erro inesperado: ${errorMessage}`);
       return [];
     } finally {
       setLoading(false);

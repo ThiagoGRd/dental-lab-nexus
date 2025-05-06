@@ -10,7 +10,7 @@ export function useOrdersData() {
   
   // Update orders only when fetchedOrders change
   useEffect(() => {
-    if (fetchedOrders.length > 0) {
+    if (fetchedOrders && fetchedOrders.length > 0) {
       setOrders(fetchedOrders);
     }
   }, [fetchedOrders]);

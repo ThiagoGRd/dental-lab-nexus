@@ -1,4 +1,3 @@
-
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { type Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,11 +9,11 @@ export async function typedInsert<
   T extends keyof Database['public']['Tables']
 >(
   table: T,
-  data: Database['public']['Tables'][T]['Insert']
+  data: any // Using 'any' here to avoid deep type instantiation issues
 ) {
   return supabase
-    .from(table)
-    .insert(data as any);
+    .from(table as string)
+    .insert(data);
 }
 
 /**
@@ -25,12 +24,12 @@ export async function typedUpdate<
 >(
   table: T,
   id: string,
-  data: Database['public']['Tables'][T]['Update']
+  data: any // Using 'any' here to avoid deep type instantiation issues
 ) {
   return supabase
-    .from(table)
-    .update(data as any)
-    .eq('id' as any, id);
+    .from(table as string)
+    .update(data)
+    .eq('id', id);
 }
 
 /**
@@ -45,9 +44,9 @@ export async function typedSelectByField<
   columns: string = '*'
 ) {
   return supabase
-    .from(table)
+    .from(table as string)
     .select(columns)
-    .eq(field as any, value);
+    .eq(field, value);
 }
 
 /**
@@ -73,9 +72,9 @@ export async function typedDelete<
   id: string
 ) {
   return supabase
-    .from(table)
+    .from(table as string)
     .delete()
-    .eq('id' as any, id);
+    .eq('id', id);
 }
 
 /**
