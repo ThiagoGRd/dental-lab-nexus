@@ -7,9 +7,9 @@ import Sidebar from './Sidebar';
 import { 
   supabase, 
   checkAuthSession, 
-  getUserProfile, 
   signOut 
 } from '@/integrations/supabase/client';
+import { safeProfileOperations } from '@/utils/supabaseHelpers';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -48,7 +48,8 @@ export default function Layout({ children }: LayoutProps) {
         }
         
         // Check user profile with our safe function
-        const { profile, error: profileError } = await getUserProfile(session.user.id);
+        const profileOps = await safeProfileOperations();
+        const { profile, error: profileError } = await profileOps.getById(session.user.id);
         
         if (profileError) {
           throw profileError;
@@ -90,7 +91,8 @@ export default function Layout({ children }: LayoutProps) {
         } else if (event === 'SIGNED_IN' && session) {
           try {
             // Use our safe function to get profile
-            const { profile } = await getUserProfile(session.user.id);
+            const profileOps = await safeProfileOperations();
+            const { profile } = await profileOps.getById(session.user.id);
               
             localStorage.setItem('user', JSON.stringify({
               id: session.user.id,

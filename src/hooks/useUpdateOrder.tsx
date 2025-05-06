@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
-import { supabase, hasError } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void) {
   const handleUpdateOrder = async (updatedOrder: any) => {
@@ -12,7 +12,7 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
         : updatedOrder.notes;
       
       // Create update object once to avoid repetition
-      const updateData = {
+      const updateData: Database['public']['Tables']['orders']['Update'] = {
         status: updatedOrder.status,
         deadline: updatedOrder.dueDate ? new Date(updatedOrder.dueDate).toISOString() : null,
         priority: updatedOrder.isUrgent ? 'urgent' : 'normal',
@@ -20,13 +20,13 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
       };
       
       // Update in Supabase
-      const response = await supabase
+      const { error } = await supabase
         .from('orders')
         .update(updateData)
         .eq('id', updatedOrder.originalData?.orderId || updatedOrder.id);
         
-      if (hasError(response)) {
-        console.error('Erro ao atualizar ordem:', response.error);
+      if (error) {
+        console.error('Erro ao atualizar ordem:', error);
         toast.error('Erro ao atualizar ordem de serviço.');
         return false;
       }

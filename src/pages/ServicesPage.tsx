@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ServiceManagement from '@/components/services/ServiceManagement';
-import { serviceOperations } from "@/integrations/supabase/client";
+import { safeServiceOperations } from "@/utils/supabaseHelpers";
 
 // This type matches the updated Service interface in ServiceManagement.tsx
 interface Service {
@@ -22,7 +22,8 @@ export default function ServicesPage() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const serviceUtils = await serviceOperations();
+        setLoading(true);
+        const serviceUtils = await safeServiceOperations();
         const { services: serviceData, error } = await serviceUtils.getAll();
           
         if (error) {

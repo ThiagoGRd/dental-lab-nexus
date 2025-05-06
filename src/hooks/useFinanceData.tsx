@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
+import { safeFinanceOperations, safeExtract } from '@/utils/supabaseHelpers';
 
 export function useFinanceData() {
   const [payableAccounts, setPayableAccounts] = useState<any[]>([]);
@@ -18,12 +19,10 @@ export function useFinanceData() {
     try {
       setLoading(true);
 
+      const financeOps = await safeFinanceOperations();
+      
       // Buscar contas a pagar (despesas)
-      const { data: expensesData, error: expensesError } = await supabase
-        .from('finances')
-        .select('*')
-        .eq('type', 'expense')
-        .order('due_date', { ascending: true });
+      const { finances: expensesData, error: expensesError } = await financeOps.getByType('expense');
         
       if (expensesError) {
         console.error('Erro ao buscar despesas:', expensesError);
@@ -32,11 +31,7 @@ export function useFinanceData() {
       }
 
       // Buscar contas a receber (receitas)
-      const { data: revenuesData, error: revenuesError } = await supabase
-        .from('finances')
-        .select('*')
-        .eq('type', 'revenue')
-        .order('due_date', { ascending: true });
+      const { finances: revenuesData, error: revenuesError } = await financeOps.getByType('revenue');
         
       if (revenuesError) {
         console.error('Erro ao buscar receitas:', revenuesError);
@@ -44,8 +39,12 @@ export function useFinanceData() {
         return;
       }
 
+      // Extrair valores seguros
+      const expenses = safeExtract(expensesData, []);
+      const revenues = safeExtract(revenuesData, []);
+
       // Buscar ordens relacionadas às receitas que têm related_order_id
-      const orderIds = revenuesData
+      const orderIds = revenues
         .filter(rev => rev.related_order_id)
         .map(rev => rev.related_order_id);
 
@@ -53,24 +52,20 @@ export function useFinanceData() {
 
       if (orderIds.length > 0) {
         // Buscar ordens
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('id, client_id')
-          .in('id', orderIds);
+        const { orders: ordersData } = await financeOps.getRelatedOrders(orderIds);
+        const orders = safeExtract(ordersData, []);
           
-        if (!ordersError && ordersData) {
+        if (orders.length > 0) {
           // Buscar clientes
-          const clientIds = ordersData.map(order => order.client_id);
-          const { data: clientsData, error: clientsError } = await supabase
-            .from('clients')
-            .select('id, name')
-            .in('id', clientIds);
+          const clientIds = orders.map(order => order.client_id);
+          const { clients: clientsData } = await financeOps.getClientsByIds(clientIds);
+          const clients = safeExtract(clientsData, []);
             
-          if (!clientsError && clientsData) {
+          if (clients.length > 0) {
             // Criar mapa de ordens para clientes
             const orderClientMap: Record<string, string> = {};
-            ordersData.forEach(order => {
-              const client = clientsData.find(c => c.id === order.client_id);
+            orders.forEach(order => {
+              const client = clients.find(c => c.id === order.client_id);
               if (client) {
                 orderClientMap[order.id] = client.name;
               }
@@ -82,7 +77,7 @@ export function useFinanceData() {
       }
 
       // Formatar contas a pagar
-      const formattedPayables = expensesData.map(expense => ({
+      const formattedPayables = expenses.map(expense => ({
         id: expense.id,
         description: expense.description,
         category: expense.category || 'Não categorizado',
@@ -94,7 +89,7 @@ export function useFinanceData() {
       }));
 
       // Formatar contas a receber
-      const formattedReceivables = revenuesData.map(revenue => {
+      const formattedReceivables = revenues.map(revenue => {
         let clientName = 'Cliente não especificado';
         let orderNumber = 'N/A';
         
@@ -144,13 +139,8 @@ export function useFinanceData() {
   // Handle payment of an account
   const handlePayment = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('finances')
-        .update({
-          status: 'paid',
-          payment_date: new Date().toISOString()
-        })
-        .eq('id', id);
+      const financeOps = await safeFinanceOperations();
+      const { error } = await financeOps.updateStatus(id, 'paid');
         
       if (error) {
         console.error('Erro ao registrar pagamento:', error);
@@ -173,13 +163,8 @@ export function useFinanceData() {
   // Handle receiving of an account
   const handleReceive = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('finances')
-        .update({
-          status: 'received',
-          payment_date: new Date().toISOString()
-        })
-        .eq('id', id);
+      const financeOps = await safeFinanceOperations();
+      const { error } = await financeOps.updateStatus(id, 'received');
         
       if (error) {
         console.error('Erro ao registrar recebimento:', error);
@@ -247,6 +232,8 @@ export function useFinanceData() {
     if (!currentAccount) return;
     
     try {
+      const financeOps = await safeFinanceOperations();
+      
       // Preparar dados para atualização
       const updateData = {
         description: 'description' in editFormData ? editFormData.description : undefined,
@@ -263,10 +250,7 @@ export function useFinanceData() {
         }
       });
       
-      const { error } = await supabase
-        .from('finances')
-        .update(updateData)
-        .eq('id', currentAccount.id);
+      const { error } = await financeOps.update(currentAccount.id, updateData);
         
       if (error) {
         console.error('Erro ao atualizar conta:', error);
@@ -310,6 +294,7 @@ export function useFinanceData() {
   // Add new payable account
   const handleAddPayable = async (data: any) => {
     try {
+      const financeOps = await safeFinanceOperations();
       const newPayableData = {
         description: data.description,
         category: data.category,
@@ -320,11 +305,7 @@ export function useFinanceData() {
         type: 'expense'
       };
       
-      const { data: insertedData, error } = await supabase
-        .from('finances')
-        .insert(newPayableData)
-        .select()
-        .single();
+      const { finance: insertedData, error } = await financeOps.add(newPayableData);
         
       if (error) {
         console.error('Erro ao adicionar conta a pagar:', error);
@@ -332,20 +313,22 @@ export function useFinanceData() {
         return;
       }
       
-      // Formatar nova conta para exibição
-      const newPayable = {
-        id: insertedData.id,
-        description: insertedData.description,
-        category: insertedData.category || 'Não categorizado',
-        value: insertedData.amount,
-        dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
-        status: 'pending',
-        notes: insertedData.notes || '',
-        originalData: insertedData
-      };
-      
-      setPayableAccounts([...payableAccounts, newPayable]);
-      toast.success('Nova conta a pagar adicionada com sucesso!');
+      if (insertedData) {
+        // Formatar nova conta para exibição
+        const newPayable = {
+          id: insertedData.id,
+          description: insertedData.description,
+          category: insertedData.category || 'Não categorizado',
+          value: insertedData.amount,
+          dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+          status: 'pending',
+          notes: insertedData.notes || '',
+          originalData: insertedData
+        };
+        
+        setPayableAccounts([...payableAccounts, newPayable]);
+        toast.success('Nova conta a pagar adicionada com sucesso!');
+      }
       
     } catch (error) {
       console.error('Erro ao adicionar conta a pagar:', error);
@@ -356,10 +339,9 @@ export function useFinanceData() {
   // Add new receivable account
   const handleAddReceivable = async (data: any) => {
     try {
-      // Busca o ID do cliente pelo nome (se for necessário)
-      let orderId = null;
-      
+      const financeOps = await safeFinanceOperations();
       // Se o orderNumber for fornecido e não for N/A, tentamos buscar a ordem
+      let orderId = null;
       if (data.orderNumber && data.orderNumber !== 'N/A') {
         // Tenta buscar a ordem pelo número - isso pode precisar ser ajustado dependendo de como as ordens são armazenadas
       }
@@ -374,11 +356,7 @@ export function useFinanceData() {
         related_order_id: orderId
       };
       
-      const { data: insertedData, error } = await supabase
-        .from('finances')
-        .insert(newReceivableData)
-        .select()
-        .single();
+      const { finance: insertedData, error } = await financeOps.add(newReceivableData);
         
       if (error) {
         console.error('Erro ao adicionar conta a receber:', error);
@@ -386,20 +364,22 @@ export function useFinanceData() {
         return;
       }
       
-      // Formatar nova conta para exibição
-      const newReceivable = {
-        id: insertedData.id,
-        client: data.client,
-        orderNumber: data.orderNumber || 'N/A',
-        value: insertedData.amount,
-        dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
-        status: 'pending',
-        notes: insertedData.notes || '',
-        originalData: insertedData
-      };
-      
-      setReceivableAccounts([...receivableAccounts, newReceivable]);
-      toast.success('Nova conta a receber adicionada com sucesso!');
+      if (insertedData) {
+        // Formatar nova conta para exibição
+        const newReceivable = {
+          id: insertedData.id,
+          client: data.client,
+          orderNumber: data.orderNumber || 'N/A',
+          value: insertedData.amount,
+          dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+          status: 'pending',
+          notes: insertedData.notes || '',
+          originalData: insertedData
+        };
+        
+        setReceivableAccounts([...receivableAccounts, newReceivable]);
+        toast.success('Nova conta a receber adicionada com sucesso!');
+      }
       
     } catch (error) {
       console.error('Erro ao adicionar conta a receber:', error);

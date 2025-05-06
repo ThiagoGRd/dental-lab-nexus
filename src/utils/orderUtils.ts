@@ -89,7 +89,7 @@ export async function updateOrder(
     .eq('id', orderId);
 }
 
-// Type-safe update workflow function
+// Type-safe update workflow function with proper typing
 export async function updateWorkflow(
   workflowId: string,
   currentStep: number,
@@ -105,22 +105,6 @@ export async function updateWorkflow(
     .from('order_workflows')
     .update(workflowUpdate)
     .eq('id', workflowId);
-}
-
-// Type-safe function to get active services
-export async function getActiveServices() {
-  try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('active', true);
-      
-    if (error) throw error;
-    return { services: data, error: null };
-  } catch (error) {
-    console.error('Erro ao buscar serviços ativos:', error);
-    return { services: null, error };
-  }
 }
 
 // Type-safe function to get workflow by order ID
@@ -147,11 +131,11 @@ export async function getWorkflowByOrderId(orderId: string) {
   }
 }
 
-// Type-safe function to update workflow with proper type handling
+// Type-safe function to update workflow step
 export async function updateWorkflowStep(
   workflowId: string,
   currentStep: number,
-  history: Json[]
+  history: any[]
 ) {
   try {
     const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
@@ -173,42 +157,97 @@ export async function updateWorkflowStep(
   }
 }
 
-// Type-safe function to handle service related operations
-export async function updateServiceById(
-  serviceId: string,
-  serviceData: Database['public']['Tables']['services']['Update']
-) {
-  try {
-    const { data, error } = await supabase
-      .from('services')
-      .update(serviceData)
-      .eq('id', serviceId);
-      
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error('Erro ao atualizar serviço:', error);
-    return { data: null, error };
-  }
-}
-
-// Type-safe function to handle profile related operations
-export async function updateProfileById(
-  profileId: string,
-  profileData: Database['public']['Tables']['profiles']['Update']
-) {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(profileData)
-      .eq('id', profileId);
-      
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error('Erro ao atualizar perfil:', error);
-    return { data: null, error };
-  }
+// Function to handle service related operations
+export async function serviceOperations() {
+  return {
+    // Get all services
+    getAll: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('name');
+          
+        if (error) throw error;
+        return { services: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar serviços:', error);
+        return { services: null, error };
+      }
+    },
+    
+    // Get active services only
+    getActive: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .eq('active', true)
+          .order('name');
+          
+        if (error) throw error;
+        return { services: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar serviços ativos:', error);
+        return { services: null, error };
+      }
+    },
+    
+    // Add new service
+    add: async (serviceData: Omit<Database['public']['Tables']['services']['Insert'], 'id' | 'created_at' | 'updated_at'>) => {
+      try {
+        // Ensure active is set if not provided
+        const fullServiceData = {
+          ...serviceData,
+          active: serviceData.active !== undefined ? serviceData.active : true
+        };
+        
+        const { data, error } = await supabase
+          .from('services')
+          .insert(fullServiceData)
+          .select();
+          
+        if (error) throw error;
+        return { service: data?.[0] || null, error: null };
+      } catch (error) {
+        console.error('Erro ao adicionar serviço:', error);
+        return { service: null, error };
+      }
+    },
+    
+    // Update existing service
+    update: async (id: string, serviceData: Omit<Database['public']['Tables']['services']['Update'], 'id' | 'created_at' | 'updated_at'>) => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', id)
+          .select();
+          
+        if (error) throw error;
+        return { service: data?.[0] || null, error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar serviço:', error);
+        return { service: null, error };
+      }
+    },
+    
+    // Delete service
+    delete: async (id: string) => {
+      try {
+        const { error } = await supabase
+          .from('services')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        return { error: null };
+      } catch (error) {
+        console.error('Erro ao excluir serviço:', error);
+        return { error };
+      }
+    }
+  };
 }
 
 // Function to handle order workflow operations
@@ -242,7 +281,7 @@ export async function orderWorkflowOperations() {
     updateStep: async (
       workflowId: string,
       currentStep: number,
-      history: Json[]
+      history: any[]
     ) => {
       try {
         const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
@@ -261,6 +300,60 @@ export async function orderWorkflowOperations() {
       } catch (error) {
         console.error('Erro ao atualizar etapa do workflow:', error);
         return { error };
+      }
+    }
+  };
+}
+
+// Type-safe profile operations
+export async function profileOperations() {
+  return {
+    // Get all profiles
+    getAll: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (error) throw error;
+        return { profiles: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar perfis:', error);
+        return { profiles: null, error };
+      }
+    },
+    
+    // Get profile by ID
+    getById: async (id: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) throw error;
+        return { profile: data, error: null };
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+        return { profile: null, error };
+      }
+    },
+    
+    // Update existing profile
+    update: async (id: string, profileData: Partial<Database['public']['Tables']['profiles']['Update']>) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', id)
+          .select();
+          
+        if (error) throw error;
+        return { profile: data?.[0] || null, error: null };
+      } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        return { profile: null, error };
       }
     }
   };

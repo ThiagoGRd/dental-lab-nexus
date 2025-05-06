@@ -2,10 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { 
-  checkAuthSession, 
-  getUserProfile
-} from '@/integrations/supabase/client';
+import { checkAuthSession } from '@/integrations/supabase/client';
+import { safeProfileOperations } from '@/utils/supabaseHelpers';
 import type { Database } from '@/integrations/supabase/types';
 
 interface ProtectedRouteProps {
@@ -41,8 +39,9 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
           return;
         }
         
-        // Verificar se o usuário tem o papel necessário usando a função segura
-        const { profile, error: profileError } = await getUserProfile(session.user.id);
+        // Verificar se o usuário tem o papel necessário usando nossas funções seguras
+        const profileOps = await safeProfileOperations();
+        const { profile, error: profileError } = await profileOps.getById(session.user.id);
         
         if (profileError) {
           throw profileError;
