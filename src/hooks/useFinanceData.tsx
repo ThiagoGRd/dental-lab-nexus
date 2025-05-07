@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { format, parseISO, isAfter, isBefore, isToday, addDays, isSameDay, compareAsc, compareDesc } from 'date-fns';
@@ -15,7 +16,7 @@ export function useFinanceData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
   
-  // Advanced filter states
+  // Advanced filter states - defaults changed to show all accounts
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -77,8 +78,8 @@ export function useFinanceData() {
       const expenses = expensesResponse.finances || [];
       const revenues = revenuesResponse.finances || [];
       
-      console.log("Despesas obtidas:", expenses);
-      console.log("Receitas obtidas:", revenues);
+      console.log("Despesas obtidas:", expenses.length);
+      console.log("Receitas obtidas:", revenues.length);
 
       // Buscar ordens relacionadas às receitas que têm related_order_id
       const orderIds = revenues
@@ -159,8 +160,8 @@ export function useFinanceData() {
         };
       });
       
-      console.log("Dados formatados - Payables:", formattedPayables);
-      console.log("Dados formatados - Receivables:", formattedReceivables);
+      console.log("Dados formatados - Payables:", formattedPayables.length);
+      console.log("Dados formatados - Receivables:", formattedReceivables.length);
 
       setPayableAccounts(formattedPayables);
       setReceivableAccounts(formattedReceivables);
@@ -180,16 +181,18 @@ export function useFinanceData() {
     fetchFinanceData();
   }, [fetchFinanceData]);
 
-  // Apply filters to accounts
+  // Apply filters to accounts - Modified to ensure all accounts are shown when filters are not set
   const applyFilters = useCallback((accounts: any[]) => {
     return accounts.filter(account => {
       // Search term filter
-      const searchLower = searchTerm.toLowerCase();
-      const hasSearchTerm = 'description' in account 
-        ? account.description.toLowerCase().includes(searchLower) || account.category.toLowerCase().includes(searchLower)
-        : account.client.toLowerCase().includes(searchLower) || account.orderNumber.toLowerCase().includes(searchLower);
-      
-      if (!hasSearchTerm) return false;
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const hasSearchTerm = 'description' in account 
+          ? account.description.toLowerCase().includes(searchLower) || account.category.toLowerCase().includes(searchLower)
+          : account.client.toLowerCase().includes(searchLower) || account.orderNumber.toLowerCase().includes(searchLower);
+        
+        if (!hasSearchTerm) return false;
+      }
 
       // Status filter
       if (statusFilter !== 'all') {

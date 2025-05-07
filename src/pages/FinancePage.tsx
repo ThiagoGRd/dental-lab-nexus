@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
@@ -57,6 +57,11 @@ export default function FinancePage() {
     handleAddReceivable,
     refreshData
   } = useFinanceData();
+
+  // Automatically clear filters when the component mounts
+  useEffect(() => {
+    clearFilters();
+  }, []);
 
   const handleNewPayableClick = () => {
     setNewAccountType('payable');
