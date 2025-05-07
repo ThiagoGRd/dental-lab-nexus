@@ -10,9 +10,12 @@ export function extractServiceName(serviceInfo: string | undefined): string | nu
   const serviceInfoLower = serviceInfo.toLowerCase();
   
   // First strategy: Look for specific common dental services with exact keyword matching
+  // Priority order matters here - more specific matches should come first
   const dentalServices = [
     { keyword: 'placa de clareamento', name: 'Placa de Clareamento' },
     { keyword: 'placa clareamento', name: 'Placa de Clareamento' },
+    { keyword: 'clareamento', name: 'Placa de Clareamento' }, // Added more flexible match
+    { keyword: 'placa', name: 'Placa de Clareamento' }, // Added more flexible match with high priority for "placa"
     { keyword: 'contenção estética', name: 'Contenção Estética' },
     { keyword: 'guia cirúrgico', name: 'Guia Cirúrgico' },
     { keyword: 'guia cirurgico', name: 'Guia Cirúrgico' },
@@ -44,8 +47,8 @@ export function extractServiceName(serviceInfo: string | undefined): string | nu
   
   // Third strategy: Look for dental service patterns using keywords
   const serviceKeywords = [
-    'placa', 'coroa', 'aparelho', 'tratamento', 'exame', 'consulta', 
-    'limpeza', 'clareamento', 'restauração', 'restauracao', 'extração', 'extracao',
+    'coroa', 'aparelho', 'tratamento', 'exame', 'consulta', 
+    'limpeza', 'restauração', 'restauracao', 'extração', 'extracao',
     'contenção', 'contencao', 'modelo', 'moldagem', 'ortodontia'
   ];
   
@@ -56,12 +59,8 @@ export function extractServiceName(serviceInfo: string | undefined): string | nu
   ];
   
   // Filter out notes entries that only contain status keywords without service information
-  let serviceFound = false;
-  
   for (const keyword of serviceKeywords) {
     if (serviceInfoLower.includes(keyword)) {
-      serviceFound = true;
-      
       // Extract phrase containing the service keyword (up to 5 words surrounding it)
       const regex = new RegExp(`.{0,30}${keyword}.{0,30}`, 'i');
       const match = serviceInfo.match(regex);
@@ -116,9 +115,17 @@ export function extractServiceName(serviceInfo: string | undefined): string | nu
     }
   }
   
-  // Fifth strategy: If "Placa" is mentioned anywhere with other context, prioritize it as service
-  if (serviceInfoLower.includes('placa')) {
+  // Handle special cases for "placa"/"clareamento" anywhere in the text
+  if (serviceInfoLower.includes('placa') || serviceInfoLower.includes('clareamento')) {
     return 'Placa de Clareamento';
+  }
+  
+  // Look for words in notes that might be service names
+  const specializedTerms = ['moldagem', 'escaneamento', 'restauração', 'coroa'];
+  for (const term of specializedTerms) {
+    if (serviceInfoLower.includes(term)) {
+      return term.charAt(0).toUpperCase() + term.slice(1);
+    }
   }
   
   // As last resort, look for capitalized phrases that might indicate service names
@@ -142,5 +149,6 @@ export function extractServiceName(serviceInfo: string | undefined): string | nu
     }
   }
   
+  // Return null if no service name is found
   return null;
 }
