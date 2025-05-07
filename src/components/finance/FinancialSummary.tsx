@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { FileUp, FileDown, Calendar } from 'lucide-react';
+import { startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
 
 interface FinancialSummaryProps {
   payableAccounts: any[];
@@ -23,17 +24,38 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  // Filtrar apenas contas pendentes
-  const pendingPayables = (payableAccounts || []).filter(acc => acc.status === 'pending');
-  const pendingReceivables = (receivableAccounts || []).filter(acc => acc.status === 'pending');
+  // Filtrar contas para o mês atual
+  const currentMonthStart = startOfMonth(new Date());
+  const currentMonthEnd = endOfMonth(new Date());
+
+  const filterByCurrentMonth = (account: any) => {
+    if (!account.dueDate) return false;
+    try {
+      const dueDate = parseISO(account.dueDate);
+      return isWithinInterval(dueDate, {
+        start: currentMonthStart,
+        end: currentMonthEnd
+      });
+    } catch (e) {
+      console.error("Error parsing date:", e);
+      return false;
+    }
+  };
+
+  // Filtrar apenas contas pendentes para o mês atual
+  const pendingPayables = (payableAccounts || [])
+    .filter(acc => acc.status === 'pending' && filterByCurrentMonth(acc));
+    
+  const pendingReceivables = (receivableAccounts || [])
+    .filter(acc => acc.status === 'pending' && filterByCurrentMonth(acc));
   
   // Calcular totais
   const totalToPay = pendingPayables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const totalToReceive = pendingReceivables.reduce((sum, acc) => sum + (Number(acc.value) || 0), 0);
   const balance = totalToReceive - totalToPay;
 
-  console.log('FinancialSummary - Pending Receivables:', pendingReceivables);
-  console.log('FinancialSummary - Pending Payables:', pendingPayables);
+  console.log('FinancialSummary - Pending Receivables for current month:', pendingReceivables);
+  console.log('FinancialSummary - Pending Payables for current month:', pendingPayables);
   console.log('FinancialSummary - Total to Receive:', totalToReceive);
   console.log('FinancialSummary - Total to Pay:', totalToPay);
   
@@ -50,7 +72,7 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
+          <CardTitle className="text-lg">Resumo Financeiro do Mês Atual</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -87,7 +109,7 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Próximos Vencimentos</CardTitle>
+          <CardTitle className="text-lg">Próximos Vencimentos do Mês</CardTitle>
         </CardHeader>
         <CardContent>
           {upcomingDueAccounts.length > 0 ? (
@@ -121,7 +143,7 @@ export default function FinancialSummary({ payableAccounts = [], receivableAccou
             </div>
           ) : (
             <div className="p-4 text-center text-gray-500">
-              Nenhum vencimento próximo encontrado.
+              Nenhum vencimento próximo encontrado para este mês.
             </div>
           )}
         </CardContent>

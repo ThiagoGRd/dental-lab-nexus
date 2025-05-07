@@ -1,17 +1,27 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart2, Calendar, Download, FileText, Printer, Users } from 'lucide-react';
+import { BarChart2, Calendar, FileText, Users } from 'lucide-react';
 import { BarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
+import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import GenerateReportButtons from '@/components/finance/GenerateReportButtons';
 
 export default function ReportsPage() {
-  const [startDate, setStartDate] = useState('2025-01-01');
-  const [endDate, setEndDate] = useState('2025-06-30');
+  // Definir datas para o mês atual por padrão
+  const currentDate = new Date();
+  const firstDayOfMonth = startOfMonth(currentDate);
+  const lastDayOfMonth = endOfMonth(currentDate);
+  
+  const [startDate, setStartDate] = useState(format(firstDayOfMonth, 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(lastDayOfMonth, 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('financial');
   
   // Dados para os gráficos
   const [productionData, setProductionData] = useState<any[]>([]);
@@ -48,6 +58,10 @@ export default function ReportsPage() {
     averageValue: 'R$ 0,00',
     topClientsByValue: [] as any[]
   });
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
 
   const loadReportsData = async () => {
     try {
@@ -89,8 +103,8 @@ export default function ReportsPage() {
       const { data: financesData, error: financesError } = await supabase
         .from('finances')
         .select('*')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
+        .gte('due_date', startDate)
+        .lte('due_date', endDate);
         
       if (financesError) {
         console.error('Erro ao buscar dados financeiros:', financesError);
@@ -246,55 +260,70 @@ export default function ReportsPage() {
   
   // Funções auxiliares para processar os dados
   const processOrdersByMonth = (orders: any[]) => {
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
-    const result = months.map(month => ({
-      month,
-      total: 0,
-      urgent: 0
-    }));
+    // Criar um mapa para dados mensais no período selecionado
+    const monthMap = new Map();
     
-    // Processa os dados reais
+    // Inicializar o mapa com todos os meses no intervalo
+    let currentMonth = new Date(startDate);
+    const endMonthDate = new Date(endDate);
+    
+    while (currentMonth <= endMonthDate) {
+      const monthKey = format(currentMonth, 'MMM', { locale: ptBR });
+      monthMap.set(monthKey, { month: monthKey, total: 0, urgent: 0 });
+      currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+    }
+    
+    // Processar os dados reais
     orders.forEach(order => {
       const date = new Date(order.created_at);
-      const monthIndex = date.getMonth();
-      if (monthIndex >= 0 && monthIndex < 6) {
-        result[monthIndex].total++;
+      const monthKey = format(date, 'MMM', { locale: ptBR });
+      
+      if (monthMap.has(monthKey)) {
+        const monthData = monthMap.get(monthKey);
+        monthData.total++;
         if (order.priority === 'high' || order.priority === 'urgent') {
-          result[monthIndex].urgent++;
+          monthData.urgent++;
         }
       }
     });
     
-    // Se não houver dados suficientes, preenche com zeros
-    return result;
+    // Converter mapa em array
+    return Array.from(monthMap.values());
   };
   
   const processFinancialData = (finances: any[]) => {
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
-    const monthlyData = months.map(month => ({
-      month,
-      receita: 0,
-      despesa: 0
-    }));
+    // Criar um mapa para dados mensais no período selecionado
+    const monthMap = new Map();
     
-    // Processa os dados reais
+    // Inicializar o mapa com todos os meses no intervalo
+    let currentMonth = new Date(startDate);
+    const endMonthDate = new Date(endDate);
+    
+    while (currentMonth <= endMonthDate) {
+      const monthKey = format(currentMonth, 'MMM', { locale: ptBR });
+      monthMap.set(monthKey, { month: monthKey, receita: 0, despesa: 0 });
+      currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+    }
+    
+    // Processar os dados reais
     let totalRevenue = 0;
     let totalExpenses = 0;
     const expensesByCategory: Record<string, number> = {};
     
     finances.forEach(finance => {
-      const date = new Date(finance.created_at);
-      const monthIndex = date.getMonth();
+      const date = new Date(finance.due_date);
+      const monthKey = format(date, 'MMM', { locale: ptBR });
       
-      if (monthIndex >= 0 && monthIndex < 6) {
+      if (monthMap.has(monthKey)) {
         // Garantir que o valor é numérico
         const amount = typeof finance.amount === 'number' ? finance.amount : 0;
+        const monthData = monthMap.get(monthKey);
         
         if (finance.type === 'revenue') {
-          monthlyData[monthIndex].receita += amount;
+          monthData.receita += amount;
           totalRevenue += amount;
         } else if (finance.type === 'expense') {
-          monthlyData[monthIndex].despesa += amount;
+          monthData.despesa += amount;
           totalExpenses += amount;
           
           // Agrupar despesas por categoria
@@ -338,7 +367,7 @@ export default function ReportsPage() {
     const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     
     return {
-      monthlyData,
+      monthlyData: Array.from(monthMap.values()),
       summary: {
         totalRevenue: formatCurrency(totalRevenue),
         totalExpenses: formatCurrency(totalExpenses),
@@ -412,15 +441,15 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="production">
+      <Tabs defaultValue="financial" onValueChange={handleTabChange} value={activeTab}>
         <TabsList className="mb-6 w-full max-w-2xl">
-          <TabsTrigger value="production" className="flex items-center">
-            <BarChart2 className="h-4 w-4 mr-2" />
-            Produção
-          </TabsTrigger>
           <TabsTrigger value="financial" className="flex items-center">
             <FileText className="h-4 w-4 mr-2" />
             Financeiro
+          </TabsTrigger>
+          <TabsTrigger value="production" className="flex items-center">
+            <BarChart2 className="h-4 w-4 mr-2" />
+            Produção
           </TabsTrigger>
           <TabsTrigger value="clients" className="flex items-center">
             <Users className="h-4 w-4 mr-2" />
@@ -433,17 +462,131 @@ export default function ReportsPage() {
         </TabsList>
 
         <div className="flex justify-end mb-4">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar PDF
-            </Button>
-          </div>
+          <GenerateReportButtons 
+            reportType={activeTab}
+            startDate={startDate}
+            endDate={endDate}
+            data={
+              activeTab === 'financial' ? financialData :
+              activeTab === 'production' ? productionData :
+              activeTab === 'clients' ? clientData :
+              inventoryData
+            }
+            title={
+              activeTab === 'financial' ? 'Relatório Financeiro' :
+              activeTab === 'production' ? 'Relatório de Produção' :
+              activeTab === 'clients' ? 'Relatório de Clientes' :
+              'Relatório de Estoque'
+            }
+          />
         </div>
+
+        <TabsContent value="financial">
+          {loading ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 bg-gray-200 animate-pulse rounded w-48 mb-2"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded w-64"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] bg-gray-100 animate-pulse rounded"></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-6 bg-gray-200 animate-pulse rounded w-48 mb-2"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded w-40"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {[1, 2].map(i => (
+                        <div key={i} className="rounded-md bg-gray-100 p-4">
+                          <div className="h-4 bg-gray-200 animate-pulse rounded w-24 mb-2"></div>
+                          <div className="h-8 bg-gray-200 animate-pulse rounded w-32 mb-1"></div>
+                          <div className="h-4 bg-gray-200 animate-pulse rounded w-40"></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Receita vs Despesas</CardTitle>
+                  <CardDescription>Comparativo financeiro mensal</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={financialData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`R$ ${value}`, undefined]} />
+                        <Legend />
+                        <Line type="monotone" dataKey="receita" name="Receita" stroke="#0D82E0" strokeWidth={2} />
+                        <Line type="monotone" dataKey="despesa" name="Despesa" stroke="#ea384c" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo Financeiro</CardTitle>
+                  <CardDescription>Indicadores do período</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-md bg-blue-50 p-4">
+                        <div className="text-sm text-gray-500">Receita Total</div>
+                        <div className="text-2xl font-bold text-dentalblue-700">{financialSummary.totalRevenue}</div>
+                        <div className="mt-1 text-xs text-green-600">{financialSummary.previousComparisonRevenue} vs período anterior</div>
+                      </div>
+                      <div className="rounded-md bg-red-50 p-4">
+                        <div className="text-sm text-gray-500">Despesas Totais</div>
+                        <div className="text-2xl font-bold text-red-600">{financialSummary.totalExpenses}</div>
+                        <div className="mt-1 text-xs text-red-600">{financialSummary.previousComparisonExpenses} vs período anterior</div>
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-md bg-green-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-gray-500">Lucro do Período</div>
+                          <div className="text-2xl font-bold text-green-700">{financialSummary.profit}</div>
+                        </div>
+                        <div className="text-4xl font-bold text-green-600">{financialSummary.profitPercentage}</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3 font-medium">Detalhamento de Despesas</h4>
+                      <div className="space-y-2">
+                        {financialSummary.expenseBreakdown.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <div className="text-sm">{item.name}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium">{item.value}</div>
+                              <div className="text-xs text-gray-500">{item.percentage}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="production">
           {loading ? (
