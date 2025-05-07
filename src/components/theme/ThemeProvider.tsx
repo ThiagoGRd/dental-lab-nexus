@@ -45,6 +45,17 @@ export function ThemeProvider({
       // Update DOM elements with the theme
       updateDOMElements(appliedTheme);
       
+      // Update meta theme-color for mobile browsers
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', appliedTheme === 'dark' ? '#1A1625' : '#ffffff');
+      } else {
+        const newMeta = document.createElement('meta');
+        newMeta.name = 'theme-color';
+        newMeta.content = appliedTheme === 'dark' ? '#1A1625' : '#ffffff';
+        document.head.appendChild(newMeta);
+      }
+      
       // Setup observer for dynamic content
       return setupMutationObserver(appliedTheme);
     } catch (error) {
@@ -71,8 +82,8 @@ export function ThemeProvider({
         html.dark [data-radix-popper-content-wrapper] > div,
         html[data-theme="dark"] [data-radix-popper-content-wrapper] > div,
         .dark [data-radix-popper-content-wrapper] > div {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
+          background-color: #1A1625 !important;
+          border-color: #2D2A3A !important;
           color: #f3f4f6 !important;
         }
         
@@ -80,15 +91,15 @@ export function ThemeProvider({
         html.dark .select-content,
         html[data-theme="dark"] .select-content,
         .dark .select-content {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
+          background-color: #1A1625 !important;
+          border-color: #2D2A3A !important;
           color: #f3f4f6 !important;
         }
         
         /* Theme attribute styling */
         .select-content[data-theme="dark"] {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
+          background-color: #1A1625 !important;
+          border-color: #2D2A3A !important;
           color: #f3f4f6 !important;
         }
         
@@ -96,8 +107,8 @@ export function ThemeProvider({
         [role="dialog"][data-theme="dark"],
         .dialog-content[data-theme="dark"],
         .modal-content[data-theme="dark"] {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
+          background-color: #1A1625 !important;
+          border-color: #2D2A3A !important;
           color: #f3f4f6 !important;
         }
         
@@ -111,8 +122,8 @@ export function ThemeProvider({
         .dark input,
         .dark textarea,
         .dark select {
-          background-color: #374151 !important;
-          border-color: #4b5563 !important;
+          background-color: #2D2A3A !important;
+          border-color: #3D3A4B !important;
           color: #f3f4f6 !important;
         }
         
@@ -120,7 +131,7 @@ export function ThemeProvider({
         html.dark [role="menuitem"],
         html[data-theme="dark"] [role="menuitem"],
         .dark [role="menuitem"] {
-          background-color: #1f2937 !important;
+          background-color: #1A1625 !important;
           color: #f3f4f6 !important;
         }
         
@@ -129,6 +140,44 @@ export function ThemeProvider({
         html[data-theme="dark"] .select-content svg,
         .dark .select-content svg {
           color: #f3f4f6 !important;
+        }
+        
+        /* Table styling for dark mode */
+        html.dark table,
+        html[data-theme="dark"] table,
+        .dark table {
+          background-color: #1A1625 !important;
+          color: #f3f4f6 !important;
+          border-color: #2D2A3A !important;
+        }
+        
+        html.dark th,
+        html[data-theme="dark"] th,
+        .dark th {
+          background-color: #2D2A3A !important;
+          color: #f3f4f6 !important;
+          border-color: #3D3A4B !important;
+        }
+        
+        html.dark td,
+        html[data-theme="dark"] td,
+        .dark td {
+          border-color: #2D2A3A !important;
+          color: #f3f4f6 !important;
+        }
+        
+        /* Services page specific styling */
+        html.dark .p-6,
+        html[data-theme="dark"] .p-6,
+        .dark .p-6 {
+          background-color: #1A1625 !important;
+        }
+        
+        /* Override any light background containers */
+        html.dark div[class*="bg-white"],
+        html[data-theme="dark"] div[class*="bg-white"],
+        .dark div[class*="bg-white"] {
+          background-color: #1A1625 !important;
         }
       `;
       

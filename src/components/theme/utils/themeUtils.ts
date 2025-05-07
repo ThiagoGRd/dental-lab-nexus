@@ -48,6 +48,30 @@ export const updateDOMElements = (appliedTheme: string) => {
       appliedTheme === "dark" ? 'recharts-dark-theme' : null,
       appliedTheme === "light" ? 'recharts-dark-theme' : null
     );
+    
+    // Apply dark theme to table elements
+    safelyManageClasses(
+      'table, tbody, thead, tr, th, td',
+      isDark ? 'dark-table-element' : null,
+      !isDark ? 'dark-table-element' : null
+    );
+    
+    // Apply theme to specific sections that might retain light backgrounds
+    safelyManageClasses(
+      '.services-container, .services-table, .content-container, .page-container',
+      isDark ? 'dark-content' : null,
+      !isDark ? 'dark-content' : null
+    );
+    
+    // Force update all main content areas
+    document.querySelectorAll('.p-6, main, [role="main"], .content-area').forEach(el => {
+      if (isDark) {
+        el.classList.add('bg-background');
+      } else {
+        el.classList.remove('bg-background');
+      }
+    });
+    
   } catch (error) {
     console.debug("Error updating DOM elements:", error);
   }

@@ -46,10 +46,10 @@ export default function ServicesPage() {
   }, []);
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-background min-h-screen">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-dentalblue-800">Serviços</h1>
-        <p className="text-gray-600">Gerencie os serviços oferecidos pelo laboratório</p>
+        <h1 className="text-3xl font-bold text-foreground">Serviços</h1>
+        <p className="text-muted-foreground">Gerencie os serviços oferecidos pelo laboratório</p>
       </div>
       
       {/* Passando os serviços carregados para o componente de gerenciamento */}

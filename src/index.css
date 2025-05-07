@@ -46,41 +46,41 @@
   }
   
   .dark {
-    --background: 260 20% 12%; /* Fundo escuro roxo escuro */
+    --background: 260 20% 10%; /* Fundo escuro roxo mais escuro */
     --foreground: 0 0% 98%;
 
-    --card: 260 20% 15%;
+    --card: 260 20% 13%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 260 20% 15%;
+    --popover: 260 20% 13%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 250 95% 76%; /* Roxo mais vibrante no tema escuro */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 260 15% 22%;
+    --secondary: 260 15% 20%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 260 15% 22%;
+    --muted: 260 15% 20%;
     --muted-foreground: 240 5% 75%;
 
-    --accent: 260 15% 25%;
+    --accent: 260 15% 23%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 260 15% 22%;
-    --input: 260 15% 25%;
+    --border: 260 15% 20%;
+    --input: 260 15% 23%;
     --ring: 250 95% 76%;
     
-    --sidebar-background: 260 25% 11%;
+    --sidebar-background: 260 25% 9%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 250 95% 76%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 15% 22%;
+    --sidebar-accent: 260 15% 20%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 260 15% 20%;
+    --sidebar-border: 260 15% 18%;
     --sidebar-ring: 250 95% 76%;
   }
 }
@@ -93,6 +93,24 @@
   body {
     @apply bg-background text-foreground font-sans transition-colors duration-300;
     background-color: hsl(var(--background));
+  }
+  
+  /* Seleção de texto */
+  ::selection {
+    @apply bg-primary/30 text-foreground;
+  }
+  
+  /* Scrollbar personalizado */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/50;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50;
   }
 }
 
@@ -146,7 +164,7 @@
     @apply dark:fill-gray-300;
   }
   
-  /* New utility classes for dark mode dashboard */
+  /* Utility classes for dark mode dashboard */
   .dashboard-card {
     @apply bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-md p-4 shadow-sm transition-all;
   }
@@ -167,7 +185,7 @@
     @apply bg-blue-50 text-blue-700 dark:bg-purple-900/40 dark:text-purple-300;
   }
   
-  /* New dark mode improvements */
+  /* Dark mode improvements */
   .dark .stat-card {
     @apply bg-gray-800 border-gray-700;
   }
@@ -182,5 +200,55 @@
   
   .dark .status-badge {
     @apply bg-opacity-20 border-opacity-30;
+  }
+  
+  /* Estilos específicos para tabelas em modo escuro */
+  .dark table {
+    @apply bg-gray-800/90 border-gray-700;
+  }
+  
+  .dark th {
+    @apply bg-gray-800 text-gray-200 border-gray-700;
+  }
+  
+  .dark td {
+    @apply border-gray-700 text-gray-300;
+  }
+  
+  .dark tr:nth-child(even) {
+    @apply bg-gray-800/50;
+  }
+  
+  /* Estilos para inputs e formulários em modo escuro */
+  .dark input, 
+  .dark textarea, 
+  .dark select {
+    @apply bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-500;
+  }
+  
+  /* Estilos para cards e containers em modo escuro */
+  .dark .bg-white {
+    @apply bg-gray-800;
+  }
+  
+  .dark .border-gray-200 {
+    @apply border-gray-700;
+  }
+  
+  .dark .text-gray-700 {
+    @apply text-gray-300;
+  }
+  
+  .dark .text-gray-600 {
+    @apply text-gray-400;
+  }
+  
+  .dark .text-gray-900 {
+    @apply text-gray-100;
+  }
+  
+  /* Estilos para o header em modo escuro */
+  .dark [data-sidebar="sidebar"] {
+    @apply bg-sidebar shadow-lg border-r border-sidebar-border;
   }
 }
