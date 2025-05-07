@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,32 +97,32 @@
 }
 
 .status-pending {
-  @apply bg-amber-50 text-amber-700 border-amber-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-amber-50 text-amber-700 border-amber-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800;
 }
 
 .status-production {
-  @apply bg-blue-50 text-blue-700 border-blue-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-blue-50 text-blue-700 border-blue-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-blue-950 dark:text-blue-200 dark:border-blue-800;
 }
 
 .status-waiting {
-  @apply bg-purple-50 text-purple-700 border-purple-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-purple-50 text-purple-700 border-purple-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800;
 }
 
 .status-completed {
-  @apply bg-emerald-50 text-emerald-700 border-emerald-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-emerald-50 text-emerald-700 border-emerald-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800;
 }
 
 .status-delivered {
-  @apply bg-slate-50 text-slate-700 border-slate-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-slate-50 text-slate-700 border-slate-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700;
 }
 
 .status-urgent {
-  @apply bg-rose-50 text-rose-700 border-rose-200 border rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply bg-rose-50 text-rose-700 border-rose-200 border rounded-md px-2 py-0.5 text-xs font-medium dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800;
 }
 
 @layer utilities {
   .card-modern {
-    @apply bg-white rounded-md shadow-sm border border-slate-100 transition-all hover:shadow-md;
+    @apply bg-white rounded-md shadow-sm border border-slate-100 transition-all hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600;
   }
   
   .btn-gradient {
@@ -129,10 +130,40 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-blue-300;
   }
   
   .glassmorphism {
-    @apply bg-white/90 backdrop-blur-sm border border-white/20 shadow-sm;
+    @apply bg-white/90 backdrop-blur-sm border border-white/20 shadow-sm dark:bg-gray-800/80 dark:border-gray-700/30;
+  }
+  
+  /* Chart colors for dark mode */
+  .recharts-dark-theme .recharts-layer {
+    @apply dark:fill-gray-300 dark:stroke-gray-300;
+  }
+  
+  .recharts-dark-theme text {
+    @apply dark:fill-gray-300;
+  }
+  
+  /* New utility classes for dark mode dashboard */
+  .dashboard-card {
+    @apply bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-md p-4 shadow-sm transition-all;
+  }
+  
+  .dashboard-stat {
+    @apply text-2xl font-semibold text-gray-900 dark:text-gray-100;
+  }
+  
+  .dashboard-label {
+    @apply text-gray-600 dark:text-gray-400 text-sm;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800;
+  }
+  
+  .sidebar-item-active {
+    @apply bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300;
   }
 }

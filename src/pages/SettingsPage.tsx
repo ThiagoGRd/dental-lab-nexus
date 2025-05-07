@@ -200,7 +200,7 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter>
               <Button 
-                className="bg-protechblue-600 hover:bg-protechblue-700"
+                className="bg-protechblue-600 hover:bg-protechblue-700 dark:bg-protechblue-700 dark:hover:bg-protechblue-800"
                 onClick={saveCompanySettings}
               >
                 Salvar Alterações
@@ -270,13 +270,14 @@ export default function SettingsPage() {
                   onChange={(e) => handleSystemChange('defaultDueTime', parseInt(e.target.value) || 7)}
                   min={1}
                   max={30}
-                  className="max-w-xs"
+                  className="max-w-xs dark:bg-gray-800 dark:border-gray-700"
                 />
               </div>
             </CardContent>
             <CardFooter>
               <Button 
                 onClick={saveSystemSettings}
+                className="dark:bg-protechblue-700 dark:hover:bg-protechblue-800"
               >
                 Salvar Alterações
               </Button>

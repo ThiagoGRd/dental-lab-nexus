@@ -43,10 +43,37 @@ export function ThemeProvider({
         : "light";
       
       root.classList.add(systemTheme);
+      
+      // Update data attributes for select components and charts
+      if (systemTheme === "dark") {
+        root.setAttribute("data-theme", "dark");
+        document.querySelectorAll('.recharts-wrapper').forEach(el => {
+          el.classList.add('recharts-dark-theme');
+        });
+      } else {
+        root.removeAttribute("data-theme");
+        document.querySelectorAll('.recharts-wrapper').forEach(el => {
+          el.classList.remove('recharts-dark-theme');
+        });
+      }
+      
       return;
     }
     
     root.classList.add(theme);
+    
+    // Update data attributes for select components and charts
+    if (theme === "dark") {
+      root.setAttribute("data-theme", "dark");
+      document.querySelectorAll('.recharts-wrapper').forEach(el => {
+        el.classList.add('recharts-dark-theme');
+      });
+    } else {
+      root.removeAttribute("data-theme");
+      document.querySelectorAll('.recharts-wrapper').forEach(el => {
+        el.classList.remove('recharts-dark-theme');
+      });
+    }
   }, [theme]);
 
   // Listen for changes to the user's system preference
@@ -58,6 +85,19 @@ export function ThemeProvider({
         const root = window.document.documentElement;
         root.classList.remove("light", "dark");
         root.classList.add(mediaQuery.matches ? "dark" : "light");
+        
+        // Update data attributes for select components
+        if (mediaQuery.matches) {
+          root.setAttribute("data-theme", "dark");
+          document.querySelectorAll('.recharts-wrapper').forEach(el => {
+            el.classList.add('recharts-dark-theme');
+          });
+        } else {
+          root.removeAttribute("data-theme");
+          document.querySelectorAll('.recharts-wrapper').forEach(el => {
+            el.classList.remove('recharts-dark-theme');
+          });
+        }
       }
     };
     

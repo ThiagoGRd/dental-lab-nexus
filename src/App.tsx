@@ -40,98 +40,104 @@ const LoadingFallback = () => (
   </div>
 );
 
-const App = () => (
-  <React.StrictMode>
-    <ThemeProvider defaultTheme="light">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Dashboard />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/orders" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <OrdersPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/clients" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <ClientsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/production" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <ProductionPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/inventory" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <InventoryPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/finances" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <FinancePage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <ReportsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/services" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <ServicesPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute requiredRole="admin">
-                    <Layout>
-                      <SettingsPage />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </React.StrictMode>
-);
+const App = () => {
+  // Verificar se há um tema armazenado e usá-lo como padrão
+  const storedTheme = localStorage.getItem('protech-ui-theme');
+  const defaultTheme = storedTheme || 'system';
+  
+  return (
+    <React.StrictMode>
+      <ThemeProvider defaultTheme={defaultTheme as "light" | "dark" | "system"}>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Dashboard />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/orders" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <OrdersPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/clients" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <ClientsPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/production" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <ProductionPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/inventory" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <InventoryPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/finances" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <FinancePage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/reports" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <ReportsPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/services" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <ServicesPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/settings" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <Layout>
+                        <SettingsPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;

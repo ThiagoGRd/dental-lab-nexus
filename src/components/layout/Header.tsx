@@ -49,7 +49,7 @@ export default function Header() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Buscar ordens, clientes..." 
-            className="w-full max-w-md pl-9 bg-muted/50 border-input" 
+            className="w-full max-w-md pl-9 bg-muted/50 border-input dark:bg-gray-800 dark:border-gray-700" 
           />
         </div>
       </div>
@@ -62,7 +62,7 @@ export default function Header() {
               <div className="text-sm font-medium">{user.name}</div>
               <div className="text-xs text-muted-foreground">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium dark:bg-gray-700">
               {user.name?.charAt(0).toUpperCase() || 'U'}
             </div>
           </div>
