@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -141,9 +140,9 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
   // Watch for changes to the isUrgent field and update dueDate accordingly
   const isUrgent = form.watch('isUrgent');
   useEffect(() => {
-    const currentDueDate = form.getValues('dueDate');
     if (isUrgent) {
       // Set due date to 3 business days from today when marked as urgent
+      // Using addBusinessDays from date-fns v2
       const newDueDate = format(addBusinessDays(new Date(), 3), 'yyyy-MM-dd');
       form.setValue('dueDate', newDueDate);
     }
