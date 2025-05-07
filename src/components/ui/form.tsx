@@ -94,7 +94,10 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={cn(error && "text-destructive dark:text-red-400", className)}
+      className={cn(
+        error && "text-destructive dark:text-red-400",
+        className
+      )}
       htmlFor={formItemId}
       {...props}
     />
@@ -118,7 +121,8 @@ const FormControl = React.forwardRef<
           : `${formDescriptionId} ${formMessageId}`
       }
       aria-invalid={!!error}
-      className={cn(error && "dark:border-red-500")}
+      className={cn(error && "dark:border-red-500", "dark:focus:border-gray-500")}
+      data-theme-parent
       {...props}
     />
   )
