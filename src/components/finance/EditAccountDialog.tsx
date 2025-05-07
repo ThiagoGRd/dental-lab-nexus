@@ -87,30 +87,31 @@ export default function EditAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
         <DialogHeader>
-          <DialogTitle>Editar Conta</DialogTitle>
+          <DialogTitle className="dark:text-gray-100">Editar Conta</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           {isPayable ? (
             // Payable account edit form
             <>
               <div className="grid gap-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description" className="dark:text-gray-200">Descrição</Label>
                 <Input
                   id="description"
                   name="description"
                   value={formData.description || ''}
                   onChange={onInputChange}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="category">Categoria</Label>
+                <Label htmlFor="category" className="dark:text-gray-200">Categoria</Label>
                 <Select 
                   value={formData.category || ''}
                   onValueChange={(value) => handleSelectChange('category', value)}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -127,27 +128,29 @@ export default function EditAccountDialog({
             // Receivable account edit form
             <>
               <div className="grid gap-2">
-                <Label htmlFor="client">Cliente</Label>
+                <Label htmlFor="client" className="dark:text-gray-200">Cliente</Label>
                 <Input
                   id="client"
                   name="client"
                   value={formData.client || ''}
                   onChange={onInputChange}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="orderNumber">Número da Ordem</Label>
+                <Label htmlFor="orderNumber" className="dark:text-gray-200">Número da Ordem</Label>
                 <Input
                   id="orderNumber"
                   name="orderNumber"
                   value={formData.orderNumber || ''}
                   onChange={onInputChange}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 />
               </div>
               {serviceName && (
                 <div className="grid gap-2">
-                  <Label>Serviço</Label>
-                  <div className="text-blue-600 py-2 px-3 border rounded bg-blue-50 font-medium">
+                  <Label className="dark:text-gray-200">Serviço</Label>
+                  <div className="text-blue-600 py-2 px-3 border rounded bg-blue-50 font-medium dark:bg-gray-700 dark:border-blue-500 dark:text-blue-400 dark:bg-opacity-20">
                     {serviceName}
                   </div>
                 </div>
@@ -155,7 +158,7 @@ export default function EditAccountDialog({
             </>
           )}
           <div className="grid gap-2">
-            <Label htmlFor="value">Valor (R$)</Label>
+            <Label htmlFor="value" className="dark:text-gray-200">Valor (R$)</Label>
             <Input
               id="value"
               name="value"
@@ -163,33 +166,39 @@ export default function EditAccountDialog({
               step="0.01"
               value={formData.value || 0}
               onChange={onInputChange}
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="dueDate">Data de Vencimento</Label>
+            <Label htmlFor="dueDate" className="dark:text-gray-200">Data de Vencimento</Label>
             <Input
               id="dueDate"
               name="dueDate"
               type="date"
               value={formData.dueDate || ''}
               onChange={onInputChange}
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="notes">Observações</Label>
+            <Label htmlFor="notes" className="dark:text-gray-200">Observações</Label>
             <Textarea
               id="notes"
               name="notes"
               value={formData.notes || ''}
               onChange={onInputChange}
+              className="dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={handleClose}
+            className="dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>Salvar Alterações</Button>
+          <Button onClick={handleSubmit} className="dark:bg-primary dark:text-white">
+            Salvar Alterações
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

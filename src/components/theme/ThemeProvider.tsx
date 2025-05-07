@@ -57,6 +57,15 @@ export function ThemeProvider({
         });
       }
       
+      // Adicionar atualização de modal dialogs no sistema
+      document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
+        if (systemTheme === "dark") {
+          el.classList.add('dark-theme-element');
+        } else {
+          el.classList.remove('dark-theme-element');
+        }
+      });
+      
       return;
     }
     
@@ -68,10 +77,20 @@ export function ThemeProvider({
       document.querySelectorAll('.recharts-wrapper').forEach(el => {
         el.classList.add('recharts-dark-theme');
       });
+      
+      // Adicionar atualização de modal dialogs no modo escuro direto
+      document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
+        el.classList.add('dark-theme-element');
+      });
     } else {
       root.removeAttribute("data-theme");
       document.querySelectorAll('.recharts-wrapper').forEach(el => {
         el.classList.remove('recharts-dark-theme');
+      });
+      
+      // Remover classes de tema escuro dos elementos
+      document.querySelectorAll('.dark-theme-element').forEach(el => {
+        el.classList.remove('dark-theme-element');
       });
     }
   }, [theme]);
@@ -92,10 +111,20 @@ export function ThemeProvider({
           document.querySelectorAll('.recharts-wrapper').forEach(el => {
             el.classList.add('recharts-dark-theme');
           });
+          
+          // Adicionar atualização de modal dialogs quando o sistema muda
+          document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
+            el.classList.add('dark-theme-element');
+          });
         } else {
           root.removeAttribute("data-theme");
           document.querySelectorAll('.recharts-wrapper').forEach(el => {
             el.classList.remove('recharts-dark-theme');
+          });
+          
+          // Remover classes de tema escuro dos elementos
+          document.querySelectorAll('.dark-theme-element').forEach(el => {
+            el.classList.remove('dark-theme-element');
           });
         }
       }
