@@ -55,10 +55,28 @@ const receivableFormSchema = z.object({
   installmentCount: z.coerce.number().min(2, 'O número de parcelas deve ser pelo menos 2').max(36, 'O máximo de parcelas é 36').optional(),
 });
 
+// Lista fixa de categorias para contas a pagar
+const EXPENSE_CATEGORIES = [
+  { value: 'Fornecedores', label: 'Fornecedores' },
+  { value: 'Despesas Fixas', label: 'Despesas Fixas' },
+  { value: 'Serviços', label: 'Serviços' },
+  { value: 'Impostos', label: 'Impostos' },
+  { value: 'Outros', label: 'Outros' },
+];
+
+// Lista fixa de clientes para contas a receber
+const CLIENTS = [
+  { value: 'Clínica Dental Care', label: 'Clínica Dental Care' },
+  { value: 'Dr. Roberto Alves', label: 'Dr. Roberto Alves' },
+  { value: 'Odontologia Sorriso', label: 'Odontologia Sorriso' },
+  { value: 'Dra. Márcia Santos', label: 'Dra. Márcia Santos' },
+  { value: 'Centro Odontológico Bem Estar', label: 'Centro Odontológico Bem Estar' },
+];
+
 interface NewFinancialEntryFormProps {
   type: 'payable' | 'receivable';
   onSubmit: (data: any) => void;
-  children: React.ReactNode;  // Add this required prop
+  children: React.ReactNode;
 }
 
 export default function NewFinancialEntryForm({ type, onSubmit, children }: NewFinancialEntryFormProps) {
@@ -76,14 +94,22 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
   // Watch isInstallment to conditionally show installment count field
   const isInstallment = form.watch('isInstallment');
 
-  const handleSubmit = (data: z.infer<typeof schema>) => {
-    onSubmit(data);
-    setOpen(false);
-    form.reset();
+  const handleFormSubmit = (data: z.infer<typeof schema>) => {
+    try {
+      onSubmit(data);
+      setOpen(false);
+      form.reset();
+    } catch (error) {
+      console.error('Erro ao processar formulário:', error);
+      toast.error('Ocorreu um erro ao processar o formulário.');
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      if (!newOpen) form.reset();
+    }}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -100,7 +126,7 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
             {type === 'payable' ? (
               <>
                 <FormField
@@ -125,6 +151,7 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                       <FormLabel>Categoria</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
+                        value={field.value}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -133,11 +160,11 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Fornecedores">Fornecedores</SelectItem>
-                          <SelectItem value="Despesas Fixas">Despesas Fixas</SelectItem>
-                          <SelectItem value="Serviços">Serviços</SelectItem>
-                          <SelectItem value="Impostos">Impostos</SelectItem>
-                          <SelectItem value="Outros">Outros</SelectItem>
+                          {EXPENSE_CATEGORIES.map((category) => (
+                            <SelectItem key={category.value} value={category.value}>
+                              {category.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -155,6 +182,7 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                       <FormLabel>Cliente</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
+                        value={field.value}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -163,11 +191,11 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Clínica Dental Care">Clínica Dental Care</SelectItem>
-                          <SelectItem value="Dr. Roberto Alves">Dr. Roberto Alves</SelectItem>
-                          <SelectItem value="Odontologia Sorriso">Odontologia Sorriso</SelectItem>
-                          <SelectItem value="Dra. Márcia Santos">Dra. Márcia Santos</SelectItem>
-                          <SelectItem value="Centro Odontológico Bem Estar">Centro Odontológico Bem Estar</SelectItem>
+                          {CLIENTS.map((client) => (
+                            <SelectItem key={client.value} value={client.value}>
+                              {client.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -204,6 +232,11 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                       min="0" 
                       placeholder="0,00" 
                       {...field}
+                      onChange={(e) => {
+                        // Garantir que o valor digitado seja interpretado como número
+                        const value = e.target.value === '' ? '0' : e.target.value;
+                        field.onChange(parseFloat(value));
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -261,6 +294,10 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                         min="2"
                         max="36"
                         {...field}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? '2' : e.target.value;
+                          field.onChange(parseInt(value, 10));
+                        }}
                       />
                     </FormControl>
                     <FormDescription>

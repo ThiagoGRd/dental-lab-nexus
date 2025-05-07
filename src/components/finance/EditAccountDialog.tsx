@@ -11,7 +11,17 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { extractServiceName } from '@/utils/serviceNameExtractor';
+
+// Lista fixa de categorias para contas a pagar
+const EXPENSE_CATEGORIES = [
+  { value: 'Fornecedores', label: 'Fornecedores' },
+  { value: 'Despesas Fixas', label: 'Despesas Fixas' },
+  { value: 'Serviços', label: 'Serviços' },
+  { value: 'Impostos', label: 'Impostos' },
+  { value: 'Outros', label: 'Outros' },
+];
 
 interface EditAccountDialogProps {
   open: boolean;
@@ -38,9 +48,21 @@ export default function EditAccountDialog({
   const serviceInfo = currentAccount.originalData?.notes || '';
   const serviceName = extractServiceName(serviceInfo);
 
+  // Função para lidar com alterações em select fields
+  const handleSelectChange = (name: string, value: string) => {
+    const event = {
+      target: {
+        name,
+        value
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    onInputChange(event);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Conta</DialogTitle>
         </DialogHeader>
@@ -59,12 +81,21 @@ export default function EditAccountDialog({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Categoria</Label>
-                <Input
-                  id="category"
-                  name="category"
+                <Select 
                   value={formData.category}
-                  onChange={onInputChange}
-                />
+                  onValueChange={(value) => handleSelectChange('category', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPENSE_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </>
           ) : (

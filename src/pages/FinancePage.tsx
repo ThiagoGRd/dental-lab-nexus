@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,10 @@ import NewFinancialEntryForm from "@/components/finance/NewFinancialEntryForm";
 import UpdateZeroReceivables from "@/components/finance/UpdateZeroReceivables";
 import FilterFinances from "@/components/finance/FilterFinances";
 import { RefreshCw, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 export default function FinancePage() {
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newAccountType, setNewAccountType] = useState<'payable' | 'receivable'>('payable');
+  const [activeTab, setActiveTab] = useState<'receivable' | 'payable'>('receivable');
   const {
     payableAccounts,
     receivableAccounts,
@@ -57,28 +58,74 @@ export default function FinancePage() {
     refreshData
   } = useFinanceData();
 
-  // Automatically clear filters when the component mounts
+  // Limpar os filtros quando o componente montar
   useEffect(() => {
     clearFilters();
-  }, []);
+  }, [clearFilters]);
 
-  const handleNewPayableClick = () => {
-    setNewAccountType('payable');
-    setShowNewForm(true);
-  };
-
-  const handleNewReceivableClick = () => {
-    setNewAccountType('receivable');
-    setShowNewForm(true);
-  };
-
-  const handleNewFormSubmit = (data: any) => {
-    if (newAccountType === 'payable') {
-      handleAddPayable(data);
-    } else {
-      handleAddReceivable(data);
+  // Mostrar toast de erro se ocorrer algum problema
+  useEffect(() => {
+    if (error) {
+      toast.error(`Erro ao carregar dados financeiros: ${error.message || 'Erro desconhecido'}`);
     }
-    setShowNewForm(false);
+  }, [error]);
+
+  // Handler para mudar as tabs e limpar filtros
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as 'receivable' | 'payable');
+  };
+
+  // Renderiza o conteúdo da tabela
+  const renderTableContent = (type: 'payable' | 'receivable') => {
+    const accounts = type === 'payable' ? filteredPayables : filteredReceivables;
+    const handleAction = type === 'payable' ? handlePayment : handleReceive;
+    const emptyMessage = type === 'payable' 
+      ? 'Nenhuma conta a pagar encontrada.' 
+      : 'Nenhuma conta a receber encontrada.';
+    const loadingMessage = type === 'payable'
+      ? 'Carregando contas a pagar...'
+      : 'Carregando contas a receber...';
+
+    if (loading) {
+      return (
+        <TableRow>
+          <td colSpan={5} className="text-center py-4">
+            {loadingMessage}
+          </td>
+        </TableRow>
+      );
+    }
+
+    if (error) {
+      return (
+        <TableRow>
+          <td colSpan={5} className="text-center py-4 text-red-500">
+            Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
+          </td>
+        </TableRow>
+      );
+    }
+
+    if (accounts.length === 0) {
+      return (
+        <TableRow>
+          <td colSpan={5} className="text-center py-4 text-gray-500">
+            {emptyMessage}
+          </td>
+        </TableRow>
+      );
+    }
+
+    return accounts.map(account => (
+      <FinancialAccountItem
+        key={account.id}
+        account={account}
+        onPayOrReceive={handleAction}
+        onView={handleViewAccount}
+        onEdit={handleEditSetup}
+        type={type}
+      />
+    ));
   };
 
   return (
@@ -91,187 +138,117 @@ export default function FinancePage() {
         receivableAccounts={receivableAccounts}
       />
       
-      {showNewForm ? (
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Nova Conta a {newAccountType === 'payable' ? 'Pagar' : 'Receber'}</h2>
-            <Button variant="ghost" onClick={() => setShowNewForm(false)}>Cancelar</Button>
+      <Tabs 
+        defaultValue={activeTab} 
+        className="mt-8"
+        onValueChange={handleTabChange}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="receivable">Contas a Receber</TabsTrigger>
+            <TabsTrigger value="payable">Contas a Pagar</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={refreshData} 
+              variant="outline" 
+              size="icon"
+              title="Atualizar dados"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center"
+              title="Relatórios financeiros"
+              onClick={() => window.location.href = '/reports'}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Relatórios
+            </Button>
+            <UpdateZeroReceivables onComplete={refreshData} />
           </div>
-          <NewFinancialEntryForm 
-            type={newAccountType} 
-            onSubmit={handleNewFormSubmit}
-          >
-            {/* Empty placeholder to satisfy children prop */}
-            <div style={{ display: 'none' }}></div>
-          </NewFinancialEntryForm>
         </div>
-      ) : (
-        <Tabs defaultValue="receivable" className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <TabsList>
-              <TabsTrigger value="receivable">Contas a Receber</TabsTrigger>
-              <TabsTrigger value="payable">Contas a Pagar</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={refreshData} 
-                variant="outline" 
-                size="icon"
-                title="Atualizar dados"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-                title="Relatórios financeiros"
-                onClick={() => window.location.href = '/reports'}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Relatórios
-              </Button>
-              <UpdateZeroReceivables onComplete={refreshData} />
-            </div>
+        
+        <div className="mb-4">
+          <FilterFinances
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={setCategoryFilter}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onClearFilters={clearFilters}
+            categories={categories}
+          />
+        </div>
+        
+        <TabsContent value="receivable" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <NewFinancialEntryForm 
+              type="receivable" 
+              onSubmit={handleAddReceivable}
+            >
+              <Button>Nova Conta a Receber</Button>
+            </NewFinancialEntryForm>
           </div>
           
-          <div className="mb-4">
-            <FilterFinances
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              dateFilter={dateFilter}
-              onDateFilterChange={setDateFilter}
-              categoryFilter={categoryFilter}
-              onCategoryFilterChange={setCategoryFilter}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onClearFilters={clearFilters}
-              categories={categories}
-            />
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente / Serviço</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data de Vencimento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {renderTableContent('receivable')}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="payable" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <NewFinancialEntryForm 
+              type="payable" 
+              onSubmit={handleAddPayable}
+            >
+              <Button>Nova Conta a Pagar</Button>
+            </NewFinancialEntryForm>
           </div>
           
-          <TabsContent value="receivable" className="mt-4">
-            <div className="flex justify-end mb-4">
-              <NewFinancialEntryForm 
-                type="receivable" 
-                onSubmit={handleAddReceivable}
-              >
-                <Button>Nova Conta a Receber</Button>
-              </NewFinancialEntryForm>
-            </div>
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente / Serviço</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Data de Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4">
-                        Carregando contas a receber...
-                      </td>
-                    </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4 text-red-500">
-                        Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
-                      </td>
-                    </TableRow>
-                  ) : filteredReceivables.length === 0 ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4 text-gray-500">
-                        Nenhuma conta a receber encontrada.
-                      </td>
-                    </TableRow>
-                  ) : (
-                    filteredReceivables.map(account => (
-                      <FinancialAccountItem
-                        key={account.id}
-                        account={account}
-                        onPayOrReceive={handleReceive}
-                        onView={handleViewAccount}
-                        onEdit={handleEditSetup}
-                        type="receivable"
-                      />
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="payable" className="mt-4">
-            <div className="flex justify-end mb-4">
-              <NewFinancialEntryForm 
-                type="payable" 
-                onSubmit={handleAddPayable}
-              >
-                <Button>Nova Conta a Pagar</Button>
-              </NewFinancialEntryForm>
-            </div>
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Descrição / Categoria</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Data de Vencimento</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4">
-                        Carregando contas a pagar...
-                      </td>
-                    </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4 text-red-500">
-                        Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
-                      </td>
-                    </TableRow>
-                  ) : filteredPayables.length === 0 ? (
-                    <TableRow>
-                      <td colSpan={5} className="text-center py-4 text-gray-500">
-                        Nenhuma conta a pagar encontrada.
-                      </td>
-                    </TableRow>
-                  ) : (
-                    filteredPayables.map(account => (
-                      <FinancialAccountItem
-                        key={account.id}
-                        account={account}
-                        onPayOrReceive={handlePayment}
-                        onView={handleViewAccount}
-                        onEdit={handleEditSetup}
-                        type="payable"
-                      />
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descrição / Categoria</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data de Vencimento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {renderTableContent('payable')}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
       
       {/* Diálogos para visualizar e editar contas */}
       <ViewAccountDialog 
