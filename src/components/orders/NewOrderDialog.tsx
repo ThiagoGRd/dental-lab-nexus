@@ -34,7 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Plus, HelpCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addBusinessDays } from 'date-fns';
 import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { createOrder, createOrderItem, createWorkflow } from "@/utils/orderUtils";
 import type { Database } from '@/integrations/supabase/types';
@@ -176,6 +176,22 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       }
     }
   }, [watchedService, services, form]);
+
+  // Watch for changes to the isUrgent field and update dueDate accordingly
+  const isUrgent = form.watch('isUrgent');
+  useEffect(() => {
+    if (isUrgent) {
+      // Set due date to 3 business days from today when marked as urgent
+      const newDueDate = format(addBusinessDays(new Date(), 3), 'yyyy-MM-dd');
+      form.setValue('dueDate', newDueDate);
+    } else {
+      // Reset to default (7 days) when not urgent
+      form.setValue('dueDate', format(
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        'yyyy-MM-dd'
+      ));
+    }
+  }, [isUrgent, form]);
 
   const handleSubmit = async (data: OrderFormValues) => {
     setLoading(true);
@@ -358,6 +374,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
+                    {isUrgent && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Para ordens urgentes, a data de entrega será em 3 dias úteis
+                      </p>
+                    )}
                   </FormItem>
                 )}
               />
