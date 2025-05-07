@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
-import { mockStatusData } from '@/data/mockData';
+import { toast } from 'sonner';
 
 export function useDashboardData() {
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ export function useDashboardData() {
     urgent: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [statusData, setStatusData] = useState(mockStatusData);
+  const [statusData, setStatusData] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -25,8 +25,7 @@ export function useDashboardData() {
           // Limit fields and use more efficient queries
           supabase
             .from('orders')
-            .select('id, status, priority, created_at, client_id, deadline, notes')
-            .order('created_at', { ascending: false }),
+            .select('id, status, priority, created_at, client_id, deadline, notes'),
           
           supabase
             .from('clients')
@@ -35,11 +34,15 @@ export function useDashboardData() {
         
         if (ordersResult.error) {
           console.error('Erro ao buscar pedidos:', ordersResult.error);
+          toast.error('Erro ao carregar dados do dashboard');
           return;
         }
         
         const ordersData = safeData(ordersResult, []);
         const clientsData = safeData(clientsResult, []);
+        
+        console.log('Dashboard: Pedidos carregados:', ordersData.length);
+        console.log('Dashboard: Clientes carregados:', clientsData.length);
         
         // Optimize by calculating in a single loop
         const now = new Date();
@@ -73,8 +76,17 @@ export function useDashboardData() {
           }
         });
 
+        console.log('Dashboard stats calculados:', { 
+          totalOrders: ordersThisMonth, 
+          inProduction, 
+          completed: completedThisMonth, 
+          urgent 
+        });
+
         // Only process the 5 most recent orders for better performance
-        const recentOrdersData = ordersData.slice(0, 5);
+        const recentOrdersData = ordersData
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
         
         // Use a Map for O(1) lookups instead of repeated finds
         const clientsMap = new Map(clientsData.map(client => [client.id, client]));
@@ -96,12 +108,14 @@ export function useDashboardData() {
             client: client?.name || 'Cliente não encontrado',
             patientName,
             service: 'Serviço',
-            createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
-            dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : 'Não definida',
+            createdAt: format(new Date(order.created_at), 'dd/MM/yyyy'),
+            dueDate: order.deadline ? format(new Date(order.deadline), 'dd/MM/yyyy') : 'Não definida',
             status: order.status,
             isUrgent: order.priority === 'urgent'
           };
         });
+
+        console.log('Dashboard: Ordens recentes formatadas:', recentOrdersFormatted.length);
 
         // More efficient status counting using a reducer
         const statusCounts = ordersData.reduce((acc, order) => {
@@ -125,6 +139,8 @@ export function useDashboardData() {
           { name: 'Entregue', value: statusCounts.delivered, color: '#9CA3AF' },
         ];
 
+        console.log('Dashboard: Chart data:', chartData);
+
         setStats({
           totalOrders: ordersThisMonth,
           inProduction,
@@ -136,6 +152,7 @@ export function useDashboardData() {
         
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
+        toast.error('Erro ao carregar dados do dashboard');
       } finally {
         setLoading(false);
       }

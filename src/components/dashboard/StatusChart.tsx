@@ -12,6 +12,26 @@ type StatusChartProps = {
 }
 
 export default function StatusChart({ data }: StatusChartProps) {
+  // Filtrar dados com valores maiores que zero para evitar problemas no gráfico
+  const filteredData = data.filter(item => item.value > 0);
+  
+  // Se não houver dados suficientes, mostrar mensagem
+  if (filteredData.length === 0) {
+    return (
+      <Card className="h-full card-modern">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+            <div className="w-1.5 h-6 bg-gradient-to-b from-modern-primary to-modern-tertiary rounded-full mr-2"></div>
+            Status das Ordens
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-[250px]">
+          <p className="text-gray-500">Nenhum dado de status disponível</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="h-full card-modern">
       <CardHeader className="pb-2">
@@ -25,7 +45,7 @@ export default function StatusChart({ data }: StatusChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={filteredData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -36,7 +56,7 @@ export default function StatusChart({ data }: StatusChartProps) {
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 strokeWidth={1}
               >
-                {data.map((entry, index) => (
+                {filteredData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
                 ))}
               </Pie>
