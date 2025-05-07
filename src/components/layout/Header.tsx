@@ -7,6 +7,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import Notifications from '@/components/Notifications';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { supabase } from '@/integrations/supabase/client';
+import { useNotifications } from '@/context/NotificationContext';
 
 type User = {
   id: string;
@@ -19,6 +20,7 @@ type User = {
 export default function Header() {
   const sidebar = useSidebar();
   const [user, setUser] = useState<User | null>(null);
+  const { setShowNotifications } = useNotifications();
 
   useEffect(() => {
     // Buscar dados do usuário do localStorage
@@ -27,11 +29,29 @@ export default function Header() {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
+
+        // Simular login do usuário - em um app real, isto seria na função de login
+        const checkLoginState = () => {
+          const lastLoginTime = localStorage.getItem('lastLoginTime');
+          const currentTime = new Date().getTime();
+          
+          // Se não houver registro de login anterior ou tiver passado mais de 1 hora,
+          // consideramos um novo login
+          if (!lastLoginTime || (currentTime - parseInt(lastLoginTime)) > 60 * 60 * 1000) {
+            console.log('Novo login detectado, salvando timestamp');
+            localStorage.setItem('lastLoginTime', currentTime.toString());
+            
+            // Aqui não precisamos abrir manualmente as notificações,
+            // isso será feito no contexto de notificações
+          }
+        };
+
+        checkLoginState();
       } catch (error) {
         console.error('Erro ao carregar dados do usuário:', error);
       }
     }
-  }, []);
+  }, [setShowNotifications]);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background border-border px-4 md:px-6 shadow-sm transition-colors duration-300">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Popover, 
   PopoverContent, 
@@ -11,7 +11,8 @@ import {
   Trash2,
   CircleX,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,17 +38,24 @@ export default function Notifications() {
     markAsRead, 
     markAllAsRead, 
     deleteNotification, 
-    clearAllNotifications 
+    clearAllNotifications,
+    showNotifications,
+    setShowNotifications
   } = useNotifications();
-  const [isOpen, setIsOpen] = useState(false);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const navigate = useNavigate();
+  
+  // Responder à mudança no estado de showNotifications do contexto
+  useEffect(() => {
+    // Isso abrirá as notificações quando showNotifications for true
+    console.log('Estado de showNotifications alterado:', showNotifications);
+  }, [showNotifications]);
   
   const handleNotificationClick = (id: number | string, link?: string) => {
     markAsRead(id);
     
     if (link) {
-      setIsOpen(false);
+      setShowNotifications(false);
       navigate(link);
     }
   };
@@ -57,7 +65,7 @@ export default function Notifications() {
       case 'order':
         return <Bell className={`h-4 w-4 ${priority === 'high' ? 'text-red-500' : 'text-blue-500'}`} />;
       case 'deadline':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+        return <Clock className={`h-4 w-4 ${priority === 'high' ? 'text-red-500' : 'text-amber-500'}`} />;
       case 'inventory':
         return <AlertTriangle className="h-4 w-4 text-purple-500" />;
       case 'payment':
@@ -75,7 +83,7 @@ export default function Notifications() {
 
   return (
     <TooltipProvider>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={showNotifications} onOpenChange={setShowNotifications}>
         <Tooltip>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
@@ -165,7 +173,11 @@ export default function Notifications() {
                         "p-3 mx-2 my-1 rounded-md text-sm cursor-pointer relative group",
                         notification.read 
                           ? "bg-background hover:bg-muted/50" 
-                          : "bg-blue-50 dark:bg-blue-900/20"
+                          : notification.priority === 'high'
+                            ? "bg-red-50 dark:bg-red-900/20"
+                            : notification.priority === 'medium'
+                              ? "bg-amber-50 dark:bg-amber-900/20"
+                              : "bg-blue-50 dark:bg-blue-900/20"
                       )}
                       onClick={() => handleNotificationClick(notification.id, notification.link)}
                     >
@@ -189,7 +201,10 @@ export default function Notifications() {
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between">
-                            <h4 className="font-medium">
+                            <h4 className={cn(
+                              "font-medium",
+                              notification.priority === 'high' && "text-red-600 dark:text-red-400"
+                            )}>
                               {notification.title}
                             </h4>
                             <span className="text-xs text-muted-foreground">
@@ -203,7 +218,10 @@ export default function Notifications() {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-7 text-xs"
+                                className={cn(
+                                  "h-7 text-xs",
+                                  notification.priority === 'high' && "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                                )}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleNotificationClick(notification.id, notification.link);
