@@ -10,7 +10,7 @@ type OrderStatus = 'pending' | 'production' | 'waiting' | 'completed' | 'deliver
 type Order = {
   id: string;
   client: string;
-  patientName?: string; // Added patientName as an optional field
+  patientName?: string;
   service: string;
   createdAt: string;
   dueDate: string;
@@ -28,9 +28,15 @@ const statuses: Record<OrderStatus, { label: string, className: string }> = {
 
 type RecentOrdersProps = {
   orders: Order[];
+  onViewAllClick?: () => void;
+  onOrderClick?: (order: Order) => void;
 }
 
-export default function RecentOrders({ orders }: RecentOrdersProps) {
+export default function RecentOrders({ 
+  orders, 
+  onViewAllClick, 
+  onOrderClick 
+}: RecentOrdersProps) {
   return (
     <Card>
       <CardHeader>
@@ -39,10 +45,16 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
       <CardContent>
         <div className="space-y-3">
           {orders.map((order) => (
-            <div key={order.id} className="flex items-center gap-4 rounded-lg border p-3">
+            <div 
+              key={order.id} 
+              className={cn(
+                "flex items-center gap-4 rounded-lg border p-3",
+                onOrderClick && "cursor-pointer hover:bg-gray-50 transition-colors"
+              )}
+              onClick={() => onOrderClick && onOrderClick(order)}
+            >
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  {/* Display patient name if available, otherwise fall back to client name */}
                   <p className="font-medium">
                     {order.patientName || order.client}
                   </p>
@@ -50,7 +62,6 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
                     <Badge variant="destructive" className="text-xs">Urgente</Badge>
                   )}
                 </div>
-                {/* If we're showing the patient name above, show the client as secondary info */}
                 {order.patientName && (
                   <p className="text-xs text-muted-foreground">
                     Cliente: {order.client}
@@ -72,14 +83,17 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
                   {statuses[order.status].label}
                 </p>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={(e) => {
+                e.stopPropagation(); // Evitar que o clique se propague para o elemento pai
+                onOrderClick && onOrderClick(order);
+              }}>
                 Ver
               </Button>
             </div>
           ))}
         </div>
         <div className="mt-4 flex justify-center">
-          <Button variant="outline">Ver Todas as Ordens</Button>
+          <Button variant="outline" onClick={onViewAllClick}>Ver Todas as Ordens</Button>
         </div>
       </CardContent>
     </Card>

@@ -9,9 +9,10 @@ type StatusChartProps = {
     value: number;
     color: string;
   }>;
+  onStatusClick?: (status: string) => void;
 }
 
-export default function StatusChart({ data }: StatusChartProps) {
+export default function StatusChart({ data, onStatusClick }: StatusChartProps) {
   // Verificar se temos dados válidos antes de renderizar o gráfico
   const hasValidData = data && data.length > 0 && data.some(item => item && typeof item.value === 'number' && item.value > 0);
   
@@ -33,6 +34,25 @@ export default function StatusChart({ data }: StatusChartProps) {
   
   // Filtrar dados com valores maiores que zero para evitar problemas no gráfico
   const filteredData = data.filter(item => item && typeof item.value === 'number' && item.value > 0);
+
+  // Função para lidar com cliques nas fatias do gráfico
+  const handlePieClick = (data: any, index: number) => {
+    if (onStatusClick && data && data.name) {
+      // Converter o nome do status para o valor usado no filtro
+      const statusMap: Record<string, string> = {
+        'Pendente': 'pending',
+        'Em Produção': 'production',
+        'Aguardando Material': 'waiting',
+        'Finalizado': 'completed',
+        'Entregue': 'delivered'
+      };
+      
+      const statusValue = statusMap[data.name] || '';
+      if (statusValue) {
+        onStatusClick(statusValue);
+      }
+    }
+  };
 
   return (
     <Card className="h-full card-modern">
@@ -57,6 +77,8 @@ export default function StatusChart({ data }: StatusChartProps) {
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 strokeWidth={1}
+                onClick={handlePieClick}
+                cursor="pointer"
               >
                 {filteredData.map((entry, index) => (
                   <Cell 
@@ -83,6 +105,23 @@ export default function StatusChart({ data }: StatusChartProps) {
                 align="center"
                 wrapperStyle={{ paddingTop: '20px' }}
                 iconType="circle"
+                onClick={(data) => {
+                  if (onStatusClick && data) {
+                    // Converter o nome do status para o valor usado no filtro
+                    const statusMap: Record<string, string> = {
+                      'Pendente': 'pending',
+                      'Em Produção': 'production',
+                      'Aguardando Material': 'waiting',
+                      'Finalizado': 'completed',
+                      'Entregue': 'delivered'
+                    };
+                    
+                    const statusValue = statusMap[data.value] || '';
+                    if (statusValue) {
+                      onStatusClick(statusValue);
+                    }
+                  }
+                }}
               />
             </PieChart>
           </ResponsiveContainer>

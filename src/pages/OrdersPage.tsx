@@ -9,8 +9,12 @@ import NewOrderDialog from '@/components/orders/NewOrderDialog';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import OrderEditDialog from '@/components/orders/OrderEditDialog';
 import { toast } from 'sonner';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function OrdersPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
   const {
     searchTerm,
     setSearchTerm,
@@ -32,6 +36,51 @@ export default function OrdersPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Aplicar filtros da URL ao carregar a página
+  useEffect(() => {
+    // Obter parâmetros da URL
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+    const urgent = searchParams.get('urgent');
+    
+    // Aplicar filtros se existirem
+    let filtersApplied = false;
+    
+    if (status) {
+      setStatusFilter(status);
+      filtersApplied = true;
+    }
+    
+    if (search) {
+      setSearchTerm(search);
+      filtersApplied = true;
+    }
+    
+    if (startDateParam) {
+      setStartDate(startDateParam);
+      filtersApplied = true;
+    }
+    
+    if (endDateParam) {
+      setEndDate(endDateParam);
+      filtersApplied = true;
+    }
+    
+    // Observação: o filtro de urgência seria aplicado diretamente na função useOrderFilters
+    // através de uma propriedade adicional que não vamos implementar agora para manter as mudanças focadas
+
+    // Limpar parâmetros da URL após aplicar os filtros
+    if (filtersApplied) {
+      // Mostrar mensagem sobre os filtros aplicados
+      toast.info('Filtros aplicados de acordo com a seleção no dashboard');
+      
+      // Limpar URL para evitar que os filtros sejam aplicados novamente ao recarregar a página
+      navigate('/orders', { replace: true });
+    }
+  }, [searchParams, setStatusFilter, setSearchTerm, setStartDate, setEndDate, navigate]);
 
   useEffect(() => {
     if (error) {

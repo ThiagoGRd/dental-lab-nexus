@@ -7,7 +7,18 @@ export function useOrderFilters(orders: any[]) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [urgentOnly, setUrgentOnly] = useState(false);
   const [filteredOrders, setFilteredOrders] = useState<any[]>(orders);
+
+  // Verificar se há "urgent" na URL ao carregar
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urgentParam = urlParams.get('urgent');
+    
+    if (urgentParam === 'true') {
+      setUrgentOnly(true);
+    }
+  }, []);
 
   // Aplicar filtros
   useEffect(() => {
@@ -43,11 +54,16 @@ export function useOrderFilters(orders: any[]) {
         );
       }
       
+      // Filtro de urgência
+      if (urgentOnly) {
+        filtered = filtered.filter(order => order.isUrgent === true);
+      }
+      
       setFilteredOrders(filtered);
     };
     
     applyFilters();
-  }, [orders, searchTerm, statusFilter, startDate, endDate]);
+  }, [orders, searchTerm, statusFilter, startDate, endDate, urgentOnly]);
 
   const handleFilter = () => {
     toast.success('Filtros aplicados');
@@ -62,6 +78,8 @@ export function useOrderFilters(orders: any[]) {
     setStartDate,
     endDate,
     setEndDate,
+    urgentOnly,
+    setUrgentOnly,
     filteredOrders,
     handleFilter
   };
