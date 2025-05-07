@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { BarChart2, Calendar, FileText, Users } from 'lucide-react';
 import { BarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
-import { pt } from 'date-fns/locale'; // Importação corrigida para date-fns v4
+import { pt } from 'date-fns/locale'; 
 import GenerateReportButtons from '@/components/finance/GenerateReportButtons';
 
 export default function ReportsPage() {
@@ -696,7 +697,7 @@ export default function ReportsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="financial">
+        <TabsContent value="clients">
           {loading ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
@@ -714,16 +715,13 @@ export default function ReportsPage() {
                   <div className="h-4 bg-gray-200 animate-pulse rounded w-40"></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {[1, 2].map(i => (
-                        <div key={i} className="rounded-md bg-gray-100 p-4">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-24 mb-2"></div>
-                          <div className="h-8 bg-gray-200 animate-pulse rounded w-32 mb-1"></div>
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-40"></div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="rounded-md border p-4">
+                        <div className="h-8 bg-gray-200 animate-pulse rounded w-16 mb-1"></div>
+                        <div className="h-4 bg-gray-200 animate-pulse rounded w-24"></div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -732,21 +730,20 @@ export default function ReportsPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Receita vs Despesas</CardTitle>
-                  <CardDescription>Comparativo financeiro mensal</CardDescription>
+                  <CardTitle>Clientes por Volume de Pedidos</CardTitle>
+                  <CardDescription>Top clientes por número de ordens</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={financialData}>
+                      <BarChart data={clientData}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
+                        <XAxis dataKey="name" />
                         <YAxis />
-                        <Tooltip formatter={(value) => [`R$ ${value}`, undefined]} />
+                        <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="receita" name="Receita" stroke="#0D82E0" strokeWidth={2} />
-                        <Line type="monotone" dataKey="despesa" name="Despesa" stroke="#ea384c" strokeWidth={2} />
-                      </LineChart>
+                        <Bar dataKey="orders" name="Pedidos" fill="#0D82E0" />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
@@ -754,17 +751,91 @@ export default function ReportsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Resumo Financeiro</CardTitle>
-                  <CardDescription>Indicadores do período</CardDescription>
+                  <CardTitle>Resumo de Clientes</CardTitle>
+                  <CardDescription>Métricas de clientes</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-md border p-4">
+                      <div className="text-2xl font-bold text-dentalblue-700">{clientSummary.totalClients}</div>
+                      <div className="text-xs text-gray-500">Total de Clientes</div>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <div className="text-2xl font-bold text-green-600">{clientSummary.activeClients}</div>
+                      <div className="text-xs text-gray-500">Clientes Ativos</div>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <div className="text-2xl font-bold text-amber-600">{clientSummary.averageOrders}</div>
+                      <div className="text-xs text-gray-500">Média de Pedidos</div>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <div className="text-2xl font-bold text-purple-600">{clientSummary.averageValue}</div>
+                      <div className="text-xs text-gray-500">Ticket Médio</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="stock">
+          {loading ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 bg-gray-200 animate-pulse rounded w-48 mb-2"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse rounded w-64"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] bg-gray-100 animate-pulse rounded"></div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Situação do Estoque</CardTitle>
+                  <CardDescription>Materiais próximos ao limite mínimo</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded-md bg-blue-50 p-4">
-                        <div className="text-sm text-gray-500">Receita Total</div>
-                        <div className="text-2xl font-bold text-dentalblue-700">{financialSummary.totalRevenue}</div>
-                        <div className="mt-1 text-xs text-green-600">{financialSummary.previousComparisonRevenue} vs período anterior</div>
+                    {inventoryData.length > 0 ? (
+                      <div className="rounded-md border p-4">
+                        <div className="space-y-4">
+                          {inventoryData.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                              <div>
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-sm text-gray-500">
+                                  {item.quantity} {item.unit || 'un'} / Mínimo: {item.min_quantity} {item.unit || 'un'}
+                                </div>
+                              </div>
+                              <div className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                item.status === 'critical' ? 'bg-red-100 text-red-800' :
+                                item.status === 'low' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {item.status === 'critical' ? 'Crítico' :
+                                 item.status === 'low' ? 'Baixo' : 'OK'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="rounded-md bg-red-50 p-4">
-                        <div className="text-sm text-gray-500">Despesas Totais</div>
-                        <div className="text-2xl font-bold text-red-600
+                    ) : (
+                      <div className="text-center py-6 text-gray-500">
+                        Nenhum item de estoque encontrado
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
