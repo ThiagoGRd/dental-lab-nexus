@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { format, parseISO, isAfter, isBefore, isToday, addDays, isSameDay, compareAsc, compareDesc } from 'date-fns';
+import { format, parseISO, isAfter, isBefore, isToday, addDays, isSameDay, compareAsc, compareDesc, addMonths } from 'date-fns';
 import { safeFinanceOperations, safeExtract } from '@/utils/supabaseHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -426,45 +425,144 @@ export function useFinanceData() {
     }
   };
 
+  // Helper function to create multiple installments
+  const createInstallments = async (baseData: any, installmentCount: number, type: 'payable' | 'receivable') => {
+    const totalAmount = baseData.value;
+    const installmentAmount = parseFloat((totalAmount / installmentCount).toFixed(2));
+    let remainderAmount = parseFloat((totalAmount - (installmentAmount * installmentCount)).toFixed(2));
+    
+    const baseDate = parseISO(baseData.dueDate);
+    const installments = [];
+    
+    try {
+      const financeOps = await safeFinanceOperations();
+      
+      for (let i = 0; i < installmentCount; i++) {
+        // Calculate due date for this installment (1 month apart)
+        const dueDate = addMonths(baseDate, i);
+        
+        // Add remainder to first installment to account for rounding
+        let thisAmount = installmentAmount;
+        if (i === 0 && remainderAmount !== 0) {
+          thisAmount = parseFloat((thisAmount + remainderAmount).toFixed(2));
+        }
+        
+        // Create installment description
+        const installmentLabel = `${i+1}/${installmentCount}`;
+        let description = '';
+        
+        if (type === 'payable') {
+          description = `${baseData.description} - Parcela ${installmentLabel}`;
+        } else {
+          description = `Receita: ${baseData.client} - Parcela ${installmentLabel}`;
+        }
+        
+        // Create the data object for this installment
+        const installmentData = {
+          description: description,
+          category: type === 'payable' ? baseData.category : undefined,
+          amount: thisAmount,
+          due_date: format(dueDate, 'yyyy-MM-dd'),
+          status: 'pending',
+          notes: baseData.notes ? `${baseData.notes} | Parcela ${installmentLabel}` : `Parcela ${installmentLabel}`,
+          type: type === 'payable' ? 'expense' : 'revenue',
+          related_order_id: type === 'receivable' && baseData.orderNumber && baseData.orderNumber !== 'N/A' ? baseData.orderNumber : null
+        };
+        
+        // Add to list of installments to create
+        installments.push(installmentData);
+      }
+      
+      // Insert all installments and return their data
+      const createdInstallments = [];
+      
+      for (const installment of installments) {
+        const { finance, error } = await financeOps.add(installment);
+        
+        if (error) {
+          console.error('Erro ao adicionar parcela:', error);
+          throw error;
+        }
+        
+        if (finance) {
+          createdInstallments.push(finance);
+        }
+      }
+      
+      return { installments: createdInstallments, error: null };
+    } catch (error) {
+      console.error('Erro ao criar parcelas:', error);
+      return { installments: null, error };
+    }
+  };
+
   // Add new payable account
   const handleAddPayable = async (data: any) => {
     try {
-      const financeOps = await safeFinanceOperations();
-      const newPayableData = {
-        description: data.description,
-        category: data.category,
-        amount: data.value,
-        due_date: data.dueDate,
-        status: 'pending',
-        notes: data.notes || '',
-        type: 'expense'
-      };
-      
-      const { finance: insertedData, error } = await financeOps.add(newPayableData);
+      // Check if this is an installment payment
+      if (data.isInstallment && data.installmentCount >= 2) {
+        const { installments, error } = await createInstallments(data, data.installmentCount, 'payable');
         
-      if (error) {
-        console.error('Erro ao adicionar conta a pagar:', error);
-        toast.error('Erro ao adicionar conta a pagar.');
-        return;
-      }
-      
-      if (insertedData) {
-        // Formatar nova conta para exibição
-        const newPayable = {
-          id: insertedData.id,
-          description: insertedData.description,
-          category: insertedData.category || 'Não categorizado',
-          value: insertedData.amount,
-          dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+        if (error) {
+          console.error('Erro ao criar parcelas:', error);
+          toast.error('Erro ao criar parcelas de pagamento.');
+          return;
+        }
+        
+        if (installments) {
+          // Format the installments for display and add to state
+          const formattedInstallments = installments.map((item: any) => ({
+            id: item.id,
+            description: item.description,
+            category: item.category || 'Não categorizado',
+            value: item.amount,
+            dueDate: item.due_date ? format(new Date(item.due_date), 'yyyy-MM-dd') : '',
+            status: 'pending',
+            notes: item.notes || '',
+            originalData: item
+          }));
+          
+          setPayableAccounts([...payableAccounts, ...formattedInstallments]);
+          toast.success(`${data.installmentCount} parcelas de pagamento criadas com sucesso!`);
+        }
+      } else {
+        // Handle single payment (original code)
+        const financeOps = await safeFinanceOperations();
+        const newPayableData = {
+          description: data.description,
+          category: data.category,
+          amount: data.value,
+          due_date: data.dueDate,
           status: 'pending',
-          notes: insertedData.notes || '',
-          originalData: insertedData
+          notes: data.notes || '',
+          type: 'expense'
         };
         
-        setPayableAccounts([...payableAccounts, newPayable]);
-        toast.success('Nova conta a pagar adicionada com sucesso!');
+        const { finance: insertedData, error } = await financeOps.add(newPayableData);
+          
+        if (error) {
+          console.error('Erro ao adicionar conta a pagar:', error);
+          toast.error('Erro ao adicionar conta a pagar.');
+          return;
+        }
+        
+        if (insertedData) {
+          // Formatar nova conta para exibição
+          const newPayable = {
+            id: insertedData.id,
+            description: insertedData.description,
+            category: insertedData.category || 'Não categorizado',
+            value: insertedData.amount,
+            dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+            status: 'pending',
+            notes: insertedData.notes || '',
+            originalData: insertedData
+          };
+          
+          setPayableAccounts([...payableAccounts, newPayable]);
+          toast.success('Nova conta a pagar adicionada com sucesso!');
+        }
       }
-      
     } catch (error) {
       console.error('Erro ao adicionar conta a pagar:', error);
       toast.error('Ocorreu um erro ao adicionar a conta a pagar.');
@@ -474,48 +572,76 @@ export function useFinanceData() {
   // Add new receivable account
   const handleAddReceivable = async (data: any) => {
     try {
-      const financeOps = await safeFinanceOperations();
-      // Se o orderNumber for fornecido e não for N/A, tentamos buscar a ordem
-      let orderId = null;
-      if (data.orderNumber && data.orderNumber !== 'N/A') {
-        // Tenta buscar a ordem pelo número - isso pode precisar ser ajustado dependendo de como as ordens são armazenadas
-      }
-      
-      const newReceivableData = {
-        description: `Receita: ${data.client}`,
-        amount: data.value,
-        due_date: data.dueDate,
-        status: 'pending',
-        notes: data.notes || '',
-        type: 'revenue',
-        related_order_id: orderId
-      };
-      
-      const { finance: insertedData, error } = await financeOps.add(newReceivableData);
+      // Check if this is an installment payment
+      if (data.isInstallment && data.installmentCount >= 2) {
+        const { installments, error } = await createInstallments(data, data.installmentCount, 'receivable');
         
-      if (error) {
-        console.error('Erro ao adicionar conta a receber:', error);
-        toast.error('Erro ao adicionar conta a receber.');
-        return;
-      }
-      
-      if (insertedData) {
-        // Formatar nova conta para exibição
-        const newReceivable = {
-          id: insertedData.id,
-          client: data.client,
-          orderNumber: data.orderNumber || 'N/A',
-          value: insertedData.amount,
-          dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+        if (error) {
+          console.error('Erro ao criar parcelas:', error);
+          toast.error('Erro ao criar parcelas de recebimento.');
+          return;
+        }
+        
+        if (installments) {
+          // Format the installments for display and add to state
+          const formattedInstallments = installments.map((item: any) => ({
+            id: item.id,
+            client: data.client,
+            orderNumber: data.orderNumber || 'N/A',
+            value: item.amount,
+            dueDate: item.due_date ? format(new Date(item.due_date), 'yyyy-MM-dd') : '',
+            status: 'pending',
+            notes: item.notes || '',
+            originalData: item
+          }));
+          
+          setReceivableAccounts([...receivableAccounts, ...formattedInstallments]);
+          toast.success(`${data.installmentCount} parcelas de recebimento criadas com sucesso!`);
+        }
+      } else {
+        // Handle single payment (original code)
+        const financeOps = await safeFinanceOperations();
+        // Se o orderNumber for fornecido e não for N/A, tentamos buscar a ordem
+        let orderId = null;
+        if (data.orderNumber && data.orderNumber !== 'N/A') {
+          // Tenta buscar a ordem pelo número - isso pode precisar ser ajustado dependendo de como as ordens são armazenadas
+        }
+        
+        const newReceivableData = {
+          description: `Receita: ${data.client}`,
+          amount: data.value,
+          due_date: data.dueDate,
           status: 'pending',
-          notes: insertedData.notes || '',
-          originalData: insertedData
+          notes: data.notes || '',
+          type: 'revenue',
+          related_order_id: orderId
         };
         
-        setReceivableAccounts([...receivableAccounts, newReceivable]);
-        toast.success('Nova conta a receber adicionada com sucesso!');
+        const { finance: insertedData, error } = await financeOps.add(newReceivableData);
+          
+        if (error) {
+          console.error('Erro ao adicionar conta a receber:', error);
+          toast.error('Erro ao adicionar conta a receber.');
+          return;
+        }
+        
+        if (insertedData) {
+          // Formatar nova conta para exibição
+          const newReceivable = {
+            id: insertedData.id,
+            client: data.client,
+            orderNumber: data.orderNumber || 'N/A',
+            value: insertedData.amount,
+            dueDate: insertedData.due_date ? format(new Date(insertedData.due_date), 'yyyy-MM-dd') : '',
+            status: 'pending',
+            notes: insertedData.notes || '',
+            originalData: insertedData
+          };
+          
+          setReceivableAccounts([...receivableAccounts, newReceivable]);
+          toast.success('Nova conta a receber adicionada com sucesso!');
+        }
       }
-      
     } catch (error) {
       console.error('Erro ao adicionar conta a receber:', error);
       toast.error('Ocorreu um erro ao adicionar a conta a receber.');

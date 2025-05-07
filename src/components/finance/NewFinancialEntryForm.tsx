@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Define the schema for payable and receivable entries
 const payableFormSchema = z.object({
@@ -40,6 +41,8 @@ const payableFormSchema = z.object({
   value: z.coerce.number().min(0.01, 'O valor deve ser maior que zero'),
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória'),
   notes: z.string().optional(),
+  isInstallment: z.boolean().default(false),
+  installmentCount: z.coerce.number().min(2, 'O número de parcelas deve ser pelo menos 2').max(36, 'O máximo de parcelas é 36').optional(),
 });
 
 const receivableFormSchema = z.object({
@@ -48,6 +51,8 @@ const receivableFormSchema = z.object({
   value: z.coerce.number().min(0.01, 'O valor deve ser maior que zero'),
   dueDate: z.string().min(1, 'A data de vencimento é obrigatória'),
   notes: z.string().optional(),
+  isInstallment: z.boolean().default(false),
+  installmentCount: z.coerce.number().min(2, 'O número de parcelas deve ser pelo menos 2').max(36, 'O máximo de parcelas é 36').optional(),
 });
 
 interface NewFinancialEntryFormProps {
@@ -64,9 +69,12 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: type === 'payable' 
-      ? { description: '', category: '', value: 0, dueDate: '', notes: '' } 
-      : { client: '', orderNumber: '', value: 0, dueDate: '', notes: '' },
+      ? { description: '', category: '', value: 0, dueDate: '', notes: '', isInstallment: false } 
+      : { client: '', orderNumber: '', value: 0, dueDate: '', notes: '', isInstallment: false },
   });
+
+  // Watch isInstallment to conditionally show installment count field
+  const isInstallment = form.watch('isInstallment');
 
   const handleSubmit = (data: z.infer<typeof schema>) => {
     onSubmit(data);
@@ -216,6 +224,53 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                 </FormItem>
               )}
             />
+            
+            <FormField
+              control={form.control}
+              name="isInstallment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Pagamento Parcelado
+                    </FormLabel>
+                    <FormDescription>
+                      Marque esta opção para criar parcelas automáticas
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            
+            {isInstallment && (
+              <FormField
+                control={form.control}
+                name="installmentCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="2"
+                        max="36"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Mínimo de 2 e máximo de 36 parcelas
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <FormField
               control={form.control}
