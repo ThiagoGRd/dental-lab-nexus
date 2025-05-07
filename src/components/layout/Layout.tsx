@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SidebarProvider } from "@/components/ui/sidebar";
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { 
@@ -12,6 +11,7 @@ import {
 import { safeProfileOperations } from '@/utils/supabaseHelpers';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Use lazy loading for child components when appropriate
 const LoadingIndicator = () => (
@@ -145,18 +145,20 @@ export default function Layout({ children }: LayoutProps) {
 
   // Render the full layout with sidebar for authenticated pages
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto bg-gray-50">
-            <Suspense fallback={<LoadingIndicator />}>
-              {children}
-            </Suspense>
-          </main>
+    <div className="min-h-screen flex flex-col w-full">
+      <SidebarProvider>
+        <div className="flex flex-1 w-full">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto bg-gray-50">
+              <Suspense fallback={<LoadingIndicator />}>
+                {children}
+              </Suspense>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 }
