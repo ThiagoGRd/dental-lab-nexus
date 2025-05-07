@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OrderStatus, statusLabels } from '@/data/mockData';
+import { BadgeCheck } from 'lucide-react';
 
 export interface OrderItemProps {
   order: {
@@ -23,19 +24,30 @@ export function OrderItem({ order, onView, onEdit }: OrderItemProps) {
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4">
       <div>
-        <div className="flex items-center gap-2">
-          {/* Exibir nome do paciente se disponível, senão exibir nome do cliente */}
-          <span className="font-medium">
-            {order.patientName || order.client}
-          </span>
-          {order.isUrgent && (
-            <Badge variant="destructive" className="text-xs">Urgente</Badge>
-          )}
-        </div>
-        {/* Se estiver mostrando o nome do paciente, mostrar o cliente como informação secundária */}
-        {order.patientName && (
-          <div className="text-sm text-muted-foreground">
-            Cliente: {order.client}
+        {/* Destacar o nome do paciente quando disponível */}
+        {order.patientName ? (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-purple-500 dark:text-purple-300 flex items-center gap-1">
+                <BadgeCheck className="h-4 w-4" />
+                {order.patientName}
+              </span>
+              {order.isUrgent && (
+                <Badge variant="destructive" className="text-xs">Urgente</Badge>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Cliente: {order.client}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">
+              {order.client}
+            </span>
+            {order.isUrgent && (
+              <Badge variant="destructive" className="text-xs">Urgente</Badge>
+            )}
           </div>
         )}
         <div className="text-sm text-muted-foreground">{order.service}</div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { statusLabels, OrderStatus } from '@/data/mockData';
+import { OrderItem } from '@/components/orders/OrderItem';
 
 export default function ProductionPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -99,15 +101,28 @@ export default function ProductionPage() {
             ? servicesData?.find(s => s.id === orderItem.service_id)
             : null;
             
+          // Extrair o nome do paciente das notas
+          let patientName = '';
+          let cleanNotes = order.notes || '';
+          
+          if (order.notes && order.notes.includes('Paciente:')) {
+            const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
+            if (patientMatch && patientMatch[1]) {
+              patientName = patientMatch[1].trim();
+              cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+            }
+          }
+            
           return {
             id: order.id,
             client: client?.name || 'Cliente não encontrado',
+            patientName: patientName,
             service: service?.name || 'Serviço não especificado',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
             status: order.status as OrderStatus,
             isUrgent: order.priority === 'urgent',
-            notes: order.notes || '',
+            notes: cleanNotes,
             totalValue: order.total_value || 0,
             // Dados originais para atualizações
             originalData: {
@@ -292,12 +307,29 @@ export default function ProductionPage() {
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{order.client}</span>
-              {order.isUrgent && (
-                <Badge variant="destructive" className="text-xs">Urgente</Badge>
-              )}
-            </div>
+            {/* Destacar nome do paciente quando disponível */}
+            {order.patientName ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-purple-500 dark:text-purple-300 text-lg">
+                    {order.patientName}
+                  </span>
+                  {order.isUrgent && (
+                    <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Cliente: {order.client}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{order.client}</span>
+                {order.isUrgent && (
+                  <Badge variant="destructive" className="text-xs">Urgente</Badge>
+                )}
+              </div>
+            )}
             <div className="text-sm text-muted-foreground">#{order.id.substring(0, 8)} - {order.service}</div>
           </div>
           <span className={cn(
