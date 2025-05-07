@@ -145,8 +145,8 @@ export default function Layout({ children }: LayoutProps) {
 
   // Render the full layout with sidebar for authenticated pages
   return (
-    <div className="min-h-screen flex flex-col w-full">
-      <SidebarProvider>
+    <SidebarProvider>
+      <div className="min-h-screen flex flex-col w-full">
         <div className="flex flex-1 w-full">
           <Sidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -158,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
             </main>
           </div>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }

@@ -10,7 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider>
+      <ThemeProvider defaultTheme="light" storageKey="ui-theme">
         <App />
         <Toaster />
       </ThemeProvider>

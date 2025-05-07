@@ -9,7 +9,8 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton
+  SidebarMenuButton,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { 
   Home,
@@ -38,6 +39,7 @@ export default function Sidebar() {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const sidebar = useSidebar();
   
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -92,7 +94,7 @@ export default function Sidebar() {
     {
       title: "Finanças",
       icon: Wallet,
-      href: "/finances",
+      href: "/finance",
     },
     {
       title: "Relatórios",
