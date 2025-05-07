@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from 'lucide-react';
+import { Search, Calendar } from 'lucide-react';
 
 interface OrderFiltersProps {
   searchTerm: string;
@@ -28,6 +28,10 @@ interface OrderFiltersProps {
   endDate: string;
   setEndDate: (date: string) => void;
   handleFilter: () => void;
+  sortByDueDate: boolean;
+  setSortByDueDate: (sort: boolean) => void;
+  urgentOnly: boolean;
+  setUrgentOnly: (urgent: boolean) => void;
 }
 
 export function OrderFilters({
@@ -39,7 +43,11 @@ export function OrderFilters({
   setStartDate,
   endDate,
   setEndDate,
-  handleFilter
+  handleFilter,
+  sortByDueDate,
+  setSortByDueDate,
+  urgentOnly,
+  setUrgentOnly
 }: OrderFiltersProps) {
   return (
     <Card>
@@ -90,6 +98,35 @@ export function OrderFilters({
           </div>
           <div>
             <Button className="w-full" onClick={handleFilter}>Filtrar</Button>
+          </div>
+        </div>
+        
+        {/* Adicionando opções de ordenação e filtros especiais */}
+        <div className="grid gap-4 md:grid-cols-2 mt-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="sortByDueDate"
+              checked={sortByDueDate}
+              onChange={(e) => setSortByDueDate(e.target.checked)}
+              className="rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="sortByDueDate" className="text-sm font-medium cursor-pointer flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+              Ordenar por Data de Vencimento
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="urgentOnly"
+              checked={urgentOnly}
+              onChange={(e) => setUrgentOnly(e.target.checked)}
+              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+            />
+            <label htmlFor="urgentOnly" className="text-sm font-medium cursor-pointer">
+              Mostrar apenas ordens urgentes
+            </label>
           </div>
         </div>
       </CardContent>

@@ -24,6 +24,10 @@ export default function OrdersPage() {
     setStartDate,
     endDate,
     setEndDate,
+    urgentOnly,
+    setUrgentOnly,
+    sortByDueDate,
+    setSortByDueDate,
     loading,
     filteredOrders,
     handleUpdateOrder,
@@ -45,6 +49,7 @@ export default function OrdersPage() {
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
     const urgent = searchParams.get('urgent');
+    const sortByDueDateParam = searchParams.get('sortByDueDate');
     
     // Aplicar filtros se existirem
     let filtersApplied = false;
@@ -69,8 +74,15 @@ export default function OrdersPage() {
       filtersApplied = true;
     }
     
-    // Observação: o filtro de urgência seria aplicado diretamente na função useOrderFilters
-    // através de uma propriedade adicional que não vamos implementar agora para manter as mudanças focadas
+    if (urgent === 'true') {
+      setUrgentOnly(true);
+      filtersApplied = true;
+    }
+    
+    if (sortByDueDateParam === 'false') {
+      setSortByDueDate(false);
+      filtersApplied = true;
+    }
 
     // Limpar parâmetros da URL após aplicar os filtros
     if (filtersApplied) {
@@ -80,7 +92,7 @@ export default function OrdersPage() {
       // Limpar URL para evitar que os filtros sejam aplicados novamente ao recarregar a página
       navigate('/orders', { replace: true });
     }
-  }, [searchParams, setStatusFilter, setSearchTerm, setStartDate, setEndDate, navigate]);
+  }, [searchParams, setStatusFilter, setSearchTerm, setStartDate, setEndDate, setSortByDueDate, setUrgentOnly, navigate]);
 
   useEffect(() => {
     if (error) {
@@ -136,6 +148,10 @@ export default function OrdersPage() {
         endDate={endDate}
         setEndDate={setEndDate}
         handleFilter={handleFilter}
+        sortByDueDate={sortByDueDate}
+        setSortByDueDate={setSortByDueDate}
+        urgentOnly={urgentOnly}
+        setUrgentOnly={setUrgentOnly}
       />
 
       <div className="mt-6">

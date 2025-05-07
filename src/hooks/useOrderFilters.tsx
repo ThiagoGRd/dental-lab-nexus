@@ -8,15 +8,21 @@ export function useOrderFilters(orders: any[]) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [urgentOnly, setUrgentOnly] = useState(false);
+  const [sortByDueDate, setSortByDueDate] = useState(true); // Inicialmente ordenado por data de vencimento
   const [filteredOrders, setFilteredOrders] = useState<any[]>(orders);
 
   // Verificar se há "urgent" na URL ao carregar
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urgentParam = urlParams.get('urgent');
+    const sortByDueDateParam = urlParams.get('sortByDueDate');
     
     if (urgentParam === 'true') {
       setUrgentOnly(true);
+    }
+    
+    if (sortByDueDateParam === 'false') {
+      setSortByDueDate(false);
     }
   }, []);
 
@@ -59,11 +65,23 @@ export function useOrderFilters(orders: any[]) {
         filtered = filtered.filter(order => order.isUrgent === true);
       }
       
+      // Ordenar por data de vencimento se ativado
+      if (sortByDueDate) {
+        filtered = filtered.sort((a, b) => {
+          // Verificar se ambos têm data de vencimento
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1; // Colocar os sem data no final
+          if (!b.dueDate) return -1; // Colocar os sem data no final
+          
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+      }
+      
       setFilteredOrders(filtered);
     };
     
     applyFilters();
-  }, [orders, searchTerm, statusFilter, startDate, endDate, urgentOnly]);
+  }, [orders, searchTerm, statusFilter, startDate, endDate, urgentOnly, sortByDueDate]);
 
   const handleFilter = () => {
     toast.success('Filtros aplicados');
@@ -80,6 +98,8 @@ export function useOrderFilters(orders: any[]) {
     setEndDate,
     urgentOnly,
     setUrgentOnly,
+    sortByDueDate,
+    setSortByDueDate,
     filteredOrders,
     handleFilter
   };

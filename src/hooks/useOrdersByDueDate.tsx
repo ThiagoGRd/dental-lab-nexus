@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { toast } from 'sonner';
 
 interface DueOrderData {
@@ -39,6 +39,7 @@ export function useOrdersByDueDate(daysThreshold = 7) {
           client_id
         `)
         .not('status', 'eq', 'completed')
+        .not('status', 'eq', 'delivered')
         .not('deadline', 'is', null)
         .order('deadline', { ascending: true });
       
@@ -72,6 +73,7 @@ export function useOrdersByDueDate(daysThreshold = 7) {
       
       // Current date for comparison
       const today = new Date();
+      const futureDate = addDays(today, daysThreshold);
       
       // Filter and format orders that are due soon
       const formattedDueOrders = ordersData
@@ -81,7 +83,7 @@ export function useOrdersByDueDate(daysThreshold = 7) {
           const dueDate = parseISO(order.deadline);
           const daysUntilDue = differenceInDays(dueDate, today);
           
-          // Filter orders that are due within the threshold
+          // Filter orders that are due within the threshold or overdue
           if (daysUntilDue > daysThreshold) return null;
           
           const client = clientsMap.get(order.client_id);
@@ -105,12 +107,17 @@ export function useOrdersByDueDate(daysThreshold = 7) {
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: format(new Date(order.deadline), 'yyyy-MM-dd'),
             status: order.status,
-            daysUntilDue
+            daysUntilDue,
+            isUrgent: order.priority === 'urgent'
           };
         })
         .filter(Boolean) as DueOrderData[];
       
       console.log(`Found ${formattedDueOrders.length} orders due within ${daysThreshold} days`);
+      
+      // Ordenar por proximidade da data de vencimento
+      formattedDueOrders.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+      
       setDueOrders(formattedDueOrders);
     } catch (err) {
       const errorMessage = (err as Error)?.message || 'Erro desconhecido';
