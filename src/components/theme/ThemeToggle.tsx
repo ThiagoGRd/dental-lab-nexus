@@ -10,14 +10,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { Theme } from "./types";
 
-export function ThemeToggle({ variant = "dropdown" }: { variant?: "dropdown" | "switch" }) {
+interface ThemeToggleProps {
+  variant?: "dropdown" | "switch";
+}
+
+export function ThemeToggle({ variant = "dropdown" }: ThemeToggleProps) {
   const { setTheme, theme } = useTheme();
   
   const toggleTheme = useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark");
   }, [theme, setTheme]);
 
+  // Theme switch variant
   if (variant === "switch") {
     return (
       <div className="flex items-center space-x-2">
@@ -32,6 +38,7 @@ export function ThemeToggle({ variant = "dropdown" }: { variant?: "dropdown" | "
     );
   }
 
+  // Dropdown variant (default)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

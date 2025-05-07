@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
+import { applyInitialTheme } from "./components/theme/utils/themeUtils";
 import Layout from "./components/layout/Layout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -76,7 +76,7 @@ if (typeof document !== 'undefined') {
 }
 
 const App = () => {
-  // Aplicar tema inicial antes da renderização
+  // Get initial theme for rendering
   const defaultTheme = applyInitialTheme();
   
   // Adicionar classes CSS globais para resolução de problemas com temas
