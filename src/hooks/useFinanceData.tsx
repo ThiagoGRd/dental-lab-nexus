@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO, isAfter, isBefore, isToday, addDays, isSameDay, compareAsc, compareDesc } from 'date-fns';
 import { safeFinanceOperations, safeExtract } from '@/utils/supabaseHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,6 +14,34 @@ export function useFinanceData() {
   const [editFormData, setEditFormData] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+  
+  // Advanced filter states
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('due-asc');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  // Extract unique categories for the filter dropdown
+  const categories = useMemo(() => {
+    const categorySet = new Set<string>();
+    payableAccounts.forEach(account => {
+      if (account.category) categorySet.add(account.category);
+    });
+    return Array.from(categorySet).sort();
+  }, [payableAccounts]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setDateFilter('all');
+    setCategoryFilter('all');
+    setSortOrder('due-asc');
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSearchTerm('');
+  };
 
   // Use useCallback to make refreshData available as dependency
   const fetchFinanceData = useCallback(async () => {
@@ -152,16 +180,93 @@ export function useFinanceData() {
     fetchFinanceData();
   }, [fetchFinanceData]);
 
-  // Filtered data based on search term
-  const filteredPayables = payableAccounts.filter(acc => 
-    acc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    acc.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply filters to accounts
+  const applyFilters = useCallback((accounts: any[]) => {
+    return accounts.filter(account => {
+      // Search term filter
+      const searchLower = searchTerm.toLowerCase();
+      const hasSearchTerm = 'description' in account 
+        ? account.description.toLowerCase().includes(searchLower) || account.category.toLowerCase().includes(searchLower)
+        : account.client.toLowerCase().includes(searchLower) || account.orderNumber.toLowerCase().includes(searchLower);
+      
+      if (!hasSearchTerm) return false;
+
+      // Status filter
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'pending' && account.status !== 'pending') return false;
+        if (statusFilter === 'paid' && (account.status !== 'paid' && account.status !== 'received')) return false;
+      }
+
+      // Category filter for payable accounts only
+      if ('category' in account && categoryFilter !== 'all' && account.category !== categoryFilter) {
+        return false;
+      }
+
+      // Date filter
+      if (dateFilter !== 'all' && account.dueDate) {
+        const dueDate = parseISO(account.dueDate);
+        const today = new Date();
+        
+        switch (dateFilter) {
+          case 'overdue':
+            if (!isBefore(dueDate, today)) return false;
+            break;
+          case 'today':
+            if (!isToday(dueDate)) return false;
+            break;
+          case 'week':
+            if (isBefore(dueDate, today) || isAfter(dueDate, addDays(today, 7))) return false;
+            break;
+          case 'month':
+            if (isBefore(dueDate, today) || isAfter(dueDate, addDays(today, 30))) return false;
+            break;
+          case 'custom':
+            if (startDate && isBefore(dueDate, startDate)) return false;
+            if (endDate && isAfter(dueDate, endDate)) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+  }, [searchTerm, statusFilter, categoryFilter, dateFilter, startDate, endDate]);
+
+  // Apply sorting
+  const applySorting = useCallback((accounts: any[]) => {
+    return [...accounts].sort((a, b) => {
+      switch (sortOrder) {
+        case 'due-asc':
+          return a.dueDate && b.dueDate ? compareAsc(parseISO(a.dueDate), parseISO(b.dueDate)) : 0;
+        case 'due-desc':
+          return a.dueDate && b.dueDate ? compareDesc(parseISO(a.dueDate), parseISO(b.dueDate)) : 0;
+        case 'value-asc':
+          return a.value - b.value;
+        case 'value-desc':
+          return b.value - a.value;
+        case 'alpha-asc':
+          const aText = 'description' in a ? a.description : a.client;
+          const bText = 'description' in b ? b.description : b.client;
+          return aText.localeCompare(bText);
+        case 'alpha-desc':
+          const aText2 = 'description' in a ? a.description : a.client;
+          const bText2 = 'description' in b ? b.description : b.client;
+          return bText2.localeCompare(aText2);
+        default:
+          return 0;
+      }
+    });
+  }, [sortOrder]);
+
+  // Filtered and sorted data
+  const filteredPayables = useMemo(() => {
+    const filtered = applyFilters(payableAccounts);
+    return applySorting(filtered);
+  }, [payableAccounts, applyFilters, applySorting]);
   
-  const filteredReceivables = receivableAccounts.filter(acc => 
-    acc.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    acc.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReceivables = useMemo(() => {
+    const filtered = applyFilters(receivableAccounts);
+    return applySorting(filtered);
+  }, [receivableAccounts, applyFilters, applySorting]);
 
   // Handle payment of an account
   const handlePayment = async (id: string) => {
@@ -429,6 +534,22 @@ export function useFinanceData() {
     editFormData,
     loading,
     error,
+    // Advanced filters
+    statusFilter,
+    setStatusFilter,
+    dateFilter,
+    setDateFilter,
+    categoryFilter,
+    setCategoryFilter,
+    sortOrder,
+    setSortOrder,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    clearFilters,
+    categories,
+    // Functions
     handlePayment,
     handleReceive,
     handleViewAccount,

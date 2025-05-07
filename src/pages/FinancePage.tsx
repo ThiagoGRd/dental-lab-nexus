@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -11,7 +10,8 @@ import ViewAccountDialog from "@/components/finance/ViewAccountDialog";
 import EditAccountDialog from "@/components/finance/EditAccountDialog";
 import NewFinancialEntryForm from "@/components/finance/NewFinancialEntryForm";
 import UpdateZeroReceivables from "@/components/finance/UpdateZeroReceivables";
-import { RefreshCw } from "lucide-react";
+import FilterFinances from "@/components/finance/FilterFinances";
+import { RefreshCw, FileText } from "lucide-react";
 
 export default function FinancePage() {
   const [showNewForm, setShowNewForm] = useState(false);
@@ -31,6 +31,22 @@ export default function FinancePage() {
     editFormData,
     loading,
     error,
+    // Advanced filters
+    statusFilter,
+    setStatusFilter,
+    dateFilter,
+    setDateFilter,
+    categoryFilter,
+    setCategoryFilter,
+    sortOrder,
+    setSortOrder,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    clearFilters,
+    categories,
+    // Functions
     handlePayment,
     handleReceive,
     handleViewAccount,
@@ -94,12 +110,6 @@ export default function FinancePage() {
             </TabsList>
             
             <div className="flex items-center gap-2">
-              <Input
-                placeholder="Buscar conta..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
-              />
               <Button 
                 onClick={refreshData} 
                 variant="outline" 
@@ -108,8 +118,39 @@ export default function FinancePage() {
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+                title="Relatórios financeiros"
+                onClick={() => window.location.href = '/reports'}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Relatórios
+              </Button>
               <UpdateZeroReceivables onComplete={refreshData} />
             </div>
+          </div>
+          
+          <div className="mb-4">
+            <FilterFinances
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              dateFilter={dateFilter}
+              onDateFilterChange={setDateFilter}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              onClearFilters={clearFilters}
+              categories={categories}
+            />
           </div>
           
           <TabsContent value="receivable" className="mt-4">
