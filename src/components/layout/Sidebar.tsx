@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -112,15 +113,15 @@ export default function Sidebar() {
     : menuItems.filter(item => !item.adminOnly);
 
   return (
-    <SidebarComponent className="bg-white border-r border-gray-100">
-      <div className="p-4 border-b border-gray-100">
-        <h1 className="text-xl font-semibold text-blue-600">
+    <SidebarComponent className="bg-sidebar border-r border-sidebar-border">
+      <div className="p-4 border-b border-sidebar-border">
+        <h1 className="text-xl font-semibold text-sidebar-primary">
           Protech Lab Nexus
         </h1>
       </div>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-400 text-xs">Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
@@ -128,7 +129,7 @@ export default function Sidebar() {
                   <SidebarMenuButton asChild>
                     <Link 
                       to={item.href} 
-                      className={`flex items-center gap-3 ${location.pathname === item.href ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'}`}
+                      className={`flex items-center gap-3 ${location.pathname === item.href ? 'bg-sidebar-accent text-sidebar-primary' : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary'}`}
                     >
                       <item.icon className="h-4 w-4" />
                       <span className="text-sm">{item.title}</span>
@@ -140,16 +141,16 @@ export default function Sidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <div className="mt-auto p-4 border-t border-gray-100">
+      <div className="mt-auto p-4 border-t border-sidebar-border">
         {user && (
-          <div className="mb-4 rounded p-3 bg-gray-50">
-            <div className="font-medium text-gray-800 text-sm">{user.name}</div>
-            <div className="text-xs text-gray-500">{user.email}</div>
+          <div className="mb-4 rounded p-3 bg-sidebar-accent/50">
+            <div className="font-medium text-sidebar-foreground text-sm">{user.name}</div>
+            <div className="text-xs text-sidebar-foreground/70">{user.email}</div>
           </div>
         )}
         <button 
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+          className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
         >
           <LogOut className="h-4 w-4" />
           <span>Sair</span>

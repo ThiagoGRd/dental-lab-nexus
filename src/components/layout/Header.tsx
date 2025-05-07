@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
 import Notifications from '@/components/Notifications';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { supabase } from '@/integrations/supabase/client';
 
 type User = {
@@ -33,34 +34,35 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-gray-100 bg-white px-4 md:px-6 shadow-sm">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background border-border px-4 md:px-6 shadow-sm transition-colors duration-300">
       <Button 
         variant="ghost" 
         size="icon" 
         onClick={() => sidebar.toggleSidebar()}
-        className="text-gray-500 hover:bg-gray-50"
+        className="text-muted-foreground hover:bg-accent"
       >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle Menu</span>
       </Button>
       <div className="hidden md:flex md:flex-1 md:gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Buscar ordens, clientes..." 
-            className="w-full max-w-md pl-9 bg-gray-50 border-gray-100" 
+            className="w-full max-w-md pl-9 bg-muted/50 border-input" 
           />
         </div>
       </div>
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         <Notifications />
         {user && (
           <div className="flex items-center gap-2">
             <div className="hidden md:flex md:flex-col md:items-end">
-              <div className="text-sm font-medium text-gray-800">{user.name}</div>
-              <div className="text-xs text-gray-500">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
+              <div className="text-sm font-medium">{user.name}</div>
+              <div className="text-xs text-muted-foreground">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-blue-600 font-medium">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium">
               {user.name?.charAt(0).toUpperCase() || 'U'}
             </div>
           </div>

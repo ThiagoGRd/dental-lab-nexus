@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,8 +24,10 @@ import {
 } from 'lucide-react';
 import UserManagement from '@/components/settings/UserManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [companySettings, setCompanySettings] = useState({
     name: 'Protech Lab Nexus',
     document: '12.345.678/0001-00',
@@ -41,11 +43,19 @@ export default function SettingsPage() {
 
   const [systemSettings, setSystemSettings] = useState({
     autoBackup: true,
-    darkMode: false,
+    darkMode: theme === 'dark',
     emailNotifications: true,
     autoLogout: false,
     defaultDueTime: 7,
   });
+
+  // Sincronizar o estado darkMode com o tema atual
+  useEffect(() => {
+    setSystemSettings(prev => ({
+      ...prev,
+      darkMode: theme === 'dark'
+    }));
+  }, [theme]);
 
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -54,6 +64,11 @@ export default function SettingsPage() {
 
   const handleSystemChange = (name: string, value: boolean | number) => {
     setSystemSettings(prev => ({ ...prev, [name]: value }));
+    
+    // Se for o switch de tema escuro, atualizar o tema
+    if (name === 'darkMode') {
+      setTheme(value ? 'dark' : 'light');
+    }
   };
 
   const saveCompanySettings = () => {
@@ -70,8 +85,8 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-protechblue-100">Configurações</h1>
-      <p className="text-gray-400 mb-6">Gerencie as configurações do sistema</p>
+      <h1 className="text-3xl font-bold">Configurações</h1>
+      <p className="text-muted-foreground mb-6">Gerencie as configurações do sistema</p>
 
       <Tabs defaultValue="company" className="w-full">
         <TabsList className="mb-6">
@@ -255,12 +270,12 @@ export default function SettingsPage() {
                   onChange={(e) => handleSystemChange('defaultDueTime', parseInt(e.target.value) || 7)}
                   min={1}
                   max={30}
+                  className="max-w-xs"
                 />
               </div>
             </CardContent>
             <CardFooter>
               <Button 
-                className="bg-protechblue-600 hover:bg-protechblue-700"
                 onClick={saveSystemSettings}
               >
                 Salvar Alterações
