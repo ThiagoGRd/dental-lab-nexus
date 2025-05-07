@@ -257,11 +257,11 @@ export function ThemeProvider({
       // Initial handling
       handleChange();
       
-      // Use safer event listener approach
-      const listenerOptions = { once: false, passive: true };
+      // Use correct EventListenerOptions type
+      const listenerOptions: AddEventListenerOptions = { passive: true };
       
       try {
-        // Modern event listener
+        // Modern event listener with correct type
         mediaQuery.addEventListener("change", handleChange, listenerOptions);
         
         return () => {
@@ -270,14 +270,19 @@ export function ThemeProvider({
       } catch (listenerError) {
         // Fallback for older browsers
         try {
-          mediaQuery.addListener?.(handleChange);
-          return () => {
-            mediaQuery.removeListener?.(handleChange);
-          };
+          // @ts-ignore - For older browsers that don't support addEventListener
+          if (typeof mediaQuery.addListener === 'function') {
+            // @ts-ignore
+            mediaQuery.addListener(handleChange);
+            return () => {
+              // @ts-ignore
+              mediaQuery.removeListener(handleChange);
+            };
+          }
         } catch (fallbackError) {
           console.debug("Media query listener error:", fallbackError);
-          return () => {};
         }
+        return () => {};
       }
     } catch (error) {
       console.debug("System theme detection error:", error);
