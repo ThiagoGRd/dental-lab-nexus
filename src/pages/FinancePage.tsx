@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
@@ -79,87 +79,122 @@ export default function FinancePage() {
     setActiveTab(value as 'receivable' | 'payable');
   }, []);
 
-  // Otimização: Memoizar renderização da tabela
+  // Memoizar a renderização da tabela para melhorar a performance
   const renderTableContent = useCallback((type: 'payable' | 'receivable') => {
-    const accounts = type === 'payable' ? filteredPayables : filteredReceivables;
-    const handleAction = type === 'payable' ? handlePayment : handleReceive;
-    const emptyMessage = type === 'payable' 
-      ? 'Nenhuma conta a pagar encontrada.' 
-      : 'Nenhuma conta a receber encontrada.';
-    const loadingMessage = type === 'payable'
-      ? 'Carregando contas a pagar...'
-      : 'Carregando contas a receber...';
+    try {
+      const accounts = type === 'payable' ? filteredPayables : filteredReceivables;
+      const handleAction = type === 'payable' ? handlePayment : handleReceive;
+      const emptyMessage = type === 'payable' 
+        ? 'Nenhuma conta a pagar encontrada.' 
+        : 'Nenhuma conta a receber encontrada.';
+      const loadingMessage = type === 'payable'
+        ? 'Carregando contas a pagar...'
+        : 'Carregando contas a receber...';
 
-    if (loading) {
-      return (
-        <TableRow>
-          <td colSpan={5} className="text-center py-4">
-            {loadingMessage}
-          </td>
-        </TableRow>
-      );
-    }
+      if (loading) {
+        return (
+          <TableRow>
+            <td colSpan={5} className="text-center py-4">
+              {loadingMessage}
+            </td>
+          </TableRow>
+        );
+      }
 
-    if (error) {
+      if (error) {
+        return (
+          <TableRow>
+            <td colSpan={5} className="text-center py-4 text-red-500">
+              Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
+            </td>
+          </TableRow>
+        );
+      }
+
+      if (!accounts || accounts.length === 0) {
+        return (
+          <TableRow>
+            <td colSpan={5} className="text-center py-4 text-gray-500">
+              {emptyMessage}
+            </td>
+          </TableRow>
+        );
+      }
+
+      return accounts.map(account => (
+        <MemoizedFinancialAccountItem
+          key={account.id}
+          account={account}
+          onPayOrReceive={handleAction}
+          onView={handleViewAccount}
+          onEdit={handleEditSetup}
+          type={type}
+        />
+      ));
+    } catch (error) {
+      console.error("Erro ao renderizar conteúdo da tabela:", error);
       return (
         <TableRow>
           <td colSpan={5} className="text-center py-4 text-red-500">
-            Erro: {error.message || 'Ocorreu um erro ao carregar os dados'}
+            Erro ao renderizar dados. Por favor, atualize a página.
           </td>
         </TableRow>
       );
     }
-
-    if (!accounts || accounts.length === 0) {
-      return (
-        <TableRow>
-          <td colSpan={5} className="text-center py-4 text-gray-500">
-            {emptyMessage}
-          </td>
-        </TableRow>
-      );
-    }
-
-    return accounts.map(account => (
-      <MemoizedFinancialAccountItem
-        key={account.id}
-        account={account}
-        onPayOrReceive={handleAction}
-        onView={handleViewAccount}
-        onEdit={handleEditSetup}
-        type={type}
-      />
-    ));
-  }, [filteredPayables, filteredReceivables, handlePayment, handleReceive, loading, error, handleViewAccount, handleEditSetup]);
+  }, [filteredPayables, filteredReceivables, handlePayment, handleReceive, handleViewAccount, handleEditSetup, loading, error]);
 
   // Renderização segura do componente
-  const renderSafely = (component: JSX.Element | null): JSX.Element => {
+  const renderSafely = useCallback((component: JSX.Element | null): JSX.Element => {
     try {
       return component || <></>;
     } catch (error) {
       console.error("Erro na renderização:", error);
       return <p className="text-red-500">Erro na renderização. Por favor, recarregue a página.</p>;
     }
-  };
+  }, []);
+
+  // Memoize the summary component to improve performance
+  const summaryComponent = useMemo(() => (
+    <MemoizedFinancialSummary 
+      payableAccounts={payableAccounts}
+      receivableAccounts={receivableAccounts}
+    />
+  ), [payableAccounts, receivableAccounts]);
+
+  // Memoize dialog components to avoid unnecessary re-renders
+  const viewDialogComponent = useMemo(() => (
+    <ViewAccountDialog 
+      open={viewDialogOpen}
+      onOpenChange={setViewDialogOpen}
+      account={currentAccount}
+    />
+  ), [viewDialogOpen, setViewDialogOpen, currentAccount]);
+
+  const editDialogComponent = useMemo(() => (
+    <EditAccountDialog 
+      open={editDialogOpen}
+      onOpenChange={setEditDialogOpen}
+      currentAccount={currentAccount}
+      formData={editFormData}
+      onInputChange={handleInputChange}
+      onSubmit={handleEditSubmit}
+    />
+  ), [editDialogOpen, setEditDialogOpen, currentAccount, editFormData, handleInputChange, handleEditSubmit]);
 
   // Tratamento de erros para toda a página
   try {
     return (
       <div className="p-6">
-        <h1 className="text-3xl font-bold text-dentalblue-800">Gestão Financeira</h1>
-        <p className="text-gray-600 mb-6">Controle de contas a pagar e a receber</p>
+        <h1 className="text-3xl font-bold text-dentalblue-800 dark:text-dentalblue-200">Gestão Financeira</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Controle de contas a pagar e a receber</p>
         
-        {renderSafely(
-          <MemoizedFinancialSummary 
-            payableAccounts={payableAccounts}
-            receivableAccounts={receivableAccounts}
-          />
-        )}
+        {renderSafely(summaryComponent)}
         
         <Tabs 
           defaultValue={activeTab} 
           className="mt-8"
           onValueChange={handleTabChange}
+          value={activeTab}
         >
           <div className="flex justify-between items-center mb-4">
             <TabsList>
@@ -269,24 +304,8 @@ export default function FinancePage() {
         </Tabs>
         
         {/* Diálogos para visualizar e editar contas */}
-        {renderSafely(
-          <ViewAccountDialog 
-            open={viewDialogOpen}
-            onOpenChange={setViewDialogOpen}
-            account={currentAccount}
-          />
-        )}
-        
-        {renderSafely(
-          <EditAccountDialog 
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            currentAccount={currentAccount}
-            formData={editFormData}
-            onInputChange={handleInputChange}
-            onSubmit={handleEditSubmit}
-          />
-        )}
+        {renderSafely(viewDialogComponent)}
+        {renderSafely(editDialogComponent)}
       </div>
     );
   } catch (error) {

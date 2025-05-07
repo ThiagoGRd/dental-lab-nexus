@@ -1,4 +1,5 @@
 
+import { useCallback } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "dropdown" }: { variant?: "dropdown" | "switch" }) {
   const { setTheme, theme } = useTheme();
+  
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  }, [theme, setTheme]);
+
+  if (variant === "switch") {
+    return (
+      <div className="flex items-center space-x-2">
+        <Sun className="h-4 w-4" />
+        <Switch 
+          checked={theme === "dark"} 
+          onCheckedChange={toggleTheme} 
+          aria-label="Alternar tema"
+        />
+        <Moon className="h-4 w-4" />
+      </div>
+    );
+  }
 
   return (
     <DropdownMenu>

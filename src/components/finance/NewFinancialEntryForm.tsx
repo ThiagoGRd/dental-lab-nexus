@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -91,6 +91,13 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
       : { client: '', orderNumber: '', value: 0, dueDate: '', notes: '', isInstallment: false },
   });
 
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
+
   // Watch isInstallment to conditionally show installment count field
   const isInstallment = form.watch('isInstallment');
 
@@ -105,11 +112,21 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
+  // Safe handler for dialog state changes
+  const handleOpenChange = (newOpen: boolean) => {
+    try {
       setOpen(newOpen);
-      if (!newOpen) form.reset();
-    }}>
+      if (!newOpen) {
+        // Use timeout to avoid state changes during render
+        setTimeout(() => form.reset(), 100);
+      }
+    } catch (error) {
+      console.error("Erro ao manipular estado do diálogo:", error);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -151,8 +168,8 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                       <FormLabel>Categoria</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
-                        value={field.value}
-                        defaultValue={field.value}
+                        value={field.value || ''}
+                        defaultValue={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -182,8 +199,8 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
                       <FormLabel>Cliente</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
-                        value={field.value}
-                        defaultValue={field.value}
+                        value={field.value || ''}
+                        defaultValue={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -328,7 +345,7 @@ export default function NewFinancialEntryForm({ type, onSubmit, children }: NewF
             />
             
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit">Salvar</Button>
