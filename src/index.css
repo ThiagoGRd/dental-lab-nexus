@@ -46,42 +46,42 @@
   }
   
   .dark {
-    --background: 240 10% 3.9%; /* Fundo escuro */
+    --background: 260 20% 12%; /* Fundo escuro roxo escuro */
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 260 20% 15%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 260 20% 15%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 217.2 91.2% 59.8%; /* Azul mais vibrante no tema escuro */
-    --primary-foreground: 210 40% 98%;
+    --primary: 250 95% 76%; /* Roxo mais vibrante no tema escuro */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 260 15% 22%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 260 15% 22%;
+    --muted-foreground: 240 5% 75%;
 
-    --accent: 240 3.7% 15.9%;
+    --accent: 260 15% 25%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217.2 91.2% 59.8%;
+    --border: 260 15% 22%;
+    --input: 260 15% 25%;
+    --ring: 250 95% 76%;
     
-    --sidebar-background: 240 10% 3.9%;
+    --sidebar-background: 260 25% 11%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-primary: 250 95% 76%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 15% 22%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 260 15% 20%;
+    --sidebar-ring: 250 95% 76%;
   }
 }
 
@@ -126,11 +126,11 @@
   }
   
   .btn-gradient {
-    @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white;
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white dark:from-purple-600 dark:to-purple-700;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-blue-300;
+    @apply bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent dark:from-purple-400 dark:to-purple-300;
   }
   
   .glassmorphism {
@@ -164,6 +164,23 @@
   }
   
   .sidebar-item-active {
-    @apply bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300;
+    @apply bg-blue-50 text-blue-700 dark:bg-purple-900/40 dark:text-purple-300;
+  }
+  
+  /* New dark mode improvements */
+  .dark .stat-card {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark .chart-container {
+    @apply bg-gray-800/80 border-gray-700;
+  }
+  
+  .dark .table-row-alt {
+    @apply bg-gray-800/50;
+  }
+  
+  .dark .status-badge {
+    @apply bg-opacity-20 border-opacity-30;
   }
 }

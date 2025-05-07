@@ -33,7 +33,7 @@ export function ThemeToggle({ variant = "dropdown" }: ThemeToggleProps) {
           onCheckedChange={toggleTheme} 
           aria-label="Alternar tema"
         />
-        <Moon className="h-4 w-4 text-blue-400" />
+        <Moon className="h-4 w-4 text-purple-400" />
       </div>
     );
   }
@@ -44,7 +44,7 @@ export function ThemeToggle({ variant = "dropdown" }: ThemeToggleProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-yellow-500" />
-          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
+          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-purple-400" />
           <span className="sr-only">Alternar tema</span>
         </Button>
       </DropdownMenuTrigger>
