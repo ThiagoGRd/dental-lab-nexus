@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OrderStatus, statusLabels } from '@/data/mockData';
 import { BadgeCheck } from 'lucide-react';
+import { format, isValid } from 'date-fns';
 
 export interface OrderItemProps {
   order: {
@@ -21,6 +22,13 @@ export interface OrderItemProps {
 }
 
 export function OrderItem({ order, onView, onEdit }: OrderItemProps) {
+  // Format the date to DD/MM/AAAA if it's valid
+  const formattedDueDate = order.dueDate ? 
+    (() => {
+      const dateObj = new Date(order.dueDate);
+      return isValid(dateObj) ? format(dateObj, 'dd/MM/yyyy') : 'Não definida';
+    })() : 'Não definida';
+
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4">
       <div>
@@ -54,7 +62,7 @@ export function OrderItem({ order, onView, onEdit }: OrderItemProps) {
         <div className="text-xs text-muted-foreground">#{order.id.substring(0, 8)}</div>
       </div>
       <div className="hidden sm:block text-sm">
-        {order.dueDate || 'Não definida'}
+        {formattedDueDate}
       </div>
       <div>
         <span className={cn(
