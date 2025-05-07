@@ -21,10 +21,12 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
       };
       
       console.log('Update data:', updateData);
-      console.log('Order ID:', updatedOrder.originalData?.orderId || updatedOrder.id);
+      
+      // Obter o ID correto da ordem
+      const orderId = updatedOrder.originalData?.orderId || updatedOrder.id;
+      console.log('Order ID:', orderId);
       
       // Update in Supabase
-      const orderId = updatedOrder.originalData?.orderId || updatedOrder.id;
       const { error } = await supabase
         .from('orders')
         .update(updateData)
@@ -39,9 +41,20 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
       console.log('Order updated successfully in Supabase');
       
       // Update local state efficiently using map
-      const updatedOrders = orders.map(order => 
-        (order.id === updatedOrder.id) ? { ...order, ...updatedOrder } : order
-      );
+      const updatedOrders = orders.map(order => {
+        if (order.id === updatedOrder.id) {
+          return { 
+            ...order, 
+            status: updatedOrder.status,
+            dueDate: updatedOrder.dueDate,
+            isUrgent: updatedOrder.isUrgent,
+            notes: updatedOrder.notes,
+            patientName: updatedOrder.patientName
+          };
+        }
+        return order;
+      });
+      
       setOrders(updatedOrders);
       toast.success('Ordem atualizada com sucesso!');
       return true;

@@ -23,7 +23,7 @@ export const navigateToOrdersWithFilter = (
     params.append('status', filterOptions.status);
   }
   
-  if (filterOptions.isUrgent) {
+  if (filterOptions.isUrgent === true) {
     params.append('urgent', 'true');
   }
   
