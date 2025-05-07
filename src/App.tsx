@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
-import { applyInitialTheme } from "./components/theme/utils/themeUtils";
+import { applyInitialTheme as themeUtils_applyInitialTheme } from "./components/theme/utils/themeUtils";
 import Layout from "./components/layout/Layout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -40,7 +41,7 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Aplica tema inicial para evitar flash de tema errado
+// Using the local applyInitialTheme function
 const applyInitialTheme = () => {
   if (typeof window === 'undefined') return 'light';
   
