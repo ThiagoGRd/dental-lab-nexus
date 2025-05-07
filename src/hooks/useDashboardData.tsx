@@ -14,28 +14,38 @@ export function useDashboardData() {
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [statusData, setStatusData] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        console.log('Iniciando busca de dados para o dashboard...');
         
-        // Use Promise.all for parallel requests to reduce waiting time
-        const [ordersResult, clientsResult] = await Promise.all([
-          // Limit fields and use more efficient queries
-          supabase
-            .from('orders')
-            .select('id, status, priority, created_at, client_id, deadline, notes'),
-          
-          supabase
-            .from('clients')
-            .select('id, name')
-        ]);
+        // Buscar dados das ordens com tratamento mais robusto de erros
+        console.log('Buscando ordens...');
+        const ordersResult = await supabase
+          .from('orders')
+          .select('id, status, priority, created_at, client_id, deadline, notes');
         
-        if (ordersResult.error) {
-          console.error('Erro ao buscar pedidos:', ordersResult.error);
-          toast.error('Erro ao carregar dados do dashboard');
+        if (hasError(ordersResult)) {
+          console.error('Erro ao buscar ordens:', ordersResult.error);
+          toast.error('Falha ao carregar dados de ordens');
+          setError(ordersResult.error?.message || 'Erro desconhecido');
+          setLoading(false);
           return;
+        }
+        
+        // Buscar dados dos clientes
+        console.log('Buscando clientes...');
+        const clientsResult = await supabase
+          .from('clients')
+          .select('id, name');
+          
+        if (hasError(clientsResult)) {
+          console.error('Erro ao buscar clientes:', clientsResult.error);
+          toast.error('Falha ao carregar dados de clientes');
+          // Continuar mesmo com erro em clientes
         }
         
         const ordersData = safeData(ordersResult, []);
@@ -44,7 +54,33 @@ export function useDashboardData() {
         console.log('Dashboard: Pedidos carregados:', ordersData.length);
         console.log('Dashboard: Clientes carregados:', clientsData.length);
         
-        // Optimize by calculating in a single loop
+        // Verificar se temos dados para processar
+        if (ordersData.length === 0) {
+          console.log('Nenhum pedido encontrado no banco de dados');
+          
+          // Definir dados padrão para a visualização
+          setStats({
+            totalOrders: 0,
+            inProduction: 0,
+            completed: 0,
+            urgent: 0
+          });
+          
+          setRecentOrders([]);
+          
+          setStatusData([
+            { name: 'Pendente', value: 0, color: '#FCD34D' },
+            { name: 'Em Produção', value: 0, color: '#60A5FA' },
+            { name: 'Aguardando Material', value: 0, color: '#C084FC' },
+            { name: 'Finalizado', value: 0, color: '#4ADE80' },
+            { name: 'Entregue', value: 0, color: '#9CA3AF' },
+          ]);
+          
+          setLoading(false);
+          return;
+        }
+        
+        // Calcular estatísticas
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
@@ -54,11 +90,25 @@ export function useDashboardData() {
         let urgent = 0;
         let ordersThisMonth = 0;
         
-        // Calculate stats in a single pass
+        // Inicializar contadores de status
+        const statusCounts = {
+          pending: 0,
+          production: 0,
+          waiting: 0, 
+          completed: 0,
+          delivered: 0
+        };
+        
+        // Processar cada ordem para calcular estatísticas
         ordersData.forEach(order => {
+          // Incrementar contador de status
+          if (statusCounts[order.status] !== undefined) {
+            statusCounts[order.status]++;
+          }
+          
           const orderDate = new Date(order.created_at);
           const isCurrentMonth = orderDate.getMonth() === currentMonth && 
-                                orderDate.getFullYear() === currentYear;
+                              orderDate.getFullYear() === currentYear;
           
           if (isCurrentMonth) {
             ordersThisMonth++;
@@ -82,21 +132,22 @@ export function useDashboardData() {
           completed: completedThisMonth, 
           urgent 
         });
+        console.log('Status counts:', statusCounts);
 
-        // Only process the 5 most recent orders for better performance
+        // Processar ordens recentes
         const recentOrdersData = ordersData
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);
         
-        // Use a Map for O(1) lookups instead of repeated finds
+        // Criar mapa para busca rápida de clientes
         const clientsMap = new Map(clientsData.map(client => [client.id, client]));
         
         const recentOrdersFormatted = recentOrdersData.map(order => {
-          const client = clientsMap.get(order.client_id);
+          const client = clientsMap.get(order.client_id) || { name: 'Cliente não encontrado' };
           
-          // Extract patient name using a more optimized approach
+          // Extrair nome do paciente
           let patientName = '';
-          if (order.notes && order.notes.includes('Paciente:')) {
+          if (order.notes && typeof order.notes === 'string' && order.notes.includes('Paciente:')) {
             const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
             if (patientMatch && patientMatch[1]) {
               patientName = patientMatch[1].trim();
@@ -105,7 +156,7 @@ export function useDashboardData() {
           
           return {
             id: order.id.substring(0, 8),
-            client: client?.name || 'Cliente não encontrado',
+            client: client.name,
             patientName,
             service: 'Serviço',
             createdAt: format(new Date(order.created_at), 'dd/MM/yyyy'),
@@ -117,20 +168,7 @@ export function useDashboardData() {
 
         console.log('Dashboard: Ordens recentes formatadas:', recentOrdersFormatted.length);
 
-        // More efficient status counting using a reducer
-        const statusCounts = ordersData.reduce((acc, order) => {
-          if (acc[order.status] !== undefined) {
-            acc[order.status]++;
-          }
-          return acc;
-        }, {
-          pending: 0,
-          production: 0,
-          waiting: 0, 
-          completed: 0,
-          delivered: 0
-        });
-
+        // Preparar dados para o gráfico de status
         const chartData = [
           { name: 'Pendente', value: statusCounts.pending, color: '#FCD34D' },
           { name: 'Em Produção', value: statusCounts.production, color: '#60A5FA' },
@@ -141,6 +179,7 @@ export function useDashboardData() {
 
         console.log('Dashboard: Chart data:', chartData);
 
+        // Atualizar o estado com os dados calculados
         setStats({
           totalOrders: ordersThisMonth,
           inProduction,
@@ -153,6 +192,7 @@ export function useDashboardData() {
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
         toast.error('Erro ao carregar dados do dashboard');
+        setError(error?.message || 'Erro desconhecido');
       } finally {
         setLoading(false);
       }
@@ -165,6 +205,7 @@ export function useDashboardData() {
     loading,
     stats,
     recentOrders,
-    statusData
+    statusData,
+    error
   };
 }

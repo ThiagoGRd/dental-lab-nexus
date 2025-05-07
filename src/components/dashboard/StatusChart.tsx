@@ -12,10 +12,27 @@ type StatusChartProps = {
 }
 
 export default function StatusChart({ data }: StatusChartProps) {
-  // Filtrar dados com valores maiores que zero para evitar problemas no gráfico
-  const filteredData = data.filter(item => item.value > 0);
+  // Verificar se temos dados válidos antes de renderizar o gráfico
+  if (!data || data.length === 0) {
+    return (
+      <Card className="h-full card-modern">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+            <div className="w-1.5 h-6 bg-gradient-to-b from-modern-primary to-modern-tertiary rounded-full mr-2"></div>
+            Status das Ordens
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-[250px]">
+          <p className="text-gray-500">Nenhum dado de status disponível</p>
+        </CardContent>
+      </Card>
+    );
+  }
   
-  // Se não houver dados suficientes, mostrar mensagem
+  // Filtrar dados com valores maiores que zero para evitar problemas no gráfico
+  const filteredData = data.filter(item => item && typeof item.value === 'number' && item.value > 0);
+  
+  // Se não houver dados suficientes após filtrar, mostrar mensagem
   if (filteredData.length === 0) {
     return (
       <Card className="h-full card-modern">
@@ -57,7 +74,12 @@ export default function StatusChart({ data }: StatusChartProps) {
                 strokeWidth={1}
               >
                 {filteredData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color} 
+                    stroke="#ffffff" 
+                    strokeWidth={2} 
+                  />
                 ))}
               </Pie>
               <Tooltip 

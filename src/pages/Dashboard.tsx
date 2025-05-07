@@ -6,9 +6,18 @@ import StatusChart from '@/components/dashboard/StatusChart';
 import RecentOrders from '@/components/dashboard/RecentOrders';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export default function Dashboard() {
-  const { loading, stats, recentOrders, statusData } = useDashboardData();
+  const { loading, stats, recentOrders, statusData, error } = useDashboardData();
+
+  // Mostrar toast de erro se houver
+  useEffect(() => {
+    if (error) {
+      toast.error(`Erro ao carregar dashboard: ${error}`);
+    }
+  }, [error]);
 
   return (
     <div className="p-6">
@@ -47,13 +56,7 @@ export default function Dashboard() {
           <StatCards stats={stats} loading={loading} />
 
           <div className="mt-6 grid gap-6 md:grid-cols-2">
-            {statusData && statusData.length > 0 ? (
-              <StatusChart data={statusData} />
-            ) : (
-              <div className="rounded-lg border p-4 bg-white shadow-sm flex items-center justify-center h-[300px]">
-                <p className="text-gray-500">Nenhum dado de status disponível</p>
-              </div>
-            )}
+            <StatusChart data={statusData || []} />
             
             {recentOrders && recentOrders.length > 0 ? (
               <RecentOrders orders={recentOrders} />
