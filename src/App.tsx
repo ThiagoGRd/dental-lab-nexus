@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
-import { applyInitialTheme as themeUtils_applyInitialTheme } from "./components/theme/utils/themeUtils";
+import { applyInitialTheme } from "./components/theme/utils/themeUtils";
 import Layout from "./components/layout/Layout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -40,35 +39,6 @@ const LoadingFallback = () => (
     <div className="text-xl text-protechblue-100">Carregando...</div>
   </div>
 );
-
-// Using the local applyInitialTheme function
-const applyInitialTheme = () => {
-  if (typeof window === 'undefined') return 'light';
-  
-  try {
-    // Verificar se há um tema armazenado
-    const storedTheme = localStorage.getItem('protech-ui-theme');
-    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    
-    let initialTheme;
-    
-    // Decidir qual tema usar
-    if (storedTheme === 'dark' || (storedTheme === 'system' && systemPrefersDark) || (!storedTheme && systemPrefersDark)) {
-      initialTheme = 'dark';
-      document.documentElement.classList.add('dark');
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      initialTheme = 'light';
-      document.documentElement.classList.remove('dark');
-      document.documentElement.removeAttribute('data-theme');
-    }
-    
-    return initialTheme;
-  } catch (error) {
-    console.debug("Error applying initial theme:", error);
-    return 'light'; // Fallback to light theme if there's an error
-  }
-};
 
 // Pre-render theme to avoid flashing
 if (typeof document !== 'undefined') {
