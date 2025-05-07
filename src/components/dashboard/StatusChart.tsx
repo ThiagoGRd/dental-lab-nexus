@@ -13,7 +13,9 @@ type StatusChartProps = {
 
 export default function StatusChart({ data }: StatusChartProps) {
   // Verificar se temos dados válidos antes de renderizar o gráfico
-  if (!data || data.length === 0) {
+  const hasValidData = data && data.length > 0 && data.some(item => item && typeof item.value === 'number' && item.value > 0);
+  
+  if (!hasValidData) {
     return (
       <Card className="h-full card-modern">
         <CardHeader className="pb-2">
@@ -31,23 +33,6 @@ export default function StatusChart({ data }: StatusChartProps) {
   
   // Filtrar dados com valores maiores que zero para evitar problemas no gráfico
   const filteredData = data.filter(item => item && typeof item.value === 'number' && item.value > 0);
-  
-  // Se não houver dados suficientes após filtrar, mostrar mensagem
-  if (filteredData.length === 0) {
-    return (
-      <Card className="h-full card-modern">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-            <div className="w-1.5 h-6 bg-gradient-to-b from-modern-primary to-modern-tertiary rounded-full mr-2"></div>
-            Status das Ordens
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center h-[250px]">
-          <p className="text-gray-500">Nenhum dado de status disponível</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="h-full card-modern">

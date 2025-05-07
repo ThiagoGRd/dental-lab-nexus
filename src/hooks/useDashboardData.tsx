@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase, hasError, safeData } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -22,52 +22,31 @@ export function useDashboardData() {
         setLoading(true);
         console.log('Iniciando busca de dados para o dashboard...');
         
-        // Buscar dados das ordens com tratamento mais robusto de erros
+        // Buscar dados das ordens
         console.log('Buscando ordens...');
-        const ordersResult = await supabase
+        const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('id, status, priority, created_at, client_id, deadline, notes');
         
-        if (hasError(ordersResult)) {
-          console.error('Erro ao buscar ordens:', ordersResult.error);
+        if (ordersError) {
+          console.error('Erro ao buscar ordens:', ordersError);
           toast.error('Falha ao carregar dados de ordens');
-          setError(ordersResult.error?.message || 'Erro desconhecido');
+          setError(ordersError?.message || 'Erro desconhecido');
           setLoading(false);
           return;
         }
+
+        console.log('Dashboard: Ordens carregadas:', ordersData?.length);
         
-        // Buscar dados dos clientes
-        console.log('Buscando clientes...');
-        const clientsResult = await supabase
-          .from('clients')
-          .select('id, name');
-          
-        if (hasError(clientsResult)) {
-          console.error('Erro ao buscar clientes:', clientsResult.error);
-          toast.error('Falha ao carregar dados de clientes');
-          // Continuar mesmo com erro em clientes
-        }
-        
-        const ordersData = safeData(ordersResult, []);
-        const clientsData = safeData(clientsResult, []);
-        
-        console.log('Dashboard: Pedidos carregados:', ordersData.length);
-        console.log('Dashboard: Clientes carregados:', clientsData.length);
-        
-        // Verificar se temos dados para processar
-        if (ordersData.length === 0) {
+        if (!ordersData || ordersData.length === 0) {
           console.log('Nenhum pedido encontrado no banco de dados');
-          
-          // Definir dados padrão para a visualização
           setStats({
             totalOrders: 0,
             inProduction: 0,
             completed: 0,
             urgent: 0
           });
-          
           setRecentOrders([]);
-          
           setStatusData([
             { name: 'Pendente', value: 0, color: '#FCD34D' },
             { name: 'Em Produção', value: 0, color: '#60A5FA' },
@@ -75,10 +54,23 @@ export function useDashboardData() {
             { name: 'Finalizado', value: 0, color: '#4ADE80' },
             { name: 'Entregue', value: 0, color: '#9CA3AF' },
           ]);
-          
           setLoading(false);
           return;
         }
+        
+        // Buscar dados dos clientes
+        console.log('Buscando clientes...');
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('id, name');
+          
+        if (clientsError) {
+          console.error('Erro ao buscar clientes:', clientsError);
+          toast.error('Falha ao carregar dados de clientes');
+          // Continuar mesmo com erro em clientes
+        }
+        
+        console.log('Dashboard: Clientes carregados:', clientsData?.length);
         
         // Calcular estatísticas
         const now = new Date();
@@ -101,8 +93,8 @@ export function useDashboardData() {
         
         // Processar cada ordem para calcular estatísticas
         ordersData.forEach(order => {
-          // Incrementar contador de status
-          if (statusCounts[order.status] !== undefined) {
+          // Verificar se o status existe antes de incrementar o contador
+          if (order.status && statusCounts[order.status] !== undefined) {
             statusCounts[order.status]++;
           }
           
@@ -140,7 +132,7 @@ export function useDashboardData() {
           .slice(0, 5);
         
         // Criar mapa para busca rápida de clientes
-        const clientsMap = new Map(clientsData.map(client => [client.id, client]));
+        const clientsMap = new Map((clientsData || []).map(client => [client.id, client]));
         
         const recentOrdersFormatted = recentOrdersData.map(order => {
           const client = clientsMap.get(order.client_id) || { name: 'Cliente não encontrado' };
@@ -188,6 +180,7 @@ export function useDashboardData() {
         });
         setRecentOrders(recentOrdersFormatted);
         setStatusData(chartData);
+        setError(null);
         
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
