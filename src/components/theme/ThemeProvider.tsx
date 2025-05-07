@@ -31,68 +31,87 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
+  // Safer function to add/remove class from elements
+  const safelyManageClasses = (elements: NodeListOf<Element> | null, addClass: string | null, removeClass: string | null) => {
+    if (!elements) return;
+    
+    elements.forEach(el => {
+      try {
+        if (removeClass && el.classList.contains(removeClass)) {
+          el.classList.remove(removeClass);
+        }
+        if (addClass && !el.classList.contains(addClass)) {
+          el.classList.add(addClass);
+        }
+      } catch (error) {
+        console.error("Error managing classes:", error);
+      }
+    });
+  };
+
+  // Handle theme application
   useEffect(() => {
     const root = window.document.documentElement;
     
+    // First safely remove all theme classes
     root.classList.remove("light", "dark");
     
+    // Determine the final theme to apply
+    let appliedTheme: string;
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-      
-      root.classList.add(systemTheme);
-      
-      // Update data attributes for select components and charts
-      if (systemTheme === "dark") {
-        root.setAttribute("data-theme", "dark");
-        document.querySelectorAll('.recharts-wrapper').forEach(el => {
-          el.classList.add('recharts-dark-theme');
-        });
-      } else {
-        root.removeAttribute("data-theme");
-        document.querySelectorAll('.recharts-wrapper').forEach(el => {
-          el.classList.remove('recharts-dark-theme');
-        });
-      }
-      
-      // Adicionar atualização de modal dialogs no sistema
-      document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
-        if (systemTheme === "dark") {
-          el.classList.add('dark-theme-element');
-        } else {
-          el.classList.remove('dark-theme-element');
-        }
-      });
-      
-      return;
+      appliedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } else {
+      appliedTheme = theme;
     }
     
-    root.classList.add(theme);
+    // Apply theme class to root
+    root.classList.add(appliedTheme);
     
-    // Update data attributes for select components and charts
-    if (theme === "dark") {
+    // Set data-theme attribute
+    if (appliedTheme === "dark") {
       root.setAttribute("data-theme", "dark");
-      document.querySelectorAll('.recharts-wrapper').forEach(el => {
-        el.classList.add('recharts-dark-theme');
-      });
-      
-      // Adicionar atualização de modal dialogs no modo escuro direto
-      document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
-        el.classList.add('dark-theme-element');
-      });
     } else {
       root.removeAttribute("data-theme");
-      document.querySelectorAll('.recharts-wrapper').forEach(el => {
-        el.classList.remove('recharts-dark-theme');
-      });
-      
-      // Remover classes de tema escuro dos elementos
-      document.querySelectorAll('.dark-theme-element').forEach(el => {
-        el.classList.remove('dark-theme-element');
-      });
     }
+
+    // Apply theme to charts safely
+    const chartElements = document.querySelectorAll('.recharts-wrapper');
+    safelyManageClasses(
+      chartElements,
+      appliedTheme === "dark" ? 'recharts-dark-theme' : null,
+      appliedTheme === "light" ? 'recharts-dark-theme' : null
+    );
+    
+    // Apply theme to dialogs, forms and other components safely
+    // We use a try-catch block to prevent errors if elements don't exist
+    try {
+      // Target modal backgrounds and form elements
+      const dialogElements = document.querySelectorAll('.bg-white, .bg-background, [data-radix-popper-content-wrapper], .select-content');
+      safelyManageClasses(
+        dialogElements,
+        appliedTheme === "dark" ? 'dark-theme-element' : null,
+        appliedTheme === "light" ? 'dark-theme-element' : null
+      );
+      
+      // Target form inputs and selects
+      const formElements = document.querySelectorAll('input, select, textarea, [role="combobox"]');
+      safelyManageClasses(
+        formElements,
+        appliedTheme === "dark" ? 'dark-input' : null,
+        appliedTheme === "light" ? 'dark-input' : null
+      );
+
+      // Target dropdowns and popovers
+      const dropdownElements = document.querySelectorAll('[role="listbox"], [role="menu"]');
+      safelyManageClasses(
+        dropdownElements,
+        appliedTheme === "dark" ? 'dark-dropdown' : null,
+        appliedTheme === "light" ? 'dark-dropdown' : null
+      );
+    } catch (error) {
+      console.error("Error updating theme for DOM elements:", error);
+    }
+    
   }, [theme]);
 
   // Listen for changes to the user's system preference
@@ -102,45 +121,98 @@ export function ThemeProvider({
     const handleChange = () => {
       if (theme === "system") {
         const root = window.document.documentElement;
-        root.classList.remove("light", "dark");
-        root.classList.add(mediaQuery.matches ? "dark" : "light");
-        
-        // Update data attributes for select components
-        if (mediaQuery.matches) {
-          root.setAttribute("data-theme", "dark");
-          document.querySelectorAll('.recharts-wrapper').forEach(el => {
-            el.classList.add('recharts-dark-theme');
-          });
+        const prefersDark = mediaQuery.matches;
+        const systemTheme = prefersDark ? "dark" : "light";
+
+        try {
+          // Safely update root classes
+          root.classList.remove("light", "dark");
+          root.classList.add(systemTheme);
           
-          // Adicionar atualização de modal dialogs quando o sistema muda
-          document.querySelectorAll('.bg-white, .bg-background').forEach(el => {
-            el.classList.add('dark-theme-element');
-          });
-        } else {
-          root.removeAttribute("data-theme");
-          document.querySelectorAll('.recharts-wrapper').forEach(el => {
-            el.classList.remove('recharts-dark-theme');
-          });
+          // Update data attribute
+          if (prefersDark) {
+            root.setAttribute("data-theme", "dark");
+          } else {
+            root.removeAttribute("data-theme");
+          }
           
-          // Remover classes de tema escuro dos elementos
-          document.querySelectorAll('.dark-theme-element').forEach(el => {
-            el.classList.remove('dark-theme-element');
-          });
+          // Apply theme to charts safely
+          const chartElements = document.querySelectorAll('.recharts-wrapper');
+          safelyManageClasses(
+            chartElements,
+            prefersDark ? 'recharts-dark-theme' : null,
+            !prefersDark ? 'recharts-dark-theme' : null
+          );
+
+          // Apply theme to modals and other elements safely
+          const dialogElements = document.querySelectorAll('.bg-white, .bg-background, [data-radix-popper-content-wrapper], .select-content');
+          safelyManageClasses(
+            dialogElements,
+            prefersDark ? 'dark-theme-element' : null,
+            !prefersDark ? 'dark-theme-element' : null
+          );
+          
+          // Apply theme to form elements
+          const formElements = document.querySelectorAll('input, select, textarea, [role="combobox"]');
+          safelyManageClasses(
+            formElements,
+            prefersDark ? 'dark-input' : null,
+            !prefersDark ? 'dark-input' : null
+          );
+          
+          // Apply theme to dropdowns
+          const dropdownElements = document.querySelectorAll('[role="listbox"], [role="menu"]');
+          safelyManageClasses(
+            dropdownElements,
+            prefersDark ? 'dark-dropdown' : null,
+            !prefersDark ? 'dark-dropdown' : null
+          );
+        } catch (error) {
+          console.error("Error in system theme change handler:", error);
         }
       }
     };
     
-    mediaQuery.addEventListener("change", handleChange);
+    // Initial call to handle theme
+    handleChange();
     
+    // Setup listener with error handling
+    try {
+      mediaQuery.addEventListener("change", handleChange);
+    } catch (error) {
+      console.error("Error adding media query listener:", error);
+      // Fallback to deprecated method if needed
+      try {
+        mediaQuery.addListener?.(handleChange);
+      } catch (fallbackError) {
+        console.error("Error with fallback media query listener:", fallbackError);
+      }
+    }
+    
+    // Cleanup listener with error handling
     return () => {
-      mediaQuery.removeEventListener("change", handleChange);
+      try {
+        mediaQuery.removeEventListener("change", handleChange);
+      } catch (error) {
+        console.error("Error removing media query listener:", error);
+        // Fallback to deprecated method if needed
+        try {
+          mediaQuery.removeListener?.(handleChange);
+        } catch (fallbackError) {
+          console.error("Error with fallback media query listener removal:", fallbackError);
+        }
+      }
     };
   }, [theme]);
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      try {
+        localStorage.setItem(storageKey, theme);
+      } catch (error) {
+        console.error("Failed to save theme preference to localStorage:", error);
+      }
       setTheme(theme);
     },
   };
