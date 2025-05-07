@@ -31,22 +31,125 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
-  // Safer function to add/remove class from elements
-  const safelyManageClasses = (elements: NodeListOf<Element> | null, addClass: string | null, removeClass: string | null) => {
+  // Mais seguro para adicionar/remover classes dos elementos
+  const safelyManageClasses = (elements: NodeListOf<Element> | HTMLElement[] | null, addClass: string | null, removeClass: string | null) => {
     if (!elements) return;
     
-    elements.forEach(el => {
-      try {
-        if (removeClass && el.classList.contains(removeClass)) {
-          el.classList.remove(removeClass);
+    try {
+      const elementsArray = Array.isArray(elements) ? elements : Array.from(elements);
+      
+      elementsArray.forEach(el => {
+        try {
+          if (removeClass && el.classList.contains(removeClass)) {
+            el.classList.remove(removeClass);
+          }
+          if (addClass && !el.classList.contains(addClass)) {
+            el.classList.add(addClass);
+          }
+        } catch (error) {
+          console.error("Error managing classes for element:", error);
         }
-        if (addClass && !el.classList.contains(addClass)) {
-          el.classList.add(addClass);
+      });
+    } catch (error) {
+      console.error("Error converting elements to array:", error);
+    }
+  };
+
+  // Atualiza elementos DOM com o tema atual
+  const updateDOMElements = (appliedTheme: string) => {
+    try {
+      // Aplicar tema para elementos de formulário e diálogos
+      const isDark = appliedTheme === "dark";
+      
+      // Usar setTimeout para garantir que os elementos renderizados após atualização do tema sejam afetados
+      setTimeout(() => {
+        try {
+          // Poppers e conteúdo de seleção
+          const poppers = document.querySelectorAll('[data-radix-popper-content-wrapper], .select-content');
+          safelyManageClasses(
+            poppers,
+            isDark ? 'dark-theme-element' : null,
+            !isDark ? 'dark-theme-element' : null
+          );
+
+          // Todos os select e divs de dropdown
+          const selects = document.querySelectorAll('.select-content, [role="listbox"], [role="menu"]');
+          if (selects && selects.length > 0) {
+            selects.forEach(select => {
+              if (isDark) {
+                select.setAttribute('data-theme', 'dark');
+                select.classList.add('dark', 'bg-gray-800', 'border-gray-700', 'text-gray-100');
+                select.classList.remove('light', 'bg-white');
+              } else {
+                select.removeAttribute('data-theme');
+                select.classList.remove('dark', 'bg-gray-800', 'border-gray-700', 'text-gray-100');
+                select.classList.add('light', 'bg-white');
+              }
+            });
+          }
+
+          // Diálogos, modais e seus conteúdos
+          const dialogs = document.querySelectorAll('[role="dialog"], .dialog-content, .modal-content');
+          if (dialogs && dialogs.length > 0) {
+            dialogs.forEach(dialog => {
+              if (isDark) {
+                dialog.setAttribute('data-theme', 'dark');
+                dialog.classList.add('dark', 'bg-gray-800', 'border-gray-700', 'text-gray-100');
+              } else {
+                dialog.removeAttribute('data-theme');
+                dialog.classList.remove('dark', 'bg-gray-800', 'border-gray-700', 'text-gray-100');
+              }
+            });
+          }
+
+          // Inputs e campos de formulário
+          const formElements = document.querySelectorAll('input, textarea, select, [role="combobox"]');
+          safelyManageClasses(
+            formElements,
+            isDark ? 'dark-input' : null,
+            !isDark ? 'dark-input' : null
+          );
+
+        } catch (error) {
+          console.error("Error updating DOM elements in setTimeout:", error);
         }
-      } catch (error) {
-        console.error("Error managing classes:", error);
+      }, 50);
+
+    } catch (error) {
+      console.error("Error in updateDOMElements:", error);
+    }
+  };
+
+  // Observer para monitorar mudanças no DOM e aplicar o tema aos novos elementos
+  const setupMutationObserver = (appliedTheme: string) => {
+    try {
+      // Verificar se o browser suporta MutationObserver
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver((mutations) => {
+          updateDOMElements(appliedTheme);
+        });
+
+        // Observar o corpo inteiro do documento para alterações
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+          characterData: false
+        });
+
+        // Retornar função para desconectar o observer
+        return () => {
+          try {
+            observer.disconnect();
+          } catch (error) {
+            console.error("Error disconnecting mutation observer:", error);
+          }
+        };
       }
-    });
+    } catch (error) {
+      console.error("Error setting up mutation observer:", error);
+    }
+    return () => {}; // Retornar função vazia se houver erro
   };
 
   // Handle theme application
@@ -82,36 +185,16 @@ export function ThemeProvider({
       appliedTheme === "light" ? 'recharts-dark-theme' : null
     );
     
-    // Apply theme to dialogs, forms and other components safely
-    // We use a try-catch block to prevent errors if elements don't exist
-    try {
-      // Target modal backgrounds and form elements
-      const dialogElements = document.querySelectorAll('.bg-white, .bg-background, [data-radix-popper-content-wrapper], .select-content');
-      safelyManageClasses(
-        dialogElements,
-        appliedTheme === "dark" ? 'dark-theme-element' : null,
-        appliedTheme === "light" ? 'dark-theme-element' : null
-      );
-      
-      // Target form inputs and selects
-      const formElements = document.querySelectorAll('input, select, textarea, [role="combobox"]');
-      safelyManageClasses(
-        formElements,
-        appliedTheme === "dark" ? 'dark-input' : null,
-        appliedTheme === "light" ? 'dark-input' : null
-      );
-
-      // Target dropdowns and popovers
-      const dropdownElements = document.querySelectorAll('[role="listbox"], [role="menu"]');
-      safelyManageClasses(
-        dropdownElements,
-        appliedTheme === "dark" ? 'dark-dropdown' : null,
-        appliedTheme === "light" ? 'dark-dropdown' : null
-      );
-    } catch (error) {
-      console.error("Error updating theme for DOM elements:", error);
-    }
+    // Aplicar tema a elementos do DOM
+    updateDOMElements(appliedTheme);
     
+    // Configurar observador para monitorar mudanças no DOM
+    const cleanup = setupMutationObserver(appliedTheme);
+    
+    // Cleanup
+    return () => {
+      cleanup();
+    };
   }, [theme]);
 
   // Listen for changes to the user's system preference
@@ -136,37 +219,9 @@ export function ThemeProvider({
             root.removeAttribute("data-theme");
           }
           
-          // Apply theme to charts safely
-          const chartElements = document.querySelectorAll('.recharts-wrapper');
-          safelyManageClasses(
-            chartElements,
-            prefersDark ? 'recharts-dark-theme' : null,
-            !prefersDark ? 'recharts-dark-theme' : null
-          );
-
-          // Apply theme to modals and other elements safely
-          const dialogElements = document.querySelectorAll('.bg-white, .bg-background, [data-radix-popper-content-wrapper], .select-content');
-          safelyManageClasses(
-            dialogElements,
-            prefersDark ? 'dark-theme-element' : null,
-            !prefersDark ? 'dark-theme-element' : null
-          );
+          // Apply theme to DOM elements
+          updateDOMElements(systemTheme);
           
-          // Apply theme to form elements
-          const formElements = document.querySelectorAll('input, select, textarea, [role="combobox"]');
-          safelyManageClasses(
-            formElements,
-            prefersDark ? 'dark-input' : null,
-            !prefersDark ? 'dark-input' : null
-          );
-          
-          // Apply theme to dropdowns
-          const dropdownElements = document.querySelectorAll('[role="listbox"], [role="menu"]');
-          safelyManageClasses(
-            dropdownElements,
-            prefersDark ? 'dark-dropdown' : null,
-            !prefersDark ? 'dark-dropdown' : null
-          );
         } catch (error) {
           console.error("Error in system theme change handler:", error);
         }

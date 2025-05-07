@@ -1,5 +1,5 @@
 
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,10 +40,60 @@ const LoadingFallback = () => (
   </div>
 );
 
-const App = () => {
-  // Verificar se há um tema armazenado e usá-lo como padrão
+// Aplica tema inicial para evitar flash de tema errado
+const applyInitialTheme = () => {
+  // Verificar se há um tema armazenado
   const storedTheme = localStorage.getItem('protech-ui-theme');
-  const defaultTheme = storedTheme || 'system';
+  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  
+  let initialTheme;
+  
+  // Decidir qual tema usar
+  if (storedTheme === 'dark' || (storedTheme === 'system' && systemPrefersDark) || (!storedTheme && systemPrefersDark)) {
+    initialTheme = 'dark';
+    document.documentElement.classList.add('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    initialTheme = 'light';
+    document.documentElement.classList.remove('dark');
+    document.documentElement.removeAttribute('data-theme');
+  }
+  
+  return initialTheme;
+};
+
+const App = () => {
+  // Aplicar tema inicial antes da renderização
+  const defaultTheme = applyInitialTheme();
+  
+  // Adicionar classes CSS globais para resolução de problemas com temas
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Estilos globais para garantir tema escuro em popups */
+      html.dark [data-radix-popper-content-wrapper] > div,
+      html[data-theme="dark"] [data-radix-popper-content-wrapper] > div,
+      .dark [data-radix-popper-content-wrapper] > div {
+        background-color: #1f2937 !important;
+        border-color: #374151 !important;
+        color: #f3f4f6 !important;
+      }
+      
+      /* Garantir que selects em tema escuro mantenham o tema */
+      html.dark .select-content,
+      html[data-theme="dark"] .select-content,
+      .dark .select-content {
+        background-color: #1f2937 !important;
+        border-color: #374151 !important;
+        color: #f3f4f6 !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   
   return (
     <React.StrictMode>
