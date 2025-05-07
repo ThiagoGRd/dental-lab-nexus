@@ -1,9 +1,10 @@
+
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from './components/theme-provider';
+import { Routes, Route, Outlet } from 'react-router-dom';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from "@/components/ui/toaster"
-import { NotificationProvider } from './components/providers/notification-provider';
+import { Toaster } from "@/components/ui/toaster";
+import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { PageLoading } from './components/ui/page-loading';
@@ -52,59 +53,63 @@ function App() {
                 <LoginPage />
               </Suspense>
             } />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={
-                  <Suspense fallback={<PageLoading message="Carregando dashboard..." />}>
-                    <Dashboard />
-                  </Suspense>
-                } />
-                <Route path="/orders" element={
-                  <Suspense fallback={<PageLoading message="Carregando ordens..." />}>
-                    <OrdersPage />
-                  </Suspense>
-                } />
-                <Route path="/clients" element={
-                  <Suspense fallback={<PageLoading message="Carregando clientes..." />}>
-                    <ClientsPage />
-                  </Suspense>
-                } />
-                <Route path="/production" element={
-                  <Suspense fallback={<PageLoading message="Carregando produção..." />}>
-                    <ProductionPage />
-                  </Suspense>
-                } />
-                <Route path="/services" element={
-                  <Suspense fallback={<PageLoading message="Carregando serviços..." />}>
-                    <ServicesPage />
-                  </Suspense>
-                } />
-                <Route path="/inventory" element={
-                  <Suspense fallback={<PageLoading message="Carregando inventário..." />}>
-                    <InventoryPage />
-                  </Suspense>
-                } />
-                <Route path="/finance" element={
-                  <Suspense fallback={<PageLoading message="Carregando finanças..." />}>
-                    <FinancePage />
-                  </Suspense>
-                } />
-                <Route path="/reports" element={
-                  <Suspense fallback={<PageLoading message="Carregando relatórios..." />}>
-                    <ReportsPage />
-                  </Suspense>
-                } />
-                <Route path="/settings" element={
-                  <Suspense fallback={<PageLoading message="Carregando configurações..." />}>
-                    <SettingsPage />
-                  </Suspense>
-                } />
-                <Route path="/workflows" element={
-                  <Suspense fallback={<PageLoading message="Carregando fluxos..." />}>
-                    <WorkflowsPage />
-                  </Suspense>
-                } />
-              </Route>
+            <Route element={
+              <ProtectedRoute>
+                <Layout>
+                  <Outlet />
+                </Layout>
+              </ProtectedRoute>
+            }>
+              <Route path="/" element={
+                <Suspense fallback={<PageLoading message="Carregando dashboard..." />}>
+                  <Dashboard />
+                </Suspense>
+              } />
+              <Route path="/orders" element={
+                <Suspense fallback={<PageLoading message="Carregando ordens..." />}>
+                  <OrdersPage />
+                </Suspense>
+              } />
+              <Route path="/clients" element={
+                <Suspense fallback={<PageLoading message="Carregando clientes..." />}>
+                  <ClientsPage />
+                </Suspense>
+              } />
+              <Route path="/production" element={
+                <Suspense fallback={<PageLoading message="Carregando produção..." />}>
+                  <ProductionPage />
+                </Suspense>
+              } />
+              <Route path="/services" element={
+                <Suspense fallback={<PageLoading message="Carregando serviços..." />}>
+                  <ServicesPage />
+                </Suspense>
+              } />
+              <Route path="/inventory" element={
+                <Suspense fallback={<PageLoading message="Carregando inventário..." />}>
+                  <InventoryPage />
+                </Suspense>
+              } />
+              <Route path="/finance" element={
+                <Suspense fallback={<PageLoading message="Carregando finanças..." />}>
+                  <FinancePage />
+                </Suspense>
+              } />
+              <Route path="/reports" element={
+                <Suspense fallback={<PageLoading message="Carregando relatórios..." />}>
+                  <ReportsPage />
+                </Suspense>
+              } />
+              <Route path="/settings" element={
+                <Suspense fallback={<PageLoading message="Carregando configurações..." />}>
+                  <SettingsPage />
+                </Suspense>
+              } />
+              <Route path="/workflows" element={
+                <Suspense fallback={<PageLoading message="Carregando fluxos..." />}>
+                  <WorkflowsPage />
+                </Suspense>
+              } />
             </Route>
             <Route path="*" element={
               <Suspense fallback={<PageLoading message="Carregando..." />}>
