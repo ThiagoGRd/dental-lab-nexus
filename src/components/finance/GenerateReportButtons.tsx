@@ -146,7 +146,7 @@ const GenerateReportButtons = ({ reportType, startDate, endDate, data, title = '
         headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
         alternateRowStyles: { fillColor: [240, 245, 250] },
         foot: reportType !== 'clients' && reportType !== 'stock' ? 
-          [columns.map(col => row[col.dataKey] || '')] : undefined,
+          [columns.map(col => rows[rows.length - 1][col.dataKey] || '')] : undefined,
         footStyles: { fillColor: [220, 220, 220], fontStyle: 'bold' }
       });
       
