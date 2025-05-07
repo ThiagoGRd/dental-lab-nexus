@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { extractServiceName } from '@/utils/serviceNameExtractor';
+import { toast } from 'sonner';
 
 // Lista fixa de categorias para contas a pagar
 const EXPENSE_CATEGORIES = [
@@ -50,14 +51,38 @@ export default function EditAccountDialog({
 
   // Função para lidar com alterações em select fields
   const handleSelectChange = (name: string, value: string) => {
-    const event = {
-      target: {
-        name,
-        value
-      }
-    } as React.ChangeEvent<HTMLInputElement>;
-    
-    onInputChange(event);
+    try {
+      const event = {
+        target: {
+          name,
+          value
+        }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      onInputChange(event);
+    } catch (error) {
+      console.error("Erro ao processar alteração do select:", error);
+      toast.error("Erro ao selecionar categoria. Por favor, tente novamente.");
+    }
+  };
+
+  // Função para fechar o diálogo de forma segura
+  const handleClose = () => {
+    try {
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Erro ao fechar diálogo:", error);
+    }
+  };
+
+  // Função para enviar o formulário de forma segura
+  const handleSubmit = () => {
+    try {
+      onSubmit();
+    } catch (error) {
+      console.error("Erro ao salvar alterações:", error);
+      toast.error("Erro ao salvar. Por favor, tente novamente.");
+    }
   };
 
   return (
@@ -75,14 +100,14 @@ export default function EditAccountDialog({
                 <Input
                   id="description"
                   name="description"
-                  value={formData.description}
+                  value={formData.description || ''}
                   onChange={onInputChange}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Categoria</Label>
                 <Select 
-                  value={formData.category}
+                  value={formData.category || ''}
                   onValueChange={(value) => handleSelectChange('category', value)}
                 >
                   <SelectTrigger className="w-full">
@@ -106,7 +131,7 @@ export default function EditAccountDialog({
                 <Input
                   id="client"
                   name="client"
-                  value={formData.client}
+                  value={formData.client || ''}
                   onChange={onInputChange}
                 />
               </div>
@@ -115,7 +140,7 @@ export default function EditAccountDialog({
                 <Input
                   id="orderNumber"
                   name="orderNumber"
-                  value={formData.orderNumber}
+                  value={formData.orderNumber || ''}
                   onChange={onInputChange}
                 />
               </div>
@@ -136,7 +161,7 @@ export default function EditAccountDialog({
               name="value"
               type="number"
               step="0.01"
-              value={formData.value}
+              value={formData.value || 0}
               onChange={onInputChange}
             />
           </div>
@@ -146,7 +171,7 @@ export default function EditAccountDialog({
               id="dueDate"
               name="dueDate"
               type="date"
-              value={formData.dueDate}
+              value={formData.dueDate || ''}
               onChange={onInputChange}
             />
           </div>
@@ -155,16 +180,16 @@ export default function EditAccountDialog({
             <Textarea
               id="notes"
               name="notes"
-              value={formData.notes}
+              value={formData.notes || ''}
               onChange={onInputChange}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button onClick={onSubmit}>Salvar Alterações</Button>
+          <Button onClick={handleSubmit}>Salvar Alterações</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
