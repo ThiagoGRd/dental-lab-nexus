@@ -9,7 +9,7 @@ import { BarChart2, Calendar, FileText, Users } from 'lucide-react';
 import { BarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { pt } from 'date-fns/locale'; // Importação corrigida para date-fns v4
 import GenerateReportButtons from '@/components/finance/GenerateReportButtons';
 
 export default function ReportsPage() {
@@ -268,7 +268,7 @@ export default function ReportsPage() {
     const endMonthDate = new Date(endDate);
     
     while (currentMonth <= endMonthDate) {
-      const monthKey = format(currentMonth, 'MMM', { locale: ptBR });
+      const monthKey = format(currentMonth, 'MMM', { locale: pt });
       monthMap.set(monthKey, { month: monthKey, total: 0, urgent: 0 });
       currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
     }
@@ -276,7 +276,7 @@ export default function ReportsPage() {
     // Processar os dados reais
     orders.forEach(order => {
       const date = new Date(order.created_at);
-      const monthKey = format(date, 'MMM', { locale: ptBR });
+      const monthKey = format(date, 'MMM', { locale: pt });
       
       if (monthMap.has(monthKey)) {
         const monthData = monthMap.get(monthKey);
@@ -300,7 +300,7 @@ export default function ReportsPage() {
     const endMonthDate = new Date(endDate);
     
     while (currentMonth <= endMonthDate) {
-      const monthKey = format(currentMonth, 'MMM', { locale: ptBR });
+      const monthKey = format(currentMonth, 'MMM', { locale: pt });
       monthMap.set(monthKey, { month: monthKey, receita: 0, despesa: 0 });
       currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
     }
@@ -312,7 +312,7 @@ export default function ReportsPage() {
     
     finances.forEach(finance => {
       const date = new Date(finance.due_date);
-      const monthKey = format(date, 'MMM', { locale: ptBR });
+      const monthKey = format(date, 'MMM', { locale: pt });
       
       if (monthMap.has(monthKey)) {
         // Garantir que o valor é numérico

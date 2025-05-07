@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { pt } from 'date-fns/locale'; // Importação corrigida para date-fns v4
 
 interface GenerateReportButtonsProps {
   reportType: string;
@@ -30,7 +30,7 @@ const GenerateReportButtons = ({ reportType, startDate, endDate, data, title = '
   // Format date for reports
   const formatDateForDisplay = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
+      return format(new Date(dateString), 'dd/MM/yyyy', { locale: pt });
     } catch (e) {
       return dateString || 'N/A';
     }
@@ -54,7 +54,7 @@ const GenerateReportButtons = ({ reportType, startDate, endDate, data, title = '
       
       // Add timestamp
       doc.setFontSize(10);
-      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, 26);
+      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: pt })}`, 14, 26);
       
       // Create table data
       let columns: any[] = [];
