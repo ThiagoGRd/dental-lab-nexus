@@ -8,6 +8,14 @@ import './index.css';
 // Certifique-se de que o React está definido globalmente para módulos de terceiros
 window.React = React;
 
+// Declare tipos para hooks que podem ser usados por bibliotecas de terceiros
+declare global {
+  interface Window {
+    React: typeof React;
+    __REACT_ERROR_OVERLAY_GLOBAL_HOOK__?: unknown;
+  }
+}
+
 // Encontre o elemento root
 const rootElement = document.getElementById("root");
 

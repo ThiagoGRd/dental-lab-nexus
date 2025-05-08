@@ -9,6 +9,7 @@ import {
   applyInitialTheme
 } from "./utils/themeUtils";
 import { useMediaQuery } from "./hooks/useMediaQuery";
+import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialThemeState);
 
@@ -26,8 +27,8 @@ export function ThemeProvider({
   // Use the media query hook to detect system preferences
   const systemIsDark = useMediaQuery("(prefers-color-scheme: dark)");
   
-  // Apply theme to document root
-  useEffect(() => {
+  // Apply theme to document root - usando useIsomorphicLayoutEffect em vez de useEffect
+  useIsomorphicLayoutEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {

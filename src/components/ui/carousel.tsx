@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -6,6 +7,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -96,7 +98,8 @@ const Carousel = React.forwardRef<
       [scrollPrev, scrollNext]
     )
 
-    React.useEffect(() => {
+    // Substituído useEffect por useIsomorphicLayoutEffect para compatibilidade
+    useIsomorphicLayoutEffect(() => {
       if (!api || !setApi) {
         return
       }
@@ -104,7 +107,8 @@ const Carousel = React.forwardRef<
       setApi(api)
     }, [api, setApi])
 
-    React.useEffect(() => {
+    // Substituído useEffect por useIsomorphicLayoutEffect para compatibilidade
+    useIsomorphicLayoutEffect(() => {
       if (!api) {
         return
       }
