@@ -42,9 +42,13 @@ export default function Sidebar() {
   const sidebar = useSidebar();
   
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
     }
   }, []);
   

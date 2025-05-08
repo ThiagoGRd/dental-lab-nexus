@@ -7,16 +7,24 @@ import App from './App.tsx';
 import './index.css';
 import { Toaster } from "@/components/ui/sonner";
 
+// More robust root element finding
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
-createRoot(rootElement).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <ThemeProvider defaultTheme="light" storageKey="ui-theme">
-        <App />
-        <Toaster />
-      </ThemeProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
+// Create root with error handling
+try {
+  const root = createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <ThemeProvider defaultTheme="light" storageKey="ui-theme">
+          <App />
+          <Toaster />
+        </ThemeProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+  console.log('Application successfully rendered');
+} catch (error) {
+  console.error('Failed to render the application:', error);
+}

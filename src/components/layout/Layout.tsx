@@ -48,10 +48,12 @@ export default function Layout({ children }: LayoutProps) {
         const { session, error } = await checkAuthSession();
         
         if (error) {
+          console.error("Auth check error:", error);
           throw error;
         }
         
         if (!session) {
+          console.log("No session found, redirecting to login");
           navigate('/login');
           return;
         }
@@ -61,6 +63,7 @@ export default function Layout({ children }: LayoutProps) {
         const { profile, error: profileError } = await profileOps.getById(session.user.id);
         
         if (profileError) {
+          console.error("Profile check error:", profileError);
           throw profileError;
         }
         
@@ -132,11 +135,9 @@ export default function Layout({ children }: LayoutProps) {
   // Render a simple layout without sidebar for login page
   if (isLoginPage) {
     return (
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background dark:bg-gray-900">
         <main className="flex-1 overflow-y-auto">
-          <Suspense fallback={<LoadingIndicator />}>
-            {children}
-          </Suspense>
+          {children}
         </main>
       </div>
     );
@@ -145,15 +146,13 @@ export default function Layout({ children }: LayoutProps) {
   // Render the full layout with sidebar for authenticated pages
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background dark:bg-gray-900">
         <div className="flex flex-1 w-full">
           <Sidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
             <Header />
-            <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-              <Suspense fallback={<LoadingIndicator />}>
-                {children}
-              </Suspense>
+            <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4">
+              {children}
             </main>
           </div>
         </div>
