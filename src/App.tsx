@@ -1,76 +1,58 @@
 
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Outlet } from 'react-router-dom';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from "@/components/ui/toaster";
 import { NotificationProvider } from './context/NotificationContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { PageLoading } from './components/ui/page-loading';
-import { ErrorBoundary } from './components/ui/error-boundary';
 
-// Configure QueryClient with error handling that's compatible with @tanstack/react-query v5+
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 30000,
-      refetchOnWindowFocus: false,
-      meta: {
-        onError: (error) => {
-          console.error('Query error:', error);
-        }
-      }
-    },
-    mutations: {
-      meta: {
-        onError: (error) => {
-          console.error('Mutation error:', error);
-        }
-      }
-    }
-  }
-});
-
-// Lazy load pages with error handling for each chunk loading
-const loadComponent = (importer) => {
-  return lazy(() => {
-    console.log(`Loading component: ${importer.name || 'unknown'}`);
-    return importer().catch(error => {
-      console.error(`Failed to load component: ${error}`);
-      // Re-throw to be caught by ErrorBoundary
-      throw error;
-    });
-  });
-};
+const queryClient = new QueryClient();
 
 // Lazy load pages
-const Dashboard = loadComponent(() => import('./pages/Dashboard'));
-const OrdersPage = loadComponent(() => import('./pages/OrdersPage'));
-const ClientsPage = loadComponent(() => import('./pages/ClientsPage'));
-const ProductionPage = loadComponent(() => import('./pages/ProductionPage'));
-const ServicesPage = loadComponent(() => import('./pages/ServicesPage'));
-const InventoryPage = loadComponent(() => import('./pages/InventoryPage'));
-const FinancePage = loadComponent(() => import('./pages/FinancePage'));
-const ReportsPage = loadComponent(() => import('./pages/ReportsPage'));
-const SettingsPage = loadComponent(() => import('./pages/SettingsPage'));
-const WorkflowsPage = loadComponent(() => import('./pages/WorkflowsPage'));
-const LoginPage = loadComponent(() => import('./pages/LoginPage'));
-const NotFound = loadComponent(() => import('./pages/NotFound'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ProductionPage = lazy(() => import('./pages/ProductionPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const FinancePage = lazy(() => import('./pages/FinancePage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Prefetch the largest page (ReportsPage) when idle
+const prefetchReportsPage = () => {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => {
+      import('./pages/ReportsPage');
+    });
+  } else {
+    setTimeout(() => {
+      import('./pages/ReportsPage');
+    }, 3000); // Fallback for browsers that don't support requestIdleCallback
+  }
+};
 
 function App() {
+  React.useEffect(() => {
+    prefetchReportsPage();
+  }, []);
+
   return (
-    <ErrorBoundary>
+    <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
           <Routes>
             <Route path="/login" element={
-              <Layout>
-                <Suspense fallback={<PageLoading message="Carregando..." />}>
-                  <LoginPage />
-                </Suspense>
-              </Layout>
+              <Suspense fallback={<PageLoading message="Carregando..." />}>
+                <LoginPage />
+              </Suspense>
             } />
-            
             <Route element={
               <ProtectedRoute>
                 <Layout>
@@ -129,18 +111,17 @@ function App() {
                 </Suspense>
               } />
             </Route>
-            
             <Route path="*" element={
-              <Layout>
-                <Suspense fallback={<PageLoading message="Carregando..." />}>
-                  <NotFound />
-                </Suspense>
-              </Layout>
+              <Suspense fallback={<PageLoading message="Carregando..." />}>
+                <NotFound />
+              </Suspense>
             } />
           </Routes>
+          
+          <Toaster />
         </NotificationProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 

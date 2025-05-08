@@ -9,8 +9,7 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
-  useSidebar
+  SidebarMenuButton
 } from "@/components/ui/sidebar";
 import { 
   Home,
@@ -39,16 +38,11 @@ export default function Sidebar() {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const sidebar = useSidebar();
   
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      }
-    } catch (error) {
-      console.error('Error parsing user data from localStorage:', error);
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
     }
   }, []);
   
@@ -98,7 +92,7 @@ export default function Sidebar() {
     {
       title: "Finanças",
       icon: Wallet,
-      href: "/finance",
+      href: "/finances",
     },
     {
       title: "Relatórios",

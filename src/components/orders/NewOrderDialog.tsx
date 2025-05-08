@@ -90,15 +90,13 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [selectedServiceWorkflow, setSelectedServiceWorkflow] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   
-  // Carrega serviços e clientes quando o diálogo é aberto
+  // Carrega serviços e clientes
   useEffect(() => {
     const fetchData = async () => {
       if (!open) return;
       
       setDataLoading(true);
-      setError(null);
       console.log('Carregando dados para o formulário de nova ordem...');
       
       try {
@@ -112,7 +110,6 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         if (servicesError) {
           console.error("Erro ao carregar serviços:", servicesError);
           toast.error('Não foi possível carregar a lista de serviços.');
-          setError('Erro ao carregar serviços.');
         } else {
           console.log('Serviços carregados:', servicesData?.length || 0);
           setServices(servicesData || []);
@@ -127,7 +124,6 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         if (clientsError) {
           console.error("Erro ao carregar clientes:", clientsError);
           toast.error('Não foi possível carregar a lista de clientes.');
-          setError(prev => prev ? `${prev} Erro ao carregar clientes.` : 'Erro ao carregar clientes.');
         } else {
           console.log('Clientes carregados:', clientsData?.length || 0);
           setClients(clientsData || []);
@@ -142,7 +138,6 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         if (templatesError) {
           console.error("Erro ao carregar templates de workflow:", templatesError);
           toast.error('Não foi possível carregar a lista de templates de workflow.');
-          setError(prev => prev ? `${prev} Erro ao carregar workflows.` : 'Erro ao carregar workflows.');
         } else {
           console.log('Templates de workflow carregados:', templatesData?.length || 0);
           setWorkflowTemplates(templatesData || []);
@@ -150,14 +145,13 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error('Ocorreu um erro ao carregar os dados necessários.');
-        setError('Erro inesperado ao carregar dados. Por favor, tente novamente.');
       } finally {
         setDataLoading(false);
       }
     };
     
     fetchData();
-  }, [open]);
+  }, [open]); // Recarrega quando o diálogo é aberto
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -313,18 +307,6 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-dentalblue-600"></div>
             <span className="ml-2">Carregando dados...</span>
           </div>
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 my-4">
-            <p className="text-red-800 mb-2 font-medium">Erro ao carregar dados:</p>
-            <p className="text-red-600">{error}</p>
-            <Button 
-              onClick={() => setOpen(true)} 
-              variant="outline" 
-              className="mt-3"
-            >
-              Tentar novamente
-            </Button>
-          </div>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
@@ -340,7 +322,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="bg-white">
+                          <SelectTrigger>
                             <SelectValue placeholder="Selecione um cliente" />
                           </SelectTrigger>
                         </FormControl>
@@ -389,7 +371,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger>
                           <SelectValue placeholder="Selecione um serviço" />
                         </SelectTrigger>
                       </FormControl>
@@ -420,7 +402,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <FormItem>
                       <FormLabel>Data de Entrega</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} className="bg-white" />
+                        <Input type="date" {...field} />
                       </FormControl>
                       <FormMessage />
                       {isUrgent && (
@@ -461,7 +443,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                   <FormItem>
                     <FormLabel>Cor/Escala</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: A2" {...field} className="bg-white" />
+                      <Input placeholder="Ex: A2" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -477,7 +459,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <FormControl>
                       <Textarea 
                         placeholder="Instruções especiais ou observações adicionais" 
-                        className="resize-none bg-white" 
+                        className="resize-none" 
                         {...field}
                       />
                     </FormControl>
@@ -501,7 +483,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       disabled={!!selectedServiceWorkflow}
                     >
                       <FormControl>
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger>
                           <SelectValue placeholder={selectedServiceWorkflow ? "Fluxo de trabalho do serviço" : "Selecione um fluxo de trabalho (opcional)"} />
                         </SelectTrigger>
                       </FormControl>
