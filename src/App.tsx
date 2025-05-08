@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,20 +7,24 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { PageLoading } from './components/ui/page-loading';
 import { ErrorBoundary } from './components/ui/error-boundary';
 
-// Configure QueryClient with error handling
+// Configure QueryClient with error handling that's compatible with @tanstack/react-query v5+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
       staleTime: 30000,
       refetchOnWindowFocus: false,
-      onError: (error) => {
-        console.error('Query error:', error);
+      meta: {
+        onError: (error) => {
+          console.error('Query error:', error);
+        }
       }
     },
     mutations: {
-      onError: (error) => {
-        console.error('Mutation error:', error);
+      meta: {
+        onError: (error) => {
+          console.error('Mutation error:', error);
+        }
       }
     }
   }
