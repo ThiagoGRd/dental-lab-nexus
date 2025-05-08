@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import App from './App.tsx';
 import './index.css';
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorBoundary } from './components/ui/error-boundary';
 
 // More robust root element finding
 const rootElement = document.getElementById('root');
