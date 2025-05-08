@@ -29,6 +29,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   
   // Check if we're on the login page
   const isLoginPage = location.pathname === '/login';
@@ -37,12 +38,14 @@ export default function Layout({ children }: LayoutProps) {
     // Skip auth check if we're on the login page
     if (isLoginPage) {
       setLoading(false);
+      setInitialized(true);
       return;
     }
     
     const checkAuth = async () => {
       try {
         setLoading(true);
+        console.log("Checking authentication status...");
         
         // Get session using our safe function
         const { session, error } = await checkAuthSession();
@@ -58,6 +61,8 @@ export default function Layout({ children }: LayoutProps) {
           return;
         }
         
+        console.log("Session found, checking user profile");
+        
         // Check user profile with our safe function
         const profileOps = await safeProfileOperations();
         const { profile, error: profileError } = await profileOps.getById(session.user.id);
@@ -68,11 +73,14 @@ export default function Layout({ children }: LayoutProps) {
         }
         
         if (profile && profile.is_active === false) {
+          console.log("User account is inactive");
           await signOut();
           toast.error('Sua conta foi desativada. Entre em contato com o administrador.');
           navigate('/login');
           return;
         }
+        
+        console.log("Authentication successful, storing user data");
         
         // Store minimal user data in localStorage
         localStorage.setItem('user', JSON.stringify({
@@ -83,6 +91,7 @@ export default function Layout({ children }: LayoutProps) {
           role: profile?.role || 'user'
         }));
         
+        setInitialized(true);
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
         toast.error('Ocorreu um erro ao verificar sua autenticação');
@@ -96,8 +105,10 @@ export default function Layout({ children }: LayoutProps) {
     
     // Setup auth state listener only if not on login page
     if (!isLoginPage) {
+      console.log("Setting up auth state listener");
       const { data: authListener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
+          console.log(`Auth state changed: ${event}`);
           if (event === 'SIGNED_OUT') {
             localStorage.removeItem('user');
             navigate('/login');
@@ -123,6 +134,7 @@ export default function Layout({ children }: LayoutProps) {
 
       // Clean up listener
       return () => {
+        console.log("Cleaning up auth listener");
         authListener.subscription.unsubscribe();
       };
     }
@@ -132,8 +144,13 @@ export default function Layout({ children }: LayoutProps) {
     return <LoadingIndicator />;
   }
   
+  if (!initialized) {
+    return <LoadingIndicator />;
+  }
+  
   // Render a simple layout without sidebar for login page
   if (isLoginPage) {
+    console.log("Rendering login page layout");
     return (
       <div className="min-h-screen flex w-full bg-background dark:bg-gray-900">
         <main className="flex-1 overflow-y-auto">
@@ -144,6 +161,7 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   // Render the full layout with sidebar for authenticated pages
+  console.log("Rendering authenticated page layout with sidebar");
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background dark:bg-gray-900">
