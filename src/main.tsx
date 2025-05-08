@@ -8,6 +8,15 @@ import './index.css';
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from './components/ui/error-boundary';
 
+// Add type declaration for React error overlay hook
+declare global {
+  interface Window {
+    __REACT_ERROR_OVERLAY_GLOBAL_HOOK__?: {
+      handleRuntimeError: (error: Error) => void;
+    }
+  }
+}
+
 // Create a SafeCreateRoot function to handle potential DOM issues
 const SafeCreateRoot = (container: HTMLElement | null) => {
   // Ensure we have a container to render into
