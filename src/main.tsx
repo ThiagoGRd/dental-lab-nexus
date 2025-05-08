@@ -7,7 +7,10 @@ import App from './App.tsx';
 import './index.css';
 import { Toaster } from "@/components/ui/sonner";
 
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Root element not found');
+
+createRoot(rootElement).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider defaultTheme="light" storageKey="ui-theme">

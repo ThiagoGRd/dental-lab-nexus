@@ -13,9 +13,8 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-// Use lazy loading for child components when appropriate
 const LoadingIndicator = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-white">
+  <div className="flex h-screen w-full items-center justify-center bg-background">
     <div className="text-xl text-blue-600">Carregando...</div>
   </div>
 );
@@ -133,7 +132,7 @@ export default function Layout({ children }: LayoutProps) {
   // Render a simple layout without sidebar for login page
   if (isLoginPage) {
     return (
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-background">
         <main className="flex-1 overflow-y-auto">
           <Suspense fallback={<LoadingIndicator />}>
             {children}
@@ -146,12 +145,12 @@ export default function Layout({ children }: LayoutProps) {
   // Render the full layout with sidebar for authenticated pages
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full">
+      <div className="min-h-screen flex w-full">
         <div className="flex flex-1 w-full">
           <Sidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
             <Header />
-            <main className="flex-1 overflow-y-auto bg-gray-50">
+            <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
               <Suspense fallback={<LoadingIndicator />}>
                 {children}
               </Suspense>

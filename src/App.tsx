@@ -23,35 +23,19 @@ const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Prefetch the largest page (ReportsPage) when idle
-const prefetchReportsPage = () => {
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => {
-      import('./pages/ReportsPage');
-    });
-  } else {
-    setTimeout(() => {
-      import('./pages/ReportsPage');
-    }, 3000); // Fallback for browsers that don't support requestIdleCallback
-  }
-};
-
 function App() {
-  React.useEffect(() => {
-    prefetchReportsPage();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <NotificationProvider>
         <Routes>
           <Route path="/login" element={
-            <Suspense fallback={<PageLoading message="Carregando..." />}>
-              <Layout>
+            <Layout>
+              <Suspense fallback={<PageLoading message="Carregando..." />}>
                 <LoginPage />
-              </Layout>
-            </Suspense>
+              </Suspense>
+            </Layout>
           } />
+          
           <Route element={
             <ProtectedRoute>
               <Layout>
@@ -110,10 +94,13 @@ function App() {
               </Suspense>
             } />
           </Route>
+          
           <Route path="*" element={
-            <Suspense fallback={<PageLoading message="Carregando..." />}>
-              <NotFound />
-            </Suspense>
+            <Layout>
+              <Suspense fallback={<PageLoading message="Carregando..." />}>
+                <NotFound />
+              </Suspense>
+            </Layout>
           } />
         </Routes>
       </NotificationProvider>
