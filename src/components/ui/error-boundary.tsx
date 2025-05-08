@@ -22,6 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    console.error("Error caught by ErrorBoundary:", error);
     // Update state so the next render will show the fallback UI
     return { 
       hasError: true, 
@@ -38,8 +39,6 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       errorInfo
     });
-    
-    // You can also log the error to an error reporting service here
   }
 
   handleReload = () => {
@@ -56,6 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // You can render any custom fallback UI
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
           <h2 className="mb-4 text-2xl font-bold text-destructive">Oops, ocorreu um erro!</h2>

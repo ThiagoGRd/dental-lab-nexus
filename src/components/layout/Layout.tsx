@@ -104,40 +104,37 @@ export default function Layout({ children }: LayoutProps) {
     checkAuth();
     
     // Setup auth state listener only if not on login page
-    if (!isLoginPage) {
-      console.log("Setting up auth state listener");
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log(`Auth state changed: ${event}`);
-          if (event === 'SIGNED_OUT') {
-            localStorage.removeItem('user');
-            navigate('/login');
-          } else if (event === 'SIGNED_IN' && session) {
-            try {
-              // Use our safe function to get profile
-              const profileOps = await safeProfileOperations();
-              const { profile } = await profileOps.getById(session.user.id);
-                
-              localStorage.setItem('user', JSON.stringify({
-                id: session.user.id,
-                name: session.user.user_metadata.name || session.user.email?.split('@')[0],
-                email: session.user.email,
-                avatar: session.user.user_metadata.avatar_url,
-                role: profile?.role || 'user'
-              }));
-            } catch (error) {
-              console.error('Erro ao obter perfil do usuário após login:', error);
-            }
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`Auth state changed: ${event}`);
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('user');
+          navigate('/login');
+        } else if (event === 'SIGNED_IN' && session) {
+          try {
+            // Use our safe function to get profile
+            const profileOps = await safeProfileOperations();
+            const { profile } = await profileOps.getById(session.user.id);
+              
+            localStorage.setItem('user', JSON.stringify({
+              id: session.user.id,
+              name: session.user.user_metadata.name || session.user.email?.split('@')[0],
+              email: session.user.email,
+              avatar: session.user.user_metadata.avatar_url,
+              role: profile?.role || 'user'
+            }));
+          } catch (error) {
+            console.error('Erro ao obter perfil do usuário após login:', error);
           }
         }
-      );
+      }
+    );
 
-      // Clean up listener
-      return () => {
-        console.log("Cleaning up auth listener");
-        authListener.subscription.unsubscribe();
-      };
-    }
+    // Clean up listener
+    return () => {
+      console.log("Cleaning up auth listener");
+      authListener?.subscription?.unsubscribe();
+    };
   }, [navigate, isLoginPage, location.pathname]);
 
   if (loading) {
