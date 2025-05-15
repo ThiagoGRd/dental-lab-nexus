@@ -32,10 +32,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { Plus, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase, hasError, safeData } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { createOrder, createOrderItem, createWorkflow } from "@/utils/orderUtils";
 import type { Database } from '@/integrations/supabase/types';
 
@@ -43,9 +43,9 @@ import type { Database } from '@/integrations/supabase/types';
 interface Service {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
-  category: string;
+  category: string | null;
   workflow_template_id: string | null;
 }
 
@@ -97,7 +97,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       setIsDataLoading(true);
       console.log("Iniciando carregamento de dados para o formulário de nova ordem...");
       
-      // Carrega serviços do Supabase
+      // Carrega serviços do Supabase - use eq('active', true) instead of comparison
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*')
@@ -106,26 +106,32 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       
       if (servicesError) {
         console.error("Erro ao carregar serviços:", servicesError);
-        toast.error('Não foi possível carregar a lista de serviços.');
-      } else {
-        const typedServices = safeData<Service[]>(servicesData, []);
-        console.log("Serviços carregados:", typedServices.length);
-        setServices(typedServices);
+        toast({
+          title: "Erro",
+          description: 'Não foi possível carregar a lista de serviços.',
+          variant: "destructive"
+        });
+      } else if (servicesData) {
+        console.log("Serviços carregados:", servicesData.length);
+        setServices(servicesData);
       }
       
       // Carrega clientes do banco de dados Supabase
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('*')
+        .select('id, name, contact_name, phone, email, address, document')
         .order('name');
       
       if (clientsError) {
         console.error("Erro ao carregar clientes:", clientsError);
-        toast.error('Não foi possível carregar a lista de clientes.');
-      } else {
-        const typedClients = safeData<Client[]>(clientsData, []);
-        console.log("Clientes carregados:", typedClients.length);
-        setClients(typedClients);
+        toast({
+          title: "Erro",
+          description: 'Não foi possível carregar a lista de clientes.',
+          variant: "destructive"
+        });
+      } else if (clientsData) {
+        console.log("Clientes carregados:", clientsData.length);
+        setClients(clientsData);
       }
       
       // Carrega templates de workflow
@@ -136,15 +142,22 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         
       if (templatesError) {
         console.error("Erro ao carregar templates de workflow:", templatesError);
-        toast.error('Não foi possível carregar os templates de workflow.');
-      } else {
-        const typedTemplates = safeData<WorkflowTemplate[]>(templatesData, []);
-        console.log("Templates de workflow carregados:", typedTemplates.length);
-        setWorkflowTemplates(typedTemplates);
+        toast({
+          title: "Erro",
+          description: 'Não foi possível carregar os templates de workflow.',
+          variant: "destructive"
+        });
+      } else if (templatesData) {
+        console.log("Templates de workflow carregados:", templatesData.length);
+        setWorkflowTemplates(templatesData);
       }
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
-      toast.error('Ocorreu um erro ao carregar os dados necessários.');
+      toast({
+        title: "Erro",
+        description: 'Ocorreu um erro ao carregar os dados necessários.',
+        variant: "destructive"
+      });
     } finally {
       setIsDataLoading(false);
     }
@@ -177,7 +190,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const watchedService = form.watch('service');
   useEffect(() => {
     if (watchedService) {
-      const selectedService = services.find(s => s.name === watchedService);
+      const selectedService = services.find(s => s.id === watchedService);
       if (selectedService && selectedService.workflow_template_id) {
         setSelectedServiceWorkflow(selectedService.workflow_template_id);
         form.setValue('workflowTemplateId', selectedService.workflow_template_id);
@@ -191,17 +204,25 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
     setLoading(true);
     
     try {
-      // Encontrar o cliente pelo nome
-      const selectedClient = clients.find(client => client.name === data.client);
+      // Encontrar o cliente pelo ID
+      const selectedClient = clients.find(client => client.id === data.client);
       if (!selectedClient) {
-        toast.error('Cliente não encontrado.');
+        toast({
+          title: "Erro",
+          description: 'Cliente não encontrado.',
+          variant: "destructive"
+        });
         return;
       }
       
-      // Encontrar o serviço pelo nome
-      const selectedService = services.find(service => service.name === data.service);
+      // Encontrar o serviço pelo ID
+      const selectedService = services.find(service => service.id === data.service);
       if (!selectedService) {
-        toast.error('Serviço não encontrado.');
+        toast({
+          title: "Erro",
+          description: 'Serviço não encontrado.',
+          variant: "destructive"
+        });
         return;
       }
       
@@ -216,16 +237,12 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         notes
       );
       
-      if (hasError(orderResult)) {
+      if (!orderResult.data) {
         console.error("Erro ao criar ordem:", orderResult.error);
-        throw new Error(orderResult.error.message);
+        throw new Error(orderResult.error?.message || "Erro ao criar ordem");
       }
       
-      const orderData = safeData<Database['public']['Tables']['orders']['Row'] | null>(orderResult, null);
-      
-      if (!orderData) {
-        throw new Error("Dados da ordem não retornados");
-      }
+      const orderData = orderResult.data;
       
       // Criar o item da ordem
       const itemNotes = `Paciente: ${data.patientName}, Cor/Escala: ${data.shade}`;
@@ -237,9 +254,9 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         itemNotes
       );
       
-      if (hasError(orderItemResult)) {
+      if (!orderItemResult.data) {
         console.error("Erro ao adicionar item à ordem:", orderItemResult.error);
-        throw new Error(orderItemResult.error.message);
+        throw new Error(orderItemResult.error?.message || "Erro ao adicionar item à ordem");
       }
       
       // Criar workflow se selecionado
@@ -253,18 +270,29 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           workflowNotes
         );
           
-        if (hasError(workflowResult)) {
+        if (!workflowResult.data) {
           console.error("Erro ao criar workflow:", workflowResult.error);
-          toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
+          toast({
+            title: "Atenção", 
+            description: "Erro ao criar fluxo de trabalho para esta ordem.",
+            variant: "destructive"
+          });
         }
       }
       
-      toast.success('Ordem de serviço criada com sucesso!');
+      toast({
+        title: "Sucesso",
+        description: 'Ordem de serviço criada com sucesso!'
+      });
       setOpen(false);
       form.reset(); // Limpa o formulário
     } catch (error: any) {
       console.error('Erro ao criar ordem:', error);
-      toast.error(`Ocorreu um erro ao criar a ordem: ${error.message}`);
+      toast({
+        title: "Erro",
+        description: `Ocorreu um erro ao criar a ordem: ${error.message}`,
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -308,11 +336,17 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.name}>
-                              {client.name}
+                          {clients.length > 0 ? (
+                            clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-clients" disabled>
+                              Nenhum cliente encontrado
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -351,11 +385,17 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.name}>
-                            {service.name}
+                        {services.length > 0 ? (
+                          services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-services" disabled>
+                            Nenhum serviço encontrado
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -453,11 +493,17 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Nenhum</SelectItem>
-                        {workflowTemplates.map(template => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
+                        {workflowTemplates.length > 0 ? (
+                          workflowTemplates.map(template => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-templates" disabled>
+                            Nenhum template encontrado
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                     {selectedServiceWorkflow ? (
