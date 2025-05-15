@@ -1,6 +1,6 @@
 
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 // Use explicit type assertions to avoid TypeScript errors
 export async function typedInsert(table: string, data: any) {
