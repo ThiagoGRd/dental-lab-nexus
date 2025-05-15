@@ -39,7 +39,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format, isValid, addBusinessDays } from 'date-fns';
+import { format } from 'date-fns';
 import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 import { updateOrder, createWorkflow } from "@/utils/orderUtils";
 import type { Database } from '@/integrations/supabase/types';
@@ -136,17 +136,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       });
     }
   }, [order, form]);
-
-  // Watch for changes to the isUrgent field and update dueDate accordingly
-  const isUrgent = form.watch('isUrgent');
-  useEffect(() => {
-    if (isUrgent) {
-      // Set due date to 3 business days from today when marked as urgent
-      // Using addBusinessDays from date-fns v2
-      const newDueDate = format(addBusinessDays(new Date(), 3), 'yyyy-MM-dd');
-      form.setValue('dueDate', newDueDate);
-    }
-  }, [isUrgent, form]);
 
   const loadWorkflowTemplates = async () => {
     try {
@@ -424,11 +413,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
-                    {isUrgent && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        Para ordens urgentes, a data de entrega será em 3 dias úteis
-                      </p>
-                    )}
                   </FormItem>
                 )}
               />

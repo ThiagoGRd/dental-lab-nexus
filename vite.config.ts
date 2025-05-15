@@ -33,51 +33,26 @@ export default defineConfig(({ mode }) => ({
     cssMinify: true,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Improved chunking strategy
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react';
-            }
-            if (id.includes('@tanstack/react-query')) {
-              return 'vendor-query';
-            }
-            if (id.includes('recharts') || id.includes('d3')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('date-fns')) {
-              return 'vendor-date';
-            }
-            if (id.includes('lucide')) {
-              return 'vendor-icons';
-            }
-            if (id.includes('sonner') || id.includes('toast')) {
-              return 'vendor-notifications';
-            }
-            if (id.includes('@radix-ui')) {
-              return 'vendor-ui-primitives';
-            }
-            return 'vendor-other'; // Other dependencies
-          }
-          
-          // Split UI components
-          if (id.includes('/components/ui/')) {
-            return 'ui-components';
-          }
-          
-          // Split large pages
-          if (id.includes('/pages/ReportsPage')) {
-            return 'page-reports';
-          }
-          if (id.includes('/pages/FinancePage')) {
-            return 'page-finance';
-          }
-          if (id.includes('/pages/OrdersPage')) {
-            return 'page-orders';
-          }
-          if (id.includes('/pages/ProductionPage')) {
-            return 'page-production';
-          }
+        manualChunks: {
+          // Divide o código em chunks para carregamento mais rápido
+          vendor: [
+            'react', 
+            'react-dom', 
+            'react-router-dom', 
+            '@tanstack/react-query',
+            'recharts',
+            'sonner',
+            'date-fns'
+          ],
+          ui: [
+            '@/components/ui/button',
+            '@/components/ui/toast',
+            '@/components/ui/toaster',
+            '@/components/ui/dialog',
+            '@/components/ui/select',
+            '@/components/ui/form',
+            '@/components/ui/input'
+          ]
         }
       }
     },
@@ -92,8 +67,7 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       '@tanstack/react-query',
       'recharts',
-      'sonner',
-      'date-fns'
+      'sonner'
     ]
   }
 }));
