@@ -89,62 +89,72 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedServiceWorkflow, setSelectedServiceWorkflow] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(false);
   
-  // Carrega serviços e clientes
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Carrega serviços do Supabase
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('active', true as any)  // Fixed type issue with casting
-          .order('name');
-        
-        if (servicesError) {
-          console.error("Erro ao carregar serviços:", servicesError);
-          toast.error('Não foi possível carregar a lista de serviços.');
-        } else {
-          const typedServices = safeData<Service[]>(servicesData, []);
-          setServices(typedServices);
-        }
-        
-        // Carrega clientes do banco de dados Supabase
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('*')
-          .order('name');
-        
-        if (clientsError) {
-          console.error("Erro ao carregar clientes:", clientsError);
-          toast.error('Não foi possível carregar a lista de clientes.');
-        } else {
-          const typedClients = safeData<Client[]>(clientsData, []);
-          setClients(typedClients);
-        }
-        
-        // Carrega templates de workflow
-        const { data: templatesData, error: templatesError } = await supabase
-          .from('workflow_templates')
-          .select('id, name, description')
-          .order('name');
-          
-        if (templatesError) {
-          console.error("Erro ao carregar templates de workflow:", templatesError);
-        } else {
-          const typedTemplates = safeData<WorkflowTemplate[]>(templatesData, []);
-          setWorkflowTemplates(typedTemplates);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-        toast.error('Ocorreu um erro ao carregar os dados necessários.');
+  // Função para carregar os dados quando o diálogo é aberto
+  const fetchData = async () => {
+    try {
+      setIsDataLoading(true);
+      console.log("Iniciando carregamento de dados para o formulário de nova ordem...");
+      
+      // Carrega serviços do Supabase
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('active', true)
+        .order('name');
+      
+      if (servicesError) {
+        console.error("Erro ao carregar serviços:", servicesError);
+        toast.error('Não foi possível carregar a lista de serviços.');
+      } else {
+        const typedServices = safeData<Service[]>(servicesData, []);
+        console.log("Serviços carregados:", typedServices.length);
+        setServices(typedServices);
       }
-    };
-    
+      
+      // Carrega clientes do banco de dados Supabase
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('*')
+        .order('name');
+      
+      if (clientsError) {
+        console.error("Erro ao carregar clientes:", clientsError);
+        toast.error('Não foi possível carregar a lista de clientes.');
+      } else {
+        const typedClients = safeData<Client[]>(clientsData, []);
+        console.log("Clientes carregados:", typedClients.length);
+        setClients(typedClients);
+      }
+      
+      // Carrega templates de workflow
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('workflow_templates')
+        .select('id, name, description')
+        .order('name');
+        
+      if (templatesError) {
+        console.error("Erro ao carregar templates de workflow:", templatesError);
+        toast.error('Não foi possível carregar os templates de workflow.');
+      } else {
+        const typedTemplates = safeData<WorkflowTemplate[]>(templatesData, []);
+        console.log("Templates de workflow carregados:", typedTemplates.length);
+        setWorkflowTemplates(typedTemplates);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+      toast.error('Ocorreu um erro ao carregar os dados necessários.');
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     if (open) {
       fetchData();
     }
-  }, [open]); // Recarrega quando o diálogo é aberto
+  }, [open]);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -273,28 +283,77 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+        {isDataLoading ? (
+          <div className="flex items-center justify-center p-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dentalblue-600"></div>
+            <span className="ml-3">Carregando dados...</span>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="client"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cliente</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um cliente" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.name}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="patientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Paciente</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do paciente" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="client"
+                name="service"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cliente</FormLabel>
+                    <FormLabel>Tipo de Serviço</FormLabel>
                     <Select 
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um cliente" />
+                          <SelectValue placeholder="Selecione um serviço" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.name}>
-                            {client.name}
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.name}>
+                            {service.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -303,59 +362,52 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                   </FormItem>
                 )}
               />
-
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Entrega</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="isUrgent"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Ordem Urgente</FormLabel>
+                        <FormDescription>
+                          Prazo de entrega reduzido (3 dias úteis)
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               <FormField
                 control={form.control}
-                name="patientName"
+                name="shade"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do Paciente</FormLabel>
+                    <FormLabel>Cor/Escala</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nome do paciente" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="service"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Serviço</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um serviço" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.name}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Entrega</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
+                      <Input placeholder="Ex: A2" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -364,110 +416,75 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
               
               <FormField
                 control={form.control}
-                name="isUrgent"
+                name="notes"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+                      <Textarea 
+                        placeholder="Instruções especiais ou observações adicionais" 
+                        className="resize-none" 
+                        {...field}
                       />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Ordem Urgente</FormLabel>
-                      <FormDescription>
-                        Prazo de entrega reduzido (3 dias úteis)
-                      </FormDescription>
-                    </div>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="shade"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cor/Escala</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: A2" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observações</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Instruções especiais ou observações adicionais" 
-                      className="resize-none" 
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="workflowTemplateId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1">
-                    Fluxo de Trabalho 
-                    <HelpCircle className="h-4 w-4 text-gray-400" />
-                  </FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    value={field.value || "none"}
-                    disabled={!!selectedServiceWorkflow}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={selectedServiceWorkflow ? "Fluxo de trabalho do serviço" : "Selecione um fluxo de trabalho (opcional)"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {workflowTemplates.map(template => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedServiceWorkflow ? (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Este serviço já tem um fluxo de trabalho associado
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Associar um fluxo de trabalho para acompanhar as etapas de produção
-                    </p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled={loading}>
-                {loading ? 'Criando...' : 'Criar Ordem'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              
+              <FormField
+                control={form.control}
+                name="workflowTemplateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1">
+                      Fluxo de Trabalho 
+                      <HelpCircle className="h-4 w-4 text-gray-400" />
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange}
+                      value={field.value || "none"}
+                      disabled={!!selectedServiceWorkflow}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={selectedServiceWorkflow ? "Fluxo de trabalho do serviço" : "Selecione um fluxo de trabalho (opcional)"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {workflowTemplates.map(template => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedServiceWorkflow ? (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Este serviço já tem um fluxo de trabalho associado
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Associar um fluxo de trabalho para acompanhar as etapas de produção
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled={loading}>
+                  {loading ? 'Criando...' : 'Criar Ordem'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
