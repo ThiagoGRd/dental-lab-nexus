@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
-import { pt } from 'date-fns/locale'; // Importação corrigida para date-fns v4
+import { pt } from 'date-fns/locale'; 
 
 interface GenerateReportButtonsProps {
   reportType: string;
