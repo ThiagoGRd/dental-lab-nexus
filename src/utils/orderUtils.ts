@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { Json } from '@/integrations/supabase/types';
@@ -11,6 +10,8 @@ export async function createOrder(
   notes: string,
   status: string = 'pending'
 ) {
+  console.log('Creating order with data:', { clientId, deadline, priority, notes, status });
+  
   const orderInsert: Database['public']['Tables']['orders']['Insert'] = {
     client_id: clientId,
     deadline: deadline,
@@ -19,11 +20,19 @@ export async function createOrder(
     status: status
   };
   
-  return await supabase
-    .from('orders')
-    .insert(orderInsert)
-    .select()
-    .single();
+  try {
+    const result = await supabase
+      .from('orders')
+      .insert(orderInsert)
+      .select()
+      .single();
+      
+    console.log('Create order result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in createOrder:', error);
+    throw error;
+  }
 }
 
 // Type-safe create order item function
@@ -34,6 +43,8 @@ export async function createOrderItem(
   total: number,
   notes: string
 ) {
+  console.log('Creating order item with data:', { orderId, serviceId, price, total, notes });
+  
   const orderItemInsert: Database['public']['Tables']['order_items']['Insert'] = {
     order_id: orderId,
     service_id: serviceId,
@@ -42,9 +53,17 @@ export async function createOrderItem(
     notes: notes
   };
   
-  return await supabase
-    .from('order_items')
-    .insert(orderItemInsert);
+  try {
+    const result = await supabase
+      .from('order_items')
+      .insert(orderItemInsert);
+      
+    console.log('Create order item result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in createOrderItem:', error);
+    throw error;
+  }
 }
 
 // Type-safe create workflow function
@@ -55,6 +74,8 @@ export async function createWorkflow(
   history: Json = [],
   notes: string
 ) {
+  console.log('Creating workflow with data:', { orderId, templateId, currentStep, history, notes });
+  
   const workflowInsert: Database['public']['Tables']['order_workflows']['Insert'] = {
     order_id: orderId,
     template_id: templateId,
@@ -63,9 +84,17 @@ export async function createWorkflow(
     notes: notes
   };
   
-  return await supabase
-    .from('order_workflows')
-    .insert(workflowInsert);
+  try {
+    const result = await supabase
+      .from('order_workflows')
+      .insert(workflowInsert);
+      
+    console.log('Create workflow result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in createWorkflow:', error);
+    throw error;
+  }
 }
 
 // Type-safe update order function
@@ -95,16 +124,26 @@ export async function updateWorkflow(
   currentStep: number,
   history: Json
 ) {
+  console.log('Updating workflow:', { workflowId, currentStep, history });
+  
   const workflowUpdate: Database['public']['Tables']['order_workflows']['Update'] = {
     current_step: currentStep,
     history: history,
     updated_at: new Date().toISOString()
   };
   
-  return await supabase
-    .from('order_workflows')
-    .update(workflowUpdate)
-    .eq('id', workflowId);
+  try {
+    const result = await supabase
+      .from('order_workflows')
+      .update(workflowUpdate)
+      .eq('id', workflowId);
+      
+    console.log('Update workflow result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in updateWorkflow:', error);
+    throw error;
+  }
 }
 
 // Type-safe function to get workflow by order ID

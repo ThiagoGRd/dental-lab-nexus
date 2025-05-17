@@ -42,7 +42,7 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
       
       // Update local state efficiently using map
       const updatedOrders = orders.map(order => {
-        if (order.id === updatedOrder.id) {
+        if (order.id === orderId) {
           return { 
             ...order, 
             status: updatedOrder.status,

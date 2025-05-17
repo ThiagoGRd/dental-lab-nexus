@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -13,7 +13,8 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle, 
-  ArrowLeftRight 
+  ArrowLeftRight,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ interface WorkflowProps {
 
 export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
   const [loading, setLoading] = useState(true);
+  const [updateLoading, setUpdateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<{
     id: string;
@@ -46,12 +48,9 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
     notes: string | null;
   } | null>(null);
 
-  useEffect(() => {
-    loadWorkflowData();
-  }, [orderId]);
-
-  const loadWorkflowData = async () => {
+  const loadWorkflowData = useCallback(async () => {
     try {
+      console.log('Carregando workflow para ordem:', orderId);
       setLoading(true);
       setError(null);
 
@@ -75,13 +74,17 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
       if (workflowError) {
         console.error('Erro ao carregar workflow:', workflowError);
         setError('Não foi possível carregar o fluxo de trabalho.');
+        setLoading(false);
         return;
       }
 
       if (!workflowData) {
         setError('Fluxo de trabalho não encontrado para esta ordem.');
+        setLoading(false);
         return;
       }
+
+      console.log('Workflow data carregado:', workflowData);
 
       // Formatar os dados - corrigindo o problema de tipo
       const typedWorkflowData = workflowData as any;
@@ -103,12 +106,19 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    if (orderId) {
+      loadWorkflowData();
+    }
+  }, [orderId, loadWorkflowData]);
 
   const advanceStep = async () => {
     if (!workflow || workflow.currentStep >= workflow.steps.length - 1) return;
 
     try {
+      setUpdateLoading(true);
       const nextStep = workflow.currentStep + 1;
       const updatedHistory = [...workflow.history, {
         step: workflow.currentStep,
@@ -116,6 +126,12 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
         movedAt: new Date().toISOString(),
         action: 'advance'
       }];
+
+      console.log('Avançando workflow:', {
+        id: workflow.id,
+        nextStep,
+        updatedHistory
+      });
 
       const result = await updateWorkflow(
         workflow.id,
@@ -143,6 +159,8 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
     } catch (error) {
       console.error('Erro ao processar atualização:', error);
       toast.error('Ocorreu um erro ao atualizar o fluxo de trabalho.');
+    } finally {
+      setUpdateLoading(false);
     }
   };
 
@@ -150,6 +168,7 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
     if (!workflow || workflow.currentStep <= 0) return;
 
     try {
+      setUpdateLoading(true);
       const prevStep = workflow.currentStep - 1;
       const updatedHistory = [...workflow.history, {
         step: workflow.currentStep,
@@ -157,6 +176,12 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
         movedAt: new Date().toISOString(),
         action: 'revert'
       }];
+
+      console.log('Retrocedendo workflow:', {
+        id: workflow.id,
+        prevStep,
+        updatedHistory
+      });
 
       const result = await updateWorkflow(
         workflow.id,
@@ -184,14 +209,24 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
     } catch (error) {
       console.error('Erro ao processar atualização:', error);
       toast.error('Ocorreu um erro ao atualizar o fluxo de trabalho.');
+    } finally {
+      setUpdateLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadWorkflowData();
+    toast.info('Atualizando dados do fluxo de trabalho...');
   };
 
   if (loading) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Carregando fluxo de trabalho...</div>
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-dentalblue-600" />
+            <div>Carregando fluxo de trabalho...</div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -204,6 +239,14 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
           <div className="text-center text-red-500">
             <AlertCircle className="mx-auto h-8 w-8 mb-2" />
             <p>{error || "Fluxo de trabalho não disponível"}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4" 
+              onClick={handleRefresh}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -213,10 +256,20 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <ArrowLeftRight className="h-5 w-5" />
-          Fluxo de Trabalho: {workflow.templateName}
-        </CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ArrowLeftRight className="h-5 w-5" />
+            Fluxo de Trabalho: {workflow.templateName}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-4">
         <div className="relative">
@@ -280,16 +333,24 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
             <Button 
               variant="outline" 
               onClick={goBackStep}
-              disabled={workflow.currentStep <= 0}
+              disabled={workflow.currentStep <= 0 || updateLoading}
             >
-              Etapa Anterior
+              {updateLoading ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+              ) : (
+                <>Etapa Anterior</>
+              )}
             </Button>
             <Button 
               onClick={advanceStep}
-              disabled={workflow.currentStep >= workflow.steps.length - 1}
+              disabled={workflow.currentStep >= workflow.steps.length - 1 || updateLoading}
               className="bg-dentalblue-600 hover:bg-dentalblue-700"
             >
-              Próxima Etapa <ArrowRight className="ml-1 h-4 w-4" />
+              {updateLoading ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+              ) : (
+                <>Próxima Etapa <ArrowRight className="ml-1 h-4 w-4" /></>
+              )}
             </Button>
           </div>
         </div>
