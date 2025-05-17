@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -280,10 +279,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         }
       }
       
-      toast({
-        title: "Sucesso",
-        description: 'Ordem de serviço criada com sucesso!'
-      });
+      toast("Ordem criada com sucesso");
       setOpen(false);
       form.reset(); // Limpa o formulário
     } catch (error: any) {

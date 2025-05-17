@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,7 @@ type User = {
 export default function Header() {
   const sidebar = useSidebar();
   const [user, setUser] = useState<User | null>(null);
-  const { setShowNotifications } = useNotifications();
+  const { unreadCount, setShowNotifications } = useNotifications();
 
   useEffect(() => {
     // Buscar dados do usuário do localStorage

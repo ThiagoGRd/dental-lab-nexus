@@ -36,8 +36,8 @@ export default function Notifications() {
     notifications, 
     unreadCount, 
     markAsRead, 
-    markAllAsRead, 
-    deleteNotification, 
+    markAllAsRead,
+    deleteNotification,
     clearAllNotifications,
     showNotifications,
     setShowNotifications
@@ -51,7 +51,7 @@ export default function Notifications() {
     console.log('Estado de showNotifications alterado:', showNotifications);
   }, [showNotifications]);
   
-  const handleNotificationClick = (id: number | string, link?: string) => {
+  const handleNotificationClick = (id: string, link?: string) => {
     markAsRead(id);
     
     if (link) {
@@ -205,13 +205,13 @@ export default function Notifications() {
                               "font-medium",
                               notification.priority === 'high' && "text-red-600 dark:text-red-400"
                             )}>
-                              {notification.title}
+                              {notification.title || notification.content}
                             </h4>
                             <span className="text-xs text-muted-foreground">
-                              {notification.time}
+                              {notification.time || new Date(notification.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-muted-foreground mt-1">{notification.message}</p>
+                          <p className="text-muted-foreground mt-1">{notification.message || notification.content}</p>
                           
                           {notification.actionText && notification.link && (
                             <div className="mt-2">
@@ -300,7 +300,7 @@ function NotificationCenter() {
     return notification.type === filter;
   });
 
-  const handleNotificationClick = (id: number | string, link?: string) => {
+  const handleNotificationClick = (id: string, link?: string) => {
     markAsRead(id);
     
     if (link) {
@@ -423,12 +423,12 @@ function NotificationCenter() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-medium">
-                          {notification.title}
+                          {notification.title || notification.content}
                         </h4>
-                        <p className="text-muted-foreground mt-1">{notification.message}</p>
+                        <p className="text-muted-foreground mt-1">{notification.message || notification.content}</p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                        {notification.time}
+                        {notification.time || new Date(notification.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                     
