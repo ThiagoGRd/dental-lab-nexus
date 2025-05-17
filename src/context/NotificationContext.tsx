@@ -1,267 +1,185 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Notification } from '@/types/notification';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useOrdersByDueDate } from '@/hooks/useOrdersByDueDate';
-import { differenceInHours, formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
+import { useFetchDueOrders } from '@/hooks/useOrdersByDueDate';
+import { NotificationType } from '@/types/notification';
 
-// Mock initial notifications - será substituído pelos dados reais
-const initialNotifications: Notification[] = [
-  { 
-    id: 1, 
-    title: 'Ordem Urgente', 
-    message: 'Nova ordem urgente adicionada (#ORD045)', 
-    time: '10 min',
-    type: 'order', 
-    priority: 'high',
-    read: false,
-    createdAt: new Date().toISOString(),
-    link: '/orders',
-    actionText: 'Ver ordem'
-  },
-  { 
-    id: 2, 
-    title: 'Prazo Próximo', 
-    message: 'A ordem #ORD033 vence em 24 horas', 
-    time: '1 hora',
-    type: 'deadline', 
-    priority: 'medium',
-    read: false,
-    createdAt: new Date().toISOString(),
-    link: '/orders'
-  },
-  { 
-    id: 3, 
-    title: 'Material em Falta', 
-    message: 'Estoque baixo de Resina Z350', 
-    time: '2 horas',
-    type: 'inventory', 
-    priority: 'medium',
-    read: false,
-    createdAt: new Date().toISOString(),
-    link: '/inventory'
-  },
-  { 
-    id: 4, 
-    title: 'Pagamento Recebido', 
-    message: 'Pagamento da Clínica Dental Care confirmado', 
-    time: '5 horas',
-    type: 'payment', 
-    priority: 'low',
-    read: true,
-    createdAt: new Date(Date.now() - 5 * 3600000).toISOString()
-  },
-  { 
-    id: 5, 
-    title: 'Ordem Concluída', 
-    message: 'Ordem #ORD028 foi finalizada', 
-    time: '1 dia',
-    type: 'order', 
-    priority: 'low',
-    read: true,
-    createdAt: new Date(Date.now() - 24 * 3600000).toISOString()
-  },
-];
+interface Notification {
+  id: string;
+  content: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt: Date;
+  orderId?: string;
+}
 
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
-  markAsRead: (id: number | string) => void;
+  addNotification: (content: string, type: NotificationType, orderId?: string) => void;
+  markAsRead: (id: string) => void;
   markAllAsRead: () => void;
-  deleteNotification: (id: number | string) => void;
-  clearAllNotifications: () => void;
-  showNotifications: boolean;
-  setShowNotifications: (show: boolean) => void;
+  showNotificationDrawer: boolean;
+  setShowNotificationDrawer: React.Dispatch<React.SetStateAction<boolean>>;
+  notificationsInitialized: boolean;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | null>(null);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const { toast } = useToast();
-  const { dueOrders, loading: loadingOrders } = useOrdersByDueDate(5); // Ordens a vencer nos próximos 5 dias
-
-  // Verifica se o usuário acabou de fazer login
-  const checkIfJustLoggedIn = useCallback(() => {
-    const lastLoginTime = localStorage.getItem('lastLoginTime');
-    const currentTime = new Date().getTime();
-    localStorage.setItem('lastLoginTime', currentTime.toString());
-
-    // Se não houver registro de login anterior ou tiver passado mais de 1 hora, consideramos um novo login
-    if (!lastLoginTime || (currentTime - parseInt(lastLoginTime)) > 60 * 60 * 1000) {
-      return true;
-    }
-    return false;
-  }, []);
-
-  // Gerar notificações de ordens com prazo próximo
-  useEffect(() => {
-    if (loadingOrders || !dueOrders.length) return;
-
-    const dueOrderNotifications = dueOrders.map(order => {
-      const priority = order.daysUntilDue <= 1 ? 'high' : order.daysUntilDue <= 3 ? 'medium' : 'low';
-      const timeDistance = formatDistanceToNow(new Date(order.dueDate), { locale: ptBR, addSuffix: true });
-      const message = order.patientName 
-        ? `Ordem ${order.id} (Paciente: ${order.patientName}) vence ${timeDistance}`
-        : `Ordem ${order.id} para ${order.client} vence ${timeDistance}`;
-
-      return {
-        id: `due-order-${order.id}`,
-        title: order.daysUntilDue <= 1 ? 'Prazo Urgente!' : 'Prazo Próximo',
-        message,
-        time: timeDistance,
-        type: 'deadline',
-        priority,
-        read: false,
-        createdAt: new Date().toISOString(),
-        link: `/orders?id=${order.id}`,
-        actionText: 'Ver ordem'
-      } as Notification;
-    });
-
-    const existingIds = new Set(notifications.map(n => n.id));
-    const newDueOrderNotifications = dueOrderNotifications.filter(
-      n => !existingIds.has(n.id)
-    );
-
-    if (newDueOrderNotifications.length > 0) {
-      console.log('Adicionando notificações de ordens com prazo próximo:', newDueOrderNotifications.length);
-      setNotifications(prev => [...newDueOrderNotifications, ...prev]);
-      
-      // Verificar se é login recente para mostrar notificações
-      const justLoggedIn = checkIfJustLoggedIn();
-      if (justLoggedIn) {
-        console.log('Usuário acabou de fazer login, abrindo notificações');
-        setTimeout(() => {
-          setShowNotifications(true);
-        }, 1500); // Pequeno delay para garantir que a UI já foi carregada
-      }
-      
-      // Mostrar toast da primeira notificação mais urgente
-      const mostUrgent = newDueOrderNotifications.sort((a, b) => {
-        if (a.priority === 'high' && b.priority !== 'high') return -1;
-        if (a.priority !== 'high' && b.priority === 'high') return 1;
-        if (a.priority === 'medium' && b.priority === 'low') return -1;
-        if (a.priority === 'low' && b.priority === 'medium') return 1;
-        return 0;
-      })[0];
-      
-      toast({
-        title: mostUrgent.title,
-        description: mostUrgent.message,
-        variant: mostUrgent.priority === 'high' ? 'destructive' : 'default',
-      });
-    }
-  }, [dueOrders, loadingOrders, checkIfJustLoggedIn, toast]);
-
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  // Mark a notification as read
-  const markAsRead = (id: number | string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-    // In a real app, update the database
-    // updateNotificationStatus(id, true);
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    // In a real app, update all notifications
-    // updateAllNotificationsStatus(true);
-  };
-
-  // Delete a notification
-  const deleteNotification = (id: number | string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    // In a real app, delete from database
-    // deleteNotificationFromDB(id);
-  };
-
-  // Clear all notifications
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    // In a real app, clear all notifications
-    // clearAllNotificationsFromDB();
-  };
-
-  // Set up real-time notifications with Supabase (simulation for now)
-  useEffect(() => {
-    // Simulate a new notification coming in after 10 seconds
-    const timer = setTimeout(() => {
-      const newNotification: Notification = {
-        id: Date.now(),
-        title: 'Nova Atualização',
-        message: 'O sistema foi atualizado com novos recursos',
-        type: 'system',
-        priority: 'low',
-        time: 'agora',
-        read: false,
-        createdAt: new Date().toISOString(),
-      };
-      
-      setNotifications(prev => [newNotification, ...prev]);
-      
-      // Show toast notification
-      toast({
-        title: newNotification.title,
-        description: newNotification.message,
-        variant: "default",
-      });
-    }, 10000);
-
-    // For a real implementation, we would set up a Supabase subscription
-    // const channel = supabase.channel('public:notifications')
-    //   .on('postgres_changes', { 
-    //     event: 'INSERT', 
-    //     schema: 'public', 
-    //     table: 'notifications',
-    //     filter: `user_id=eq.${userId}`
-    //   }, (payload) => {
-    //     // Handle new notification
-    //     const newNotification = payload.new as Notification;
-    //     setNotifications(prev => [newNotification, ...prev]);
-    //     
-    //     // Show toast notification
-    //     toast({
-    //       title: newNotification.title,
-    //       description: newNotification.message,
-    //     });
-    //   })
-    //   .subscribe();
-    
-    // Return a cleanup function
-    return () => {
-      clearTimeout(timer);
-      // In a real app: supabase.removeChannel(channel);
-    };
-  }, [toast, checkIfJustLoggedIn]);
-
-  return (
-    <NotificationContext.Provider value={{ 
-      notifications, 
-      unreadCount, 
-      markAsRead, 
-      markAllAsRead,
-      deleteNotification,
-      clearAllNotifications,
-      showNotifications,
-      setShowNotifications
-    }}>
-      {children}
-    </NotificationContext.Provider>
-  );
-}
-
-export function useNotifications() {
+export const useNotifications = () => {
   const context = useContext(NotificationContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
+};
+
+interface NotificationProviderProps {
+  children: ReactNode;
 }
+
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
+  const [notificationsInitialized, setNotificationsInitialized] = useState(false);
+  const { ordersWithDueDate, isLoading: isLoadingOrders } = useFetchDueOrders(5);
+
+  // Sincronizar notificações com localStorage
+  useEffect(() => {
+    try {
+      const savedNotifications = localStorage.getItem('notifications');
+      if (savedNotifications) {
+        const parsedNotifications = JSON.parse(savedNotifications).map((notification: any) => ({
+          ...notification,
+          createdAt: new Date(notification.createdAt)
+        }));
+        setNotifications(parsedNotifications);
+        setUnreadCount(parsedNotifications.filter((n: Notification) => !n.read).length);
+      }
+      setNotificationsInitialized(true);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+      setNotificationsInitialized(true);
+    }
+  }, []);
+
+  // Salvar notificações em localStorage quando atualizadas
+  useEffect(() => {
+    if (notificationsInitialized && notifications.length > 0) {
+      try {
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+      } catch (error) {
+        console.error('Erro ao salvar notificações:', error);
+      }
+    }
+  }, [notifications, notificationsInitialized]);
+
+  // Adicionar notificações de ordens com prazo próximo
+  useEffect(() => {
+    if (!isLoadingOrders && ordersWithDueDate && ordersWithDueDate.length > 0 && notificationsInitialized) {
+      console.info('Adicionando notificações de ordens com prazo próximo:', ordersWithDueDate.length);
+
+      // Verificar se já não temos notificações para essas ordens
+      const newOrderNotifications = ordersWithDueDate.filter(order => {
+        return !notifications.some(
+          notification => 
+            notification.orderId === order.id && 
+            notification.type === 'due-date' &&
+            // Apenas considerar notificações nas últimas 24 horas
+            (new Date().getTime() - notification.createdAt.getTime() < 24 * 60 * 60 * 1000)
+        );
+      });
+
+      if (newOrderNotifications.length > 0) {
+        const newNotifications = newOrderNotifications.map(order => ({
+          id: `order-${order.id}-${Date.now()}`,
+          content: `A ordem #${order.id.substring(0, 8)} (${order.client}) vence em breve.`,
+          type: 'due-date' as NotificationType,
+          read: false,
+          createdAt: new Date(),
+          orderId: order.id
+        }));
+
+        setNotifications(prev => [...newNotifications, ...prev]);
+        setUnreadCount(prev => prev + newNotifications.length);
+
+        // Mostrar toast para notificações de prazo
+        if (newNotifications.length === 1) {
+          toast(`Nova notificação: ${newNotifications[0].content}`);
+        } else if (newNotifications.length > 1) {
+          toast(`${newNotifications.length} novas notificações de ordens com prazo próximo`);
+        }
+      }
+    }
+  }, [ordersWithDueDate, isLoadingOrders, notificationsInitialized]);
+
+  // Verificar se o usuário acabou de fazer login e mostrar notificações
+  useEffect(() => {
+    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+    
+    if (justLoggedIn === 'true' && notificationsInitialized && unreadCount > 0) {
+      console.info('Usuário acabou de fazer login, abrindo notificações');
+      setShowNotificationDrawer(true);
+      sessionStorage.removeItem('justLoggedIn');
+    }
+  }, [notificationsInitialized, unreadCount]);
+
+  const addNotification = (content: string, type: NotificationType, orderId?: string) => {
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      content,
+      type,
+      read: false,
+      createdAt: new Date(),
+      orderId
+    };
+
+    setNotifications(prev => [newNotification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+    
+    // Mostrar toast para notificação
+    toast(`Nova notificação: ${content}`);
+  };
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id ? { ...notification, read: true } : notification
+      )
+    );
+    
+    // Recalcular contagem de não lidas
+    setUnreadCount(prev => Math.max(prev - 1, 0));
+  };
+
+  const markAllAsRead = () => {
+    if (notifications.some(n => !n.read)) {
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+      setUnreadCount(0);
+      
+      // Mostrar toast para todas marcadas como lidas
+      toast(`Todas as notificações foram marcadas como lidas`);
+    }
+  };
+
+  // Valor do contexto
+  const contextValue: NotificationContextType = {
+    notifications,
+    unreadCount,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    showNotificationDrawer,
+    setShowNotificationDrawer,
+    notificationsInitialized
+  };
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+    </NotificationContext.Provider>
+  );
+};
