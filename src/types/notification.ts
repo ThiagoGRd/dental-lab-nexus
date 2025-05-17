@@ -1,5 +1,5 @@
 
-export type NotificationType = 'order' | 'deadline' | 'inventory' | 'payment' | 'system';
+export type NotificationType = 'order' | 'deadline' | 'inventory' | 'payment' | 'system' | 'due-date';
 
 export type NotificationPriority = 'low' | 'medium' | 'high';
 
