@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { checkAuthSession } from '@/integrations/supabase/client';
 import { safeProfileOperations } from '@/utils/supabaseHelpers';
 import type { Database } from '@/integrations/supabase/types';
@@ -27,11 +27,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         
         if (!session) {
           setIsAuthenticated(false);
-          toast({
-            title: "Erro",
-            description: 'Você precisa estar logado para acessar esta página',
-            variant: "destructive"
-          });
+          toast('Você precisa estar logado para acessar esta página');
           return;
         }
         
@@ -53,11 +49,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         
         if (!profile || profile.role !== requiredRole) {
           setHasRequiredRole(false);
-          toast({
-            title: "Erro",
-            description: 'Você não tem permissão para acessar esta página',
-            variant: "destructive"
-          });
+          toast('Você não tem permissão para acessar esta página');
           return;
         }
         
@@ -67,11 +59,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         console.error('Erro ao verificar autenticação:', error);
         setIsAuthenticated(false);
         setHasRequiredRole(false);
-        toast({
-          title: "Erro",
-          description: 'Erro ao verificar autenticação',
-          variant: "destructive"
-        });
+        toast('Erro ao verificar autenticação');
       }
     };
     
