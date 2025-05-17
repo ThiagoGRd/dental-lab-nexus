@@ -31,11 +31,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/components/ui/use-toast';
 import { Plus, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 import { createOrder, createOrderItem, createWorkflow } from "@/utils/orderUtils";
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 // Define interfaces to match expected types
@@ -105,11 +105,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       
       if (servicesError) {
         console.error("Erro ao carregar serviços:", servicesError);
-        toast({
-          title: "Erro",
-          description: 'Não foi possível carregar a lista de serviços.',
-          variant: "destructive"
-        });
+        toast.error('Não foi possível carregar a lista de serviços.');
       } else if (servicesData) {
         console.log("Serviços carregados:", servicesData.length);
         setServices(servicesData);
@@ -123,11 +119,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       
       if (clientsError) {
         console.error("Erro ao carregar clientes:", clientsError);
-        toast({
-          title: "Erro",
-          description: 'Não foi possível carregar a lista de clientes.',
-          variant: "destructive"
-        });
+        toast.error('Não foi possível carregar a lista de clientes.');
       } else if (clientsData) {
         console.log("Clientes carregados:", clientsData.length);
         setClients(clientsData);
@@ -141,22 +133,14 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
         
       if (templatesError) {
         console.error("Erro ao carregar templates de workflow:", templatesError);
-        toast({
-          title: "Erro",
-          description: 'Não foi possível carregar os templates de workflow.',
-          variant: "destructive"
-        });
+        toast.error('Não foi possível carregar os templates de workflow.');
       } else if (templatesData) {
         console.log("Templates de workflow carregados:", templatesData.length);
         setWorkflowTemplates(templatesData);
       }
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
-      toast({
-        title: "Erro",
-        description: 'Ocorreu um erro ao carregar os dados necessários.',
-        variant: "destructive"
-      });
+      toast.error('Ocorreu um erro ao carregar os dados necessários.');
     } finally {
       setIsDataLoading(false);
     }
@@ -206,22 +190,14 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       // Encontrar o cliente pelo ID
       const selectedClient = clients.find(client => client.id === data.client);
       if (!selectedClient) {
-        toast({
-          title: "Erro",
-          description: 'Cliente não encontrado.',
-          variant: "destructive"
-        });
+        toast.error('Cliente não encontrado.');
         return;
       }
       
       // Encontrar o serviço pelo ID
       const selectedService = services.find(service => service.id === data.service);
       if (!selectedService) {
-        toast({
-          title: "Erro",
-          description: 'Serviço não encontrado.',
-          variant: "destructive"
-        });
+        toast.error('Serviço não encontrado.');
         return;
       }
       
@@ -271,24 +247,16 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
           
         if (!workflowResult.data) {
           console.error("Erro ao criar workflow:", workflowResult.error);
-          toast({
-            title: "Atenção", 
-            description: "Erro ao criar fluxo de trabalho para esta ordem.",
-            variant: "destructive"
-          });
+          toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
         }
       }
       
-      toast("Ordem criada com sucesso");
+      toast.success("Ordem criada com sucesso");
       setOpen(false);
       form.reset(); // Limpa o formulário
     } catch (error: any) {
       console.error('Erro ao criar ordem:', error);
-      toast({
-        title: "Erro",
-        description: `Ocorreu um erro ao criar a ordem: ${error.message}`,
-        variant: "destructive"
-      });
+      toast.error(`Ocorreu um erro ao criar a ordem: ${error.message}`);
     } finally {
       setLoading(false);
     }
