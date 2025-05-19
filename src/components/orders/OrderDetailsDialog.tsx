@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { statusLabels } from '@/data/mockData';
 import OrderWorkflow from './OrderWorkflow';
-import { CalendarIcon, ChevronsRight, DollarSign, Timer, User } from 'lucide-react';
+import { CalendarIcon, ChevronsRight, DollarSign, Timer, User, Tool } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 
@@ -28,20 +28,60 @@ interface OrderDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: any | null;
-  clientMode?: boolean; // Make it optional with a default value
+  clientMode?: boolean;
 }
 
 export default function OrderDetailsDialog({ open, onOpenChange, order, clientMode = false }: OrderDetailsDialogProps) {
   const [hasWorkflow, setHasWorkflow] = useState(false);
   const [serviceName, setServiceName] = useState("");
   const [client, setClient] = useState<any>(null);
+  const [technicalDetails, setTechnicalDetails] = useState({
+    shadeDetails: '',
+    material: '',
+    prosthesisType: ''
+  });
 
   useEffect(() => {
     if (order && open) {
       checkWorkflow();
       loadAdditionalData();
+      extractTechnicalDetails();
     }
   }, [order, open]);
+
+  // Extrair detalhes técnicos das notas
+  const extractTechnicalDetails = () => {
+    if (!order || !order.notes) return;
+    
+    const notes = order.notes;
+    let shadeDetails = '';
+    let material = '';
+    let prosthesisType = '';
+    
+    // Extrair detalhes de cor
+    const colorMatch = notes.match(/Cor:\s*([^,\-]+)/);
+    if (colorMatch && colorMatch[1]) {
+      shadeDetails = colorMatch[1].trim();
+    }
+    
+    // Extrair material
+    const materialMatch = notes.match(/Material:\s*([^,\-]+)/);
+    if (materialMatch && materialMatch[1]) {
+      material = materialMatch[1].trim();
+    }
+    
+    // Extrair tipo de prótese
+    const typeMatch = notes.match(/Tipo:\s*([^,\-]+)/);
+    if (typeMatch && typeMatch[1]) {
+      prosthesisType = typeMatch[1].trim();
+    }
+    
+    setTechnicalDetails({
+      shadeDetails,
+      material,
+      prosthesisType
+    });
+  };
 
   const checkWorkflow = async () => {
     if (!order) return;
@@ -121,6 +161,35 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
     } catch (error) {
       console.error("Erro ao carregar dados adicionais:", error);
     }
+  };
+
+  // Traduzir valores de material e tipo para exibição
+  const getMaterialLabel = (value: string) => {
+    const materialMap: Record<string, string> = {
+      'zirconia': 'Zircônia',
+      'metal_ceramica': 'Metalocerâmica',
+      'e_max': 'E-Max',
+      'resina': 'Resina',
+      'acrilico': 'Acrílico',
+      'outro': 'Outro'
+    };
+    
+    return materialMap[value] || value;
+  };
+  
+  const getProsthesisTypeLabel = (value: string) => {
+    const typeMap: Record<string, string> = {
+      'coroa': 'Coroa',
+      'ponte': 'Ponte',
+      'protese_total': 'Prótese Total',
+      'protese_parcial': 'Prótese Parcial',
+      'implante': 'Implante',
+      'faceta': 'Faceta',
+      'onlay': 'Onlay/Inlay',
+      'outro': 'Outro'
+    };
+    
+    return typeMap[value] || value;
   };
 
   if (!order) return null;
@@ -211,6 +280,42 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
               </CardContent>
             </Card>
           </div>
+          
+          {/* Novo card para detalhes técnicos */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Tool className="h-5 w-5" />
+                Especificações Técnicas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div>
+                  <span className="font-medium">Tipo de Prótese:</span>{' '}
+                  {technicalDetails.prosthesisType ? 
+                    getProsthesisTypeLabel(technicalDetails.prosthesisType) : 
+                    'Não especificado'}
+                </div>
+                <div>
+                  <span className="font-medium">Material:</span>{' '}
+                  {technicalDetails.material ? 
+                    getMaterialLabel(technicalDetails.material) : 
+                    'Não especificado'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <span className="font-medium">Cor Base:</span>{' '}
+                  {order.shade || 'Não especificada'}
+                </div>
+                <div>
+                  <span className="font-medium">Detalhes de Cor:</span>{' '}
+                  {technicalDetails.shadeDetails || 'Não especificados'}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <Card>
             <CardHeader className="pb-2">

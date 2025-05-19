@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -52,6 +53,9 @@ const orderFormSchema = z.object({
   dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
   isUrgent: z.boolean().default(false),
   shade: z.string().min(1, 'A cor/escala é obrigatória'),
+  shadeDetails: z.string().optional(),
+  material: z.string().optional(),
+  prosthesisType: z.string().optional(),
   notes: z.string().optional(),
   workflowTemplateId: z.string().optional(),
 });
@@ -71,6 +75,26 @@ interface WorkflowTemplate {
   description: string | null;
 }
 
+const materialOptions = [
+  { value: 'zirconia', label: 'Zircônia' },
+  { value: 'metal_ceramica', label: 'Metalocerâmica' },
+  { value: 'e_max', label: 'E-Max' },
+  { value: 'resina', label: 'Resina' },
+  { value: 'acrilico', label: 'Acrílico' },
+  { value: 'outro', label: 'Outro' }
+];
+
+const prosthesisTypes = [
+  { value: 'coroa', label: 'Coroa' },
+  { value: 'ponte', label: 'Ponte' },
+  { value: 'protese_total', label: 'Prótese Total' },
+  { value: 'protese_parcial', label: 'Prótese Parcial' },
+  { value: 'implante', label: 'Implante' },
+  { value: 'faceta', label: 'Faceta' },
+  { value: 'onlay', label: 'Onlay/Inlay' },
+  { value: 'outro', label: 'Outro' }
+];
+
 export default function OrderEditDialog({ open, onOpenChange, order, onSave }: OrderEditDialogProps) {
   const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
   const [currentWorkflow, setCurrentWorkflow] = useState<string | null>(null);
@@ -86,21 +110,53 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       dueDate: format(new Date(), 'yyyy-MM-dd'),
       isUrgent: false,
       shade: 'A2',
+      shadeDetails: '',
+      material: '',
+      prosthesisType: '',
       notes: '',
       workflowTemplateId: '',
     },
   });
 
-  // Extract patient name from notes if available
-  const extractPatientName = (notes: string | undefined): string => {
-    if (!notes) return '';
+  // Extract patient information and technical details from notes
+  const extractInfoFromNotes = (notes: string | undefined) => {
+    if (!notes) return { patientName: '', cleanNotes: '', shadeDetails: '', material: '', prosthesisType: '' };
     
+    let patientName = '';
+    let shadeDetails = '';
+    let material = '';
+    let prosthesisType = '';
+    let cleanNotes = notes;
+    
+    // Extract patient name
     const patientMatch = notes.match(/Paciente:\s*([^,\-]+)/);
     if (patientMatch && patientMatch[1]) {
-      return patientMatch[1].trim();
+      patientName = patientMatch[1].trim();
+      cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
     }
     
-    return notes; // If no specific format, return the whole notes as patient name
+    // Extract color details
+    const colorMatch = notes.match(/Cor:\s*([^,\-]+)/);
+    if (colorMatch && colorMatch[1]) {
+      shadeDetails = colorMatch[1].trim();
+      cleanNotes = cleanNotes.replace(/Cor:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+    }
+    
+    // Extract material
+    const materialMatch = notes.match(/Material:\s*([^,\-]+)/);
+    if (materialMatch && materialMatch[1]) {
+      material = materialMatch[1].trim();
+      cleanNotes = cleanNotes.replace(/Material:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+    }
+    
+    // Extract prosthesis type
+    const typeMatch = notes.match(/Tipo:\s*([^,\-]+)/);
+    if (typeMatch && typeMatch[1]) {
+      prosthesisType = typeMatch[1].trim();
+      cleanNotes = cleanNotes.replace(/Tipo:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
+    }
+    
+    return { patientName, cleanNotes, shadeDetails, material, prosthesisType };
   };
   
   // Carregar templates de workflow
@@ -115,23 +171,25 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
   useEffect(() => {
     if (order) {
       console.log('Dados da ordem carregados:', order);
-      const patientName = extractPatientName(order.notes) || order.patientName || '';
       
-      // Clean up notes - remove patient name if it's in the format "Paciente: X"
-      let cleanNotes = order.notes || '';
-      if (cleanNotes.includes('Paciente:')) {
-        cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
-      }
+      // Extract all information from notes
+      const { patientName, cleanNotes, shadeDetails, material, prosthesisType } = 
+        extractInfoFromNotes(order.notes);
+      
+      const finalPatientName = patientName || order.patientName || '';
       
       form.reset({
         client: order.client || '',
-        patientName: patientName,
+        patientName: finalPatientName,
         service: order.service || '',
         status: order.status || 'pending',
         dueDate: order.dueDate || format(new Date(), 'yyyy-MM-dd'),
         isUrgent: order.isUrgent || false,
         shade: order.shade || 'A2',
-        notes: cleanNotes,
+        shadeDetails: shadeDetails || '',
+        material: material || '',
+        prosthesisType: prosthesisType || '',
+        notes: cleanNotes || '',
         workflowTemplateId: '',
       });
     }
@@ -195,10 +253,19 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
       console.log('Atualizando ordem com ID:', orderId);
       console.log('Dados para atualização:', data);
       
-      // Preparar notas com o nome do paciente
-      const notes = data.patientName 
-        ? `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`
-        : data.notes || '';
+      // Criamos um objeto para passar ao hook
+      const updatedOrderData = {
+        ...order,
+        status: data.status,
+        dueDate: data.dueDate,
+        isUrgent: data.isUrgent,
+        notes: data.notes,
+        patientName: data.patientName,
+        shadeDetails: data.shadeDetails,
+        material: data.material,
+        prosthesisType: data.prosthesisType,
+        originalData: order.originalData
+      };
       
       // Atualizar no Supabase usando a função helper
       const updateResult = await updateOrder(
@@ -206,7 +273,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         data.status,
         data.dueDate ? new Date(data.dueDate).toISOString() : null,
         data.isUrgent ? 'urgent' : 'normal',
-        notes
+        data.notes || ''
       );
         
       if (hasError(updateResult)) {
@@ -242,19 +309,8 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
         }
       }
       
-      // Preparar dados atualizados para o estado local
-      const updatedOrder = {
-        ...order,
-        status: data.status,
-        dueDate: data.dueDate,
-        isUrgent: data.isUrgent,
-        notes: data.notes,
-        shade: data.shade,
-        patientName: data.patientName,
-      };
-      
       toast.success("Ordem atualizada com sucesso!");
-      onSave(updatedOrder);
+      onSave(updatedOrderData);
       
     } catch (error) {
       console.error("Erro ao atualizar ordem:", error);
@@ -268,7 +324,7 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[600px]">
+      <DialogContent className="max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Editar Ordem de Serviço</DialogTitle>
           <DialogDescription>
@@ -348,6 +404,91 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
               )}
             />
             
+            {/* Campos específicos para protéticos */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="prosthesisType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Prótese</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {prosthesisTypes.map(type => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="material"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Material</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o material" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {materialOptions.map(material => (
+                          <SelectItem key={material.value} value={material.value}>{material.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="shade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Escala Base</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: A2" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="shadeDetails"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Detalhes de Cor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Cervical A3, Incisal mais translúcido" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -412,22 +553,6 @@ export default function OrderEditDialog({ open, onOpenChange, order, onSave }: O
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <FormField
-                control={form.control}
-                name="shade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cor/Escala</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: A2" {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

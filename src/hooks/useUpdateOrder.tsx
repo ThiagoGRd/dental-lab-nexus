@@ -7,10 +7,31 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
     try {
       console.log('Attempting to update order:', updatedOrder);
       
-      // Prepare notes with patient name more efficiently
-      const notes = updatedOrder.patientName 
-        ? `Paciente: ${updatedOrder.patientName}${updatedOrder.notes ? ' - ' + updatedOrder.notes : ''}`
-        : updatedOrder.notes;
+      // Prepare notes with patient name and technical details more efficiently
+      let notes = '';
+      
+      // Adicionar nome do paciente
+      if (updatedOrder.patientName) {
+        notes += `Paciente: ${updatedOrder.patientName}`;
+      }
+      
+      // Adicionar detalhes técnicos específicos de prótese
+      if (updatedOrder.shadeDetails) {
+        notes += notes ? ` - Cor: ${updatedOrder.shadeDetails}` : `Cor: ${updatedOrder.shadeDetails}`;
+      }
+      
+      if (updatedOrder.material) {
+        notes += notes ? ` - Material: ${updatedOrder.material}` : `Material: ${updatedOrder.material}`;
+      }
+      
+      if (updatedOrder.prosthesisType) {
+        notes += notes ? ` - Tipo: ${updatedOrder.prosthesisType}` : `Tipo: ${updatedOrder.prosthesisType}`;
+      }
+      
+      // Adicionar observações adicionais
+      if (updatedOrder.notes) {
+        notes += notes ? ` - ${updatedOrder.notes}` : updatedOrder.notes;
+      }
       
       // Create update object
       const updateData = {
@@ -49,7 +70,10 @@ export function useUpdateOrder(orders: any[], setOrders: (orders: any[]) => void
             dueDate: updatedOrder.dueDate,
             isUrgent: updatedOrder.isUrgent,
             notes: updatedOrder.notes,
-            patientName: updatedOrder.patientName
+            patientName: updatedOrder.patientName,
+            shadeDetails: updatedOrder.shadeDetails,
+            material: updatedOrder.material,
+            prosthesisType: updatedOrder.prosthesisType
           };
         }
         return order;
