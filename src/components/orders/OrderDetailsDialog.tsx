@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { statusLabels } from '@/data/mockData';
 import OrderWorkflow from './OrderWorkflow';
-import { CalendarIcon, ChevronsRight, DollarSign, Timer, User, Tool } from 'lucide-react';
+import { CalendarIcon, ChevronsRight, DollarSign, Timer, User, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase, hasError, safeData } from "@/integrations/supabase/client";
 
@@ -285,7 +285,7 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Tool className="h-5 w-5" />
+                <Wrench className="h-5 w-5" />
                 Especificações Técnicas
               </CardTitle>
             </CardHeader>

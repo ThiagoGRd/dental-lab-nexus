@@ -1,10 +1,13 @@
+<think>
+
+</think>
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OrderStatus, statusLabels } from '@/data/mockData';
-import { BadgeCheck, Tool } from 'lucide-react';
+import { BadgeCheck, Wrench } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 
 export interface OrderItemProps {
@@ -91,7 +94,7 @@ export function OrderItem({ order, onView, onEdit }: OrderItemProps) {
               )}
               {prosthesisType && (
                 <Badge variant="outline" className={cn("text-xs ml-1", getProsthesisTypeBadgeClass(prosthesisType))}>
-                  <Tool className="h-3 w-3 mr-1" />
+                  <Wrench className="h-3 w-3 mr-1" />
                   {getProsthesisTypeBadgeLabel(prosthesisType)}
                 </Badge>
               )}
@@ -110,7 +113,7 @@ export function OrderItem({ order, onView, onEdit }: OrderItemProps) {
             )}
             {prosthesisType && (
               <Badge variant="outline" className={cn("text-xs", getProsthesisTypeBadgeClass(prosthesisType))}>
-                <Tool className="h-3 w-3 mr-1" />
+                <Wrench className="h-3 w-3 mr-1" />
                 {getProsthesisTypeBadgeLabel(prosthesisType)}
               </Badge>
             )}
