@@ -41,6 +41,20 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
     prosthesisType: ''
   });
 
+  // Reset state when dialog closes to prevent stale data
+  useEffect(() => {
+    if (!open) {
+      setHasWorkflow(false);
+      setServiceName("");
+      setClient(null);
+      setTechnicalDetails({
+        shadeDetails: '',
+        material: '',
+        prosthesisType: ''
+      });
+    }
+  }, [open]);
+
   useEffect(() => {
     if (order && open) {
       checkWorkflow();
@@ -192,7 +206,21 @@ export default function OrderDetailsDialog({ open, onOpenChange, order, clientMo
     return typeMap[value] || value;
   };
 
-  if (!order) return null;
+  // If order is null, don't render the dialog content to prevent errors
+  if (!order) return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>Carregando...</DialogTitle>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
