@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -90,6 +91,23 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   const [selectedServiceWorkflow, setSelectedServiceWorkflow] = useState<string | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(false);
   
+  const form = useForm<OrderFormValues>({
+    resolver: zodResolver(orderFormSchema),
+    defaultValues: {
+      client: '',
+      patientName: '',
+      service: '',
+      dueDate: format(
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias no futuro
+        'yyyy-MM-dd'
+      ),
+      isUrgent: false,
+      shade: '',
+      notes: '',
+      workflowTemplateId: ''
+    }
+  });
+  
   // Função para carregar os dados quando o diálogo é aberto
   const fetchData = async () => {
     try {
@@ -152,23 +170,6 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
     }
   }, [open]);
 
-  const form = useForm<OrderFormValues>({
-    resolver: zodResolver(orderFormSchema),
-    defaultValues: {
-      client: '',
-      patientName: '',
-      service: '',
-      dueDate: format(
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias no futuro
-        'yyyy-MM-dd'
-      ),
-      isUrgent: false,
-      shade: '',
-      notes: '',
-      workflowTemplateId: ''
-    }
-  });
-  
   // Observe changes to the selected service to auto-select workflow
   const watchedService = form.watch('service');
   useEffect(() => {
@@ -182,6 +183,22 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       }
     }
   }, [watchedService, services, form]);
+
+  // Handle dialog state changes with proper cleanup
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Clean up when closing
+      setSelectedServiceWorkflow(null);
+      setIsDataLoading(false);
+      setLoading(false);
+      
+      // Reset form with a small delay to prevent DOM conflicts
+      setTimeout(() => {
+        form.reset();
+      }, 100);
+    }
+    setOpen(newOpen);
+  };
 
   const handleSubmit = async (data: OrderFormValues) => {
     setLoading(true);
@@ -252,8 +269,8 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
       }
       
       toast.success("Ordem criada com sucesso");
-      setOpen(false);
-      form.reset(); // Limpa o formulário
+      handleOpenChange(false); // Use the safe close handler
+      
     } catch (error: any) {
       console.error('Erro ao criar ordem:', error);
       toast.error(`Ocorreu um erro ao criar a ordem: ${error.message}`);
@@ -263,11 +280,25 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent 
+        className="sm:max-w-[600px]"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking outside during loading
+          if (loading || isDataLoading) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          // Prevent closing with escape during loading
+          if (loading || isDataLoading) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Nova Ordem de Serviço</DialogTitle>
           <DialogDescription>
@@ -292,7 +323,8 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       <FormLabel>Cliente</FormLabel>
                       <Select 
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value || ""}
+                        disabled={loading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -325,7 +357,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <FormItem>
                       <FormLabel>Nome do Paciente</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nome do paciente" {...field} />
+                        <Input 
+                          placeholder="Nome do paciente" 
+                          disabled={loading}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -341,7 +377,8 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <FormLabel>Tipo de Serviço</FormLabel>
                     <Select 
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value || ""}
+                      disabled={loading}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -375,7 +412,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <FormItem>
                       <FormLabel>Data de Entrega</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input 
+                          type="date" 
+                          disabled={loading}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -391,6 +432,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={loading}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -411,7 +453,11 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                   <FormItem>
                     <FormLabel>Cor/Escala</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: A2" {...field} />
+                      <Input 
+                        placeholder="Ex: A2" 
+                        disabled={loading}
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -428,6 +474,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                       <Textarea 
                         placeholder="Instruções especiais ou observações adicionais" 
                         className="resize-none" 
+                        disabled={loading}
                         {...field}
                       />
                     </FormControl>
@@ -448,7 +495,7 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
                     <Select 
                       onValueChange={field.onChange}
                       value={field.value || "none"}
-                      disabled={!!selectedServiceWorkflow}
+                      disabled={!!selectedServiceWorkflow || loading}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -485,10 +532,19 @@ export default function NewOrderDialog({ children }: NewOrderDialogProps) {
               />
               
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => handleOpenChange(false)}
+                  disabled={loading}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="bg-dentalblue-600 hover:bg-dentalblue-700" 
+                  disabled={loading || isDataLoading}
+                >
                   {loading ? 'Criando...' : 'Criar Ordem'}
                 </Button>
               </DialogFooter>
