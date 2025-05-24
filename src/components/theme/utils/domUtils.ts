@@ -1,4 +1,6 @@
 
+import { safeRemoveElement, cleanupPortalElements } from './safeRemoval';
+
 /**
  * Safely check if an element exists and is connected to the DOM
  */
@@ -72,20 +74,9 @@ export const safelyApplyAttributes = (
 };
 
 /**
- * Safe DOM element removal with parent verification
+ * Safe DOM element removal with parent verification - now using improved version
  */
-export const safelyRemoveElement = (element: Element | null) => {
-  if (!element || !elementExists(element)) return;
-  
-  try {
-    const parent = element.parentNode;
-    if (parent && parent.contains(element)) {
-      parent.removeChild(element);
-    }
-  } catch (error) {
-    console.debug("Safe element removal error:", error);
-  }
-};
+export const safelyRemoveElement = safeRemoveElement;
 
 /**
  * Check if a node is safely removable from its parent
@@ -102,19 +93,36 @@ export const isNodeRemovable = (node: Node | null, parent: Node | null): boolean
 };
 
 /**
- * Safely clean up portal-related DOM elements
+ * Safely clean up portal-related DOM elements - now using improved version
  */
-export const cleanupPortals = () => {
-  try {
-    // Clean up any stray portals or overlays
-    const overlays = document.querySelectorAll('[data-radix-popper-content-wrapper], [data-radix-portal], .radix-dialog-overlay');
-    
-    overlays.forEach(overlay => {
-      if (elementExists(overlay) && overlay.parentNode) {
-        safelyRemoveElement(overlay);
+export { cleanupPortalElements };
+
+/**
+ * Enhanced portal cleanup with retry mechanism
+ */
+export const enhancedCleanupPortals = () => {
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  const cleanup = () => {
+    attempts++;
+    try {
+      cleanupPortalElements();
+      
+      // Check if there are still problematic elements and retry
+      const remainingPortals = document.querySelectorAll('[data-radix-portal], [data-radix-popper-content-wrapper]');
+      
+      if (remainingPortals.length > 0 && attempts < maxAttempts) {
+        setTimeout(cleanup, 50 * attempts); // Exponential backoff
       }
-    });
-  } catch (error) {
-    console.debug("Portal cleanup error:", error);
-  }
+    } catch (error) {
+      console.debug(`Portal cleanup attempt ${attempts} failed:`, error);
+      
+      if (attempts < maxAttempts) {
+        setTimeout(cleanup, 100 * attempts);
+      }
+    }
+  };
+  
+  cleanup();
 };
