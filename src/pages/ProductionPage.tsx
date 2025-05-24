@@ -20,7 +20,6 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import { statusLabels, OrderStatus } from '@/data/mockData';
-import { OrderItem } from '@/components/orders/OrderItem';
 
 export default function ProductionPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -60,6 +59,8 @@ export default function ProductionPage() {
           return;
         }
         
+        console.log('Ordens carregadas:', ordersData);
+        
         // Buscar todos os clientes para associar às ordens
         const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
@@ -71,23 +72,28 @@ export default function ProductionPage() {
           return;
         }
 
-        // Buscar itens de serviço para cada ordem
+        // Buscar itens de serviço para cada ordem com valores
         const { data: orderItemsData, error: orderItemsError } = await supabase
           .from('order_items')
           .select(`
             order_id,
             service_id,
-            notes
+            notes,
+            price,
+            quantity,
+            total
           `);
 
         if (orderItemsError) {
           console.error('Erro ao buscar itens de ordem:', orderItemsError);
         }
 
+        console.log('Itens de ordem carregados:', orderItemsData);
+
         // Buscar serviços para associar aos itens
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
-          .select('id, name');
+          .select('id, name, price');
 
         if (servicesError) {
           console.error('Erro ao buscar serviços:', servicesError);
@@ -96,10 +102,29 @@ export default function ProductionPage() {
         // Formatar dados das ordens
         const formattedOrders = ordersData.map(order => {
           const client = clientsData?.find(c => c.id === order.client_id);
-          const orderItem = orderItemsData?.find(item => item.order_id === order.id);
-          const service = orderItem 
-            ? servicesData?.find(s => s.id === orderItem.service_id)
-            : null;
+          const orderItems = orderItemsData?.filter(item => item.order_id === order.id) || [];
+          
+          // Calcular valor total da ordem a partir dos itens
+          let calculatedTotal = 0;
+          let serviceNames = [];
+          
+          if (orderItems.length > 0) {
+            calculatedTotal = orderItems.reduce((sum, item) => {
+              const itemTotal = Number(item.total) || (Number(item.price) * Number(item.quantity)) || 0;
+              return sum + itemTotal;
+            }, 0);
+            
+            // Buscar nomes dos serviços
+            serviceNames = orderItems.map(item => {
+              const service = servicesData?.find(s => s.id === item.service_id);
+              return service?.name || 'Serviço não especificado';
+            });
+          }
+          
+          // Usar o valor total da ordem se disponível, caso contrário usar o calculado
+          const finalTotal = Number(order.total_value) || calculatedTotal || 0;
+          
+          console.log(`Ordem ${order.id}: total_value=${order.total_value}, calculatedTotal=${calculatedTotal}, finalTotal=${finalTotal}`);
             
           // Extrair o nome do paciente das notas
           let patientName = '';
@@ -117,13 +142,13 @@ export default function ProductionPage() {
             id: order.id,
             client: client?.name || 'Cliente não encontrado',
             patientName: patientName,
-            service: service?.name || 'Serviço não especificado',
+            service: serviceNames.length > 0 ? serviceNames.join(', ') : 'Serviço não especificado',
             createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
             dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
             status: order.status as OrderStatus,
             isUrgent: order.priority === 'urgent',
             notes: cleanNotes,
-            totalValue: order.total_value || 0,
+            totalValue: finalTotal,
             // Dados originais para atualizações
             originalData: {
               orderId: order.id,
@@ -132,6 +157,7 @@ export default function ProductionPage() {
           };
         });
 
+        console.log('Ordens formatadas:', formattedOrders);
         setOrders(formattedOrders);
         
         // Separar ordens por status
@@ -161,61 +187,51 @@ export default function ProductionPage() {
     try {
       console.log('Criando conta a receber para ordem:', order.id, 'no valor de:', order.totalValue);
       
-      // Verificar se o valor da ordem está definido
-      if (!order.totalValue || order.totalValue <= 0) {
-        // Buscar o valor da ordem diretamente do banco de dados para garantir valor atualizado
+      let finalValue = order.totalValue;
+      
+      // Se o valor ainda for zero, buscar diretamente do banco
+      if (!finalValue || finalValue <= 0) {
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
-          .select('total_value, client_id')
+          .select('total_value')
           .eq('id', order.originalData?.orderId || order.id)
           .single();
           
-        if (orderError) {
-          console.error('Erro ao buscar valor da ordem:', orderError);
-          throw new Error('Não foi possível obter o valor da ordem.');
+        if (!orderError && orderData?.total_value) {
+          finalValue = Number(orderData.total_value);
         }
         
-        if (orderData && orderData.total_value > 0) {
-          order.totalValue = orderData.total_value;
-          console.log('Valor da ordem recuperado do banco de dados:', order.totalValue);
-        } else {
-          // Se ainda não tiver valor, buscar dos itens da ordem
+        // Se ainda for zero, calcular dos itens
+        if (!finalValue || finalValue <= 0) {
           const { data: orderItemsData, error: itemsError } = await supabase
             .from('order_items')
-            .select('total')
+            .select('total, price, quantity')
             .eq('order_id', order.originalData?.orderId || order.id);
             
-          if (itemsError) {
-            console.error('Erro ao buscar itens da ordem:', itemsError);
-            throw new Error('Não foi possível obter os itens da ordem.');
-          }
-          
-          if (orderItemsData && orderItemsData.length > 0) {
-            const calculatedTotal = orderItemsData.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-            order.totalValue = calculatedTotal;
-            console.log('Valor da ordem calculado dos itens:', order.totalValue);
+          if (!itemsError && orderItemsData?.length > 0) {
+            finalValue = orderItemsData.reduce((sum, item) => {
+              return sum + (Number(item.total) || (Number(item.price) * Number(item.quantity)) || 0);
+            }, 0);
           }
         }
-      }
-      
-      // Se ainda não tiver valor, definir um valor mínimo para evitar zero
-      if (!order.totalValue || order.totalValue <= 0) {
-        order.totalValue = 100; // Valor padrão mínimo
-        console.log('Usando valor padrão mínimo:', order.totalValue);
+        
+        // Valor mínimo de fallback
+        if (!finalValue || finalValue <= 0) {
+          finalValue = 100;
+        }
       }
       
       // Dados para a nova conta a receber
       const receivableData = {
         description: `Receita: ${order.client}`,
-        amount: order.totalValue,
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Vencimento em 7 dias
+        amount: finalValue,
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'pending',
         notes: `Ordem de serviço #${order.id.substring(0, 8)} entregue`,
         type: 'revenue',
         related_order_id: order.originalData?.orderId || order.id
       };
       
-      // Inserir nova conta a receber
       const { data, error } = await supabase
         .from('finances')
         .insert(receivableData)
@@ -344,7 +360,9 @@ export default function ProductionPage() {
         <div className="flex justify-between items-center mt-2">
           <div className="text-sm">
             <p>Data entrega: {order.dueDate || 'Não definida'}</p>
-            <p className="mt-1">Valor: R$ {order.totalValue.toFixed(2)}</p>
+            <p className="mt-1 font-semibold text-green-600">
+              Valor: R$ {Number(order.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => handleViewOrder(order)}>
