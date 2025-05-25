@@ -107,7 +107,13 @@ export const createSafeMutationObserver = (callback: MutationCallback): Mutation
 
   // Return a wrapped observer with safe disconnect
   return {
-    observe: observer.observe.bind(observer),
+    observe: (target: Node, options?: MutationObserverInit) => {
+      try {
+        observer.observe(target, options);
+      } catch (error) {
+        console.debug('Error starting observer:', error);
+      }
+    },
     disconnect: () => {
       try {
         observer.disconnect();
@@ -115,6 +121,13 @@ export const createSafeMutationObserver = (callback: MutationCallback): Mutation
         console.debug('Error disconnecting observer:', error);
       }
     },
-    takeRecords: observer.takeRecords.bind(observer)
+    takeRecords: () => {
+      try {
+        return observer.takeRecords();
+      } catch (error) {
+        console.debug('Error taking records:', error);
+        return [];
+      }
+    }
   } as MutationObserver;
 };
