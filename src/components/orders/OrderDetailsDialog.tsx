@@ -14,9 +14,10 @@ interface OrderDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: any;
+  clientMode?: boolean;
 }
 
-export default function OrderDetailsDialog({ open, onOpenChange, order }: OrderDetailsDialogProps) {
+export default function OrderDetailsDialog({ open, onOpenChange, order, clientMode = false }: OrderDetailsDialogProps) {
   if (!order) return null;
 
   const formattedDueDate = order.dueDate ? 
