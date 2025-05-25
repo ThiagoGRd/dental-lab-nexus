@@ -1,359 +1,395 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
-  CardHeader,
-  CardTitle,
   CardDescription, 
+  CardHeader, 
+  CardTitle 
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { supabase } from "@/integrations/supabase/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Workflow, Check, Pencil, Plus, Settings, Users, ArrowLeftRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ClipboardList, 
+  Clock, 
+  CheckCircle2, 
+  AlertTriangle,
+  ArrowLeft,
+  Plus,
+  Search,
+  Filter
+} from 'lucide-react';
+import WorkflowView from '@/components/production-workflow/WorkflowView';
+import useWorkflow from '@/hooks/useWorkflow';
+import { WorkflowInstance, StepStatus } from '@/types/workflow';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Tipo para representar um template de fluxo de trabalho
-interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  steps: WorkflowStep[];
-  created_at: string;
-  updated_at: string;
-}
+const WorkflowsPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showDentistDialog, setShowDentistDialog] = useState(false);
+  const [dentistFeedback, setDentistFeedback] = useState('');
+  const [requiresAdjustments, setRequiresAdjustments] = useState(false);
+  
+  const { 
+    loading, 
+    error, 
+    workflow, 
+    allWorkflows, 
+    advanceToNextStep, 
+    sendToDentist, 
+    receiveFromDentist 
+  } = useWorkflow(id);
 
-// Tipo para uma etapa do fluxo de trabalho
-interface WorkflowStep {
-  name: string;
-  description: string;
-  responsible: 'dentist' | 'lab';
-}
+  // Filtrar workflows
+  const filteredWorkflows = allWorkflows.filter(wf => {
+    const matchesSearch = searchTerm === '' || 
+      wf.orderId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && wf.status === 'ACTIVE') ||
+      (statusFilter === 'completed' && wf.status === 'COMPLETED') ||
+      (statusFilter === 'urgent' && wf.urgent);
+    
+    return matchesSearch && matchesStatus;
+  });
 
-// Tipo para ordens de serviço com workflow
-interface OrderWithWorkflow {
-  id: string;
-  client: string;
-  service: string;
-  patientName: string | null;
-  dueDate: string | null;
-  currentStep: number;
-  status: string;
-  workflowName: string;
-  totalSteps: number;
-  isUrgent: boolean;
-}
+  // Agrupar workflows por status
+  const urgentWorkflows = filteredWorkflows.filter(wf => wf.urgent && wf.status === 'ACTIVE');
+  const activeWorkflows = filteredWorkflows.filter(wf => wf.status === 'ACTIVE' && !wf.urgent);
+  const completedWorkflows = filteredWorkflows.filter(wf => wf.status === 'COMPLETED');
 
-export default function WorkflowsPage() {
-  const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
-  const [activeOrders, setActiveOrders] = useState<OrderWithWorkflow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      // Carregar templates de workflow
-      const { data: templatesData, error: templatesError } = await supabase
-        .from('workflow_templates')
-        .select('*')
-        .order('name');
-
-      if (templatesError) {
-        console.error('Erro ao carregar templates:', templatesError);
-        toast.error('Não foi possível carregar os templates de fluxo de trabalho.');
-      } else if (templatesData) {
-        // Corrigi o tipo dos steps no template
-        const formattedTemplates = templatesData.map(template => ({
-          ...template,
-          steps: template.steps as unknown as WorkflowStep[]
-        }));
-        setTemplates(formattedTemplates);
-      }
-
-      // Carregar ordens com workflows ativos
-      const { data: workflowsData, error: workflowsError } = await supabase
-        .from('order_workflows')
-        .select(`
-          id,
-          current_step,
-          order_id,
-          workflow_templates:template_id (name, steps)
-        `)
-        .order('updated_at', { ascending: false })
-        .limit(50);
-
-      if (workflowsError) {
-        console.error('Erro ao carregar workflows:', workflowsError);
-        toast.error('Não foi possível carregar os workflows ativos.');
-        setLoading(false);
-        return;
-      }
-
-      if (!workflowsData || workflowsData.length === 0) {
-        setActiveOrders([]);
-        setLoading(false);
-        return;
-      }
-
-      // Extrair IDs de ordem para busca
-      const orderIds = workflowsData.map(wf => wf.order_id);
-
-      // Buscar detalhes das ordens
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          client_id,
-          deadline,
-          status,
-          priority,
-          notes
-        `)
-        .in('id', orderIds);
-
-      if (ordersError) {
-        console.error('Erro ao carregar ordens:', ordersError);
-        toast.error('Não foi possível carregar detalhes das ordens.');
-        setLoading(false);
-        return;
-      }
-
-      // Buscar clientes e serviços para completar informações
-      const clientIds = ordersData?.map(order => order.client_id) || [];
-
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, name')
-        .in('id', clientIds);
-
-      const { data: orderItemsData } = await supabase
-        .from('order_items')
-        .select('order_id, service_id')
-        .in('order_id', orderIds);
-
-      const serviceIds = orderItemsData?.map(item => item.service_id) || [];
-
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('id, name')
-        .in('id', serviceIds);
-
-      // Combinar todos os dados
-      const formattedOrders = workflowsData.map(workflow => {
-        const order = ordersData?.find(o => o.id === workflow.order_id);
-        if (!order) return null;
-
-        const client = clientsData?.find(c => c.id === order.client_id);
-        const orderItem = orderItemsData?.find(item => item.order_id === order.id);
-        const service = orderItem ? servicesData?.find(s => s.id === orderItem.service_id) : null;
-
-        // Extrair nome do paciente das notas
-        let patientName = null;
-        if (order.notes?.includes('Paciente:')) {
-          const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
-          if (patientMatch && patientMatch[1]) {
-            patientName = patientMatch[1].trim();
-          }
-        }
-
-        // Fix for the total steps calculation
-        const steps = workflow.workflow_templates?.steps;
-        const totalSteps = Array.isArray(steps) ? steps.length : 0;
-
-        return {
-          id: order.id,
-          client: client?.name || 'Cliente não encontrado',
-          service: service?.name || 'Serviço não especificado',
-          patientName,
-          dueDate: order.deadline ? new Date(order.deadline).toLocaleDateString() : null,
-          currentStep: workflow.current_step,
-          status: order.status,
-          workflowName: workflow.workflow_templates?.name || 'Fluxo indefinido',
-          totalSteps,
-          isUrgent: order.priority === 'urgent'
-        };
-      }).filter(Boolean) as OrderWithWorkflow[];
-
-      setActiveOrders(formattedOrders);
-
-    } catch (error) {
-      console.error('Erro inesperado:', error);
-      toast.error('Ocorreu um erro ao carregar os dados.');
-    } finally {
-      setLoading(false);
+  // Handlers
+  const handleAdvanceStep = async () => {
+    if (workflow) {
+      await advanceToNextStep();
     }
   };
 
-  return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-dentalblue-800">Fluxos de Trabalho</h1>
-          <p className="text-gray-600">Gerenciar processos e fluxos das próteses</p>
+  const handleSendToDentist = async () => {
+    if (workflow) {
+      await sendToDentist();
+    }
+  };
+
+  const handleReceiveFromDentist = async () => {
+    if (workflow) {
+      await receiveFromDentist(dentistFeedback, requiresAdjustments);
+      setShowDentistDialog(false);
+      setDentistFeedback('');
+      setRequiresAdjustments(false);
+    }
+  };
+
+  // Renderizar detalhes de um workflow específico
+  if (id && workflow) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center mb-6">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/workflows')}
+            className="mr-4"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Voltar
+          </Button>
+          <h1 className="text-2xl font-bold">Detalhes do Fluxo de Trabalho</h1>
         </div>
+
+        {error ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center text-red-500">
+                <AlertTriangle className="mr-2 h-5 w-5" />
+                <p>{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <WorkflowView 
+              workflow={workflow}
+              loading={loading}
+              onAdvanceStep={handleAdvanceStep}
+              onSendToDentist={handleSendToDentist}
+              onReceiveFromDentist={(feedback, requiresAdjustments) => {
+                setDentistFeedback(feedback);
+                setRequiresAdjustments(requiresAdjustments);
+                setShowDentistDialog(true);
+              }}
+            />
+
+            {/* Dialog para receber feedback do dentista */}
+            <Dialog open={showDentistDialog} onOpenChange={setShowDentistDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Feedback do Dentista</DialogTitle>
+                  <DialogDescription>
+                    Registre o feedback do dentista e indique se são necessários ajustes.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <Textarea
+                    placeholder="Descreva o feedback do dentista..."
+                    value={dentistFeedback}
+                    onChange={(e) => setDentistFeedback(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="requires-adjustments"
+                      checked={requiresAdjustments}
+                      onCheckedChange={setRequiresAdjustments}
+                    />
+                    <Label htmlFor="requires-adjustments">
+                      Necessita de ajustes
+                    </Label>
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDentistDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleReceiveFromDentist}>
+                    Registrar Feedback
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Renderizar lista de workflows
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Fluxos de Trabalho</h1>
+        <Button>
+          <Plus className="mr-1 h-4 w-4" />
+          Novo Fluxo de Trabalho
+        </Button>
       </div>
 
-      <Tabs defaultValue="active" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="active" className="flex items-center gap-1">
-            <ArrowLeftRight className="h-4 w-4" /> Fluxos Ativos ({activeOrders.length})
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-1">
-            <Settings className="h-4 w-4" /> Templates de Fluxo ({templates.length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex items-center space-x-2 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Buscar por ID da ordem..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
         
-        <TabsContent value="active" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ordens com Fluxo de Trabalho Ativo</CardTitle>
-              <CardDescription>
-                Acompanhe o progresso das ordens que estão seguindo um fluxo de trabalho específico
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Carregando fluxos ativos...</div>
-              ) : activeOrders.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  Não há ordens com fluxo de trabalho ativo no momento.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente / Paciente</TableHead>
-                      <TableHead>Serviço</TableHead>
-                      <TableHead>Fluxo</TableHead>
-                      <TableHead>Progresso</TableHead>
-                      <TableHead>Entrega</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>
-                          <div className="font-medium">{order.client}</div>
-                          {order.patientName && (
-                            <div className="text-sm text-gray-500">{order.patientName}</div>
-                          )}
-                          {order.isUrgent && <Badge variant="destructive" className="mt-1">Urgente</Badge>}
-                        </TableCell>
-                        <TableCell>{order.service}</TableCell>
-                        <TableCell>{order.workflowName}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-dentalblue-600 rounded-full"
-                                style={{ width: `${(order.currentStep / (order.totalSteps - 1)) * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm">
-                              {order.currentStep + 1}/{order.totalSteps}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {order.dueDate || 'Não definida'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              // Navegar para a página de detalhes da ordem
-                              window.location.href = `/orders#${order.id}`;
-                            }}
-                          >
-                            Ver Detalhes
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="templates" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Templates de Fluxo de Trabalho</CardTitle>
-                <CardDescription>
-                  Modelos de fluxo para diferentes tipos de próteses
-                </CardDescription>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <div className="flex items-center">
+              <Filter className="mr-1 h-4 w-4" />
+              <SelectValue placeholder="Filtrar por status" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="completed">Concluídos</SelectItem>
+            <SelectItem value="urgent">Urgentes</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {error ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center text-red-500">
+              <AlertTriangle className="mr-2 h-5 w-5" />
+              <p>{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="urgent">
+          <TabsList className="mb-4">
+            <TabsTrigger value="urgent">
+              Urgentes ({urgentWorkflows.length})
+            </TabsTrigger>
+            <TabsTrigger value="active">
+              Ativos ({activeWorkflows.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Concluídos ({completedWorkflows.length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="urgent">
+            {urgentWorkflows.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center text-gray-500">
+                  Não há fluxos de trabalho urgentes.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {urgentWorkflows.map((wf) => (
+                  <WorkflowCard key={wf.id} workflow={wf} />
+                ))}
               </div>
-              <Button className="bg-dentalblue-600 hover:bg-dentalblue-700" disabled>
-                <Plus className="mr-2 h-4 w-4" /> Novo Template
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Carregando templates...</div>
-              ) : templates.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  Não há templates de fluxo cadastrados.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {templates.map((template) => (
-                    <Card key={template.id} className="border-gray-200">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {template.description && (
-                          <CardDescription>{template.description}</CardDescription>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col gap-2">
-                          {template.steps.map((step, index) => (
-                            <div key={index} className="flex items-center p-2 rounded-md bg-gray-50 border border-gray-100">
-                              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs mr-3">
-                                {index + 1}
-                              </div>
-                              <div className="flex-grow">
-                                <div className="font-medium">{step.name}</div>
-                                <div className="text-xs text-gray-500">{step.description}</div>
-                              </div>
-                              <Badge variant={step.responsible === 'dentist' ? 'outline' : 'secondary'}>
-                                {step.responsible === 'dentist' ? 'Dentista' : 'Laboratório'}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="active">
+            {activeWorkflows.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center text-gray-500">
+                  Não há fluxos de trabalho ativos.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeWorkflows.map((wf) => (
+                  <WorkflowCard key={wf.id} workflow={wf} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="completed">
+            {completedWorkflows.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center text-gray-500">
+                  Não há fluxos de trabalho concluídos.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {completedWorkflows.map((wf) => (
+                  <WorkflowCard key={wf.id} workflow={wf} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
-}
+};
+
+// Componente de card para exibir um workflow na lista
+const WorkflowCard: React.FC<{ workflow: WorkflowInstance }> = ({ workflow }) => {
+  const navigate = useNavigate();
+  const currentStep = workflow.steps[workflow.currentStepIndex];
+  
+  // Calcular progresso
+  const completedSteps = workflow.steps.filter(step => step.status === StepStatus.COMPLETED);
+  const progress = Math.round((completedSteps.length / workflow.steps.length) * 100);
+  
+  // Verificar se está atrasado
+  const isLate = workflow.estimatedEndDate && new Date() > new Date(workflow.estimatedEndDate);
+  
+  return (
+    <Card 
+      className={`cursor-pointer hover:shadow-md transition-shadow ${
+        workflow.urgent ? 'border-red-500' : ''
+      }`}
+      onClick={() => navigate(`/workflows/${workflow.id}`)}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">Ordem #{workflow.orderId.substring(0, 8)}</CardTitle>
+            <CardDescription>
+              Iniciado em {new Date(workflow.startDate).toLocaleDateString()}
+            </CardDescription>
+          </div>
+          {workflow.urgent && (
+            <Badge className="bg-red-100 text-red-700">URGENTE</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="font-medium">Progresso</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full ${
+                  isLate ? 'bg-red-600' : 'bg-blue-600'
+                }`}
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <div className={`p-1.5 rounded-full mr-2 ${
+              currentStep.status === StepStatus.IN_PROGRESS 
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-700'
+            }`}>
+              {currentStep.status === StepStatus.IN_PROGRESS ? (
+                <Clock className="h-4 w-4" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                {currentStep.type === 'DENTIST_TESTING' 
+                  ? 'Em Teste no Dentista'
+                  : currentStep.type === 'RETURNED_FOR_ADJUSTMENTS'
+                  ? 'Retornado para Ajustes'
+                  : currentStep.type}
+              </p>
+              {currentStep.assignedTo && (
+                <p className="text-xs text-gray-500">
+                  Responsável: {currentStep.assignedTo}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>
+              {completedSteps.length} de {workflow.steps.length} etapas
+            </span>
+            <span>
+              {isLate ? (
+                <span className="text-red-500 flex items-center">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Atrasado
+                </span>
+              ) : (
+                <span>
+                  Previsão: {new Date(workflow.estimatedEndDate).toLocaleDateString()}
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default WorkflowsPage;
