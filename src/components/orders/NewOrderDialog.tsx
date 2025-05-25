@@ -1,556 +1,305 @@
 
-import React, { useEffect, useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription 
-} from '@/components/ui/form';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, HelpCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
-import { createOrder, createOrderItem, createWorkflow } from "@/utils/orderUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Calendar, User, FileText, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
-
-// Define interfaces to match expected types
-interface Service {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  category: string | null;
-  workflow_template_id: string | null;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  contact_name: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  document: string | null;
-}
-
-interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-}
-
-const orderFormSchema = z.object({
-  client: z.string().min(1, 'O cliente é obrigatório'),
-  patientName: z.string().min(1, 'O nome do paciente é obrigatório'),
-  service: z.string().min(1, 'O serviço é obrigatório'),
-  dueDate: z.string().min(1, 'A data de entrega é obrigatória'),
-  isUrgent: z.boolean().default(false),
-  shade: z.string().min(1, 'A cor/escala é obrigatória'),
-  notes: z.string().optional(),
-  workflowTemplateId: z.string().optional(),
-});
-
-type OrderFormValues = z.infer<typeof orderFormSchema>;
+import { supabase } from '@/integrations/supabase/client';
+import { createOrder, createOrderItem } from '@/utils/orderUtils';
 
 interface NewOrderDialogProps {
   children: React.ReactNode;
+  onOrderCreated?: () => void;
 }
 
-export default function NewOrderDialog({ children }: NewOrderDialogProps) {
-  const [open, setOpen] = React.useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
+export default function NewOrderDialog({ children, onOrderCreated }: NewOrderDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedServiceWorkflow, setSelectedServiceWorkflow] = useState<string | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState(false);
-  
-  const form = useForm<OrderFormValues>({
-    resolver: zodResolver(orderFormSchema),
-    defaultValues: {
-      client: '',
-      patientName: '',
-      service: '',
-      dueDate: format(
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias no futuro
-        'yyyy-MM-dd'
-      ),
-      isUrgent: false,
-      shade: '',
-      notes: '',
-      workflowTemplateId: ''
-    }
+  const [clients, setClients] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    clientId: '',
+    serviceId: '',
+    patientName: '',
+    dueDate: '',
+    priority: 'normal' as 'normal' | 'urgent',
+    notes: '',
+    prosthesisType: '',
+    material: '',
+    shadeDetails: ''
   });
-  
-  // Função para carregar os dados quando o diálogo é aberto
-  const fetchData = async () => {
-    try {
-      setIsDataLoading(true);
-      console.log("Iniciando carregamento de dados para o formulário de nova ordem...");
-      
-      // Carrega serviços do Supabase - use eq('active', true) instead of comparison
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('active', true)
-        .order('name');
-      
-      if (servicesError) {
-        console.error("Erro ao carregar serviços:", servicesError);
-        toast.error('Não foi possível carregar a lista de serviços.');
-      } else if (servicesData) {
-        console.log("Serviços carregados:", servicesData.length);
-        setServices(servicesData);
-      }
-      
-      // Carrega clientes do banco de dados Supabase
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('id, name, contact_name, phone, email, address, document')
-        .order('name');
-      
-      if (clientsError) {
-        console.error("Erro ao carregar clientes:", clientsError);
-        toast.error('Não foi possível carregar a lista de clientes.');
-      } else if (clientsData) {
-        console.log("Clientes carregados:", clientsData.length);
-        setClients(clientsData);
-      }
-      
-      // Carrega templates de workflow
-      const { data: templatesData, error: templatesError } = await supabase
-        .from('workflow_templates')
-        .select('id, name, description')
-        .order('name');
-        
-      if (templatesError) {
-        console.error("Erro ao carregar templates de workflow:", templatesError);
-        toast.error('Não foi possível carregar os templates de workflow.');
-      } else if (templatesData) {
-        console.log("Templates de workflow carregados:", templatesData.length);
-        setWorkflowTemplates(templatesData);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-      toast.error('Ocorreu um erro ao carregar os dados necessários.');
-    } finally {
-      setIsDataLoading(false);
-    }
-  };
-  
+
+  // Carregar clientes e serviços
   useEffect(() => {
-    if (open) {
-      fetchData();
-    }
-  }, [open]);
+    const loadData = async () => {
+      try {
+        const [clientsResponse, servicesResponse] = await Promise.all([
+          supabase.from('clients').select('id, name').order('name'),
+          supabase.from('services').select('id, name, price').eq('active', true).order('name')
+        ]);
 
-  // Observe changes to the selected service to auto-select workflow
-  const watchedService = form.watch('service');
-  useEffect(() => {
-    if (watchedService) {
-      const selectedService = services.find(s => s.id === watchedService);
-      if (selectedService && selectedService.workflow_template_id) {
-        setSelectedServiceWorkflow(selectedService.workflow_template_id);
-        form.setValue('workflowTemplateId', selectedService.workflow_template_id);
-      } else {
-        setSelectedServiceWorkflow(null);
+        if (clientsResponse.data) setClients(clientsResponse.data);
+        if (servicesResponse.data) setServices(servicesResponse.data);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados do formulário');
       }
-    }
-  }, [watchedService, services, form]);
+    };
 
-  // Handle dialog state changes with proper cleanup
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Clean up when closing
-      setSelectedServiceWorkflow(null);
-      setIsDataLoading(false);
-      setLoading(false);
-      
-      // Reset form with a small delay to prevent DOM conflicts
-      setTimeout(() => {
-        form.reset();
-      }, 100);
+    if (isOpen) {
+      loadData();
     }
-    setOpen(newOpen);
-  };
+  }, [isOpen]);
 
-  const handleSubmit = async (data: OrderFormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.clientId || !formData.serviceId) {
+      toast.error('Cliente e serviço são obrigatórios');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      // Encontrar o cliente pelo ID
-      const selectedClient = clients.find(client => client.id === data.client);
-      if (!selectedClient) {
-        toast.error('Cliente não encontrado.');
-        return;
+      // Preparar notas com detalhes técnicos
+      let notes = '';
+      if (formData.patientName) {
+        notes += `Paciente: ${formData.patientName}`;
       }
-      
-      // Encontrar o serviço pelo ID
-      const selectedService = services.find(service => service.id === data.service);
-      if (!selectedService) {
-        toast.error('Serviço não encontrado.');
-        return;
+      if (formData.prosthesisType) {
+        notes += notes ? ` - Tipo: ${formData.prosthesisType}` : `Tipo: ${formData.prosthesisType}`;
       }
-      
-      // Preparar notas com o nome do paciente
-      const notes = `Paciente: ${data.patientName}${data.notes ? ' - ' + data.notes : ''}`;
-      
-      // Criar a ordem
+      if (formData.material) {
+        notes += notes ? ` - Material: ${formData.material}` : `Material: ${formData.material}`;
+      }
+      if (formData.shadeDetails) {
+        notes += notes ? ` - Cor: ${formData.shadeDetails}` : `Cor: ${formData.shadeDetails}`;
+      }
+      if (formData.notes) {
+        notes += notes ? ` - ${formData.notes}` : formData.notes;
+      }
+
+      // Criar ordem
       const orderResult = await createOrder(
-        selectedClient.id,
-        data.dueDate,
-        data.isUrgent ? 'urgent' : 'normal',
+        formData.clientId,
+        formData.dueDate || null,
+        formData.priority,
         notes
       );
-      
-      if (!orderResult.data) {
-        console.error("Erro ao criar ordem:", orderResult.error);
-        throw new Error(orderResult.error?.message || "Erro ao criar ordem");
+
+      if (orderResult.error) {
+        throw orderResult.error;
       }
-      
-      const orderData = orderResult.data;
-      
-      // Criar o item da ordem
-      const itemNotes = `Paciente: ${data.patientName}, Cor/Escala: ${data.shade}`;
-      const orderItemResult = await createOrderItem(
-        orderData.id,
-        selectedService.id,
-        selectedService.price,
-        selectedService.price,
-        itemNotes
+
+      const orderId = orderResult.data?.id;
+      if (!orderId) {
+        throw new Error('ID da ordem não retornado');
+      }
+
+      // Obter preço do serviço
+      const selectedService = services.find(s => s.id === formData.serviceId);
+      const price = selectedService?.price || 0;
+
+      // Criar item da ordem
+      const itemResult = await createOrderItem(
+        orderId,
+        formData.serviceId,
+        price,
+        price,
+        notes
       );
-      
-      if (!orderItemResult.data) {
-        console.error("Erro ao adicionar item à ordem:", orderItemResult.error);
-        throw new Error(orderItemResult.error?.message || "Erro ao adicionar item à ordem");
+
+      if (itemResult.error) {
+        throw itemResult.error;
       }
+
+      toast.success('Ordem criada com sucesso!');
+      setIsOpen(false);
+      setFormData({
+        clientId: '',
+        serviceId: '',
+        patientName: '',
+        dueDate: '',
+        priority: 'normal',
+        notes: '',
+        prosthesisType: '',
+        material: '',
+        shadeDetails: ''
+      });
       
-      // Criar workflow se selecionado
-      if (data.workflowTemplateId && data.workflowTemplateId !== 'none') {
-        const workflowNotes = `Workflow iniciado em ${new Date().toLocaleDateString()}`;
-        const workflowResult = await createWorkflow(
-          orderData.id,
-          data.workflowTemplateId,
-          0,
-          [],
-          workflowNotes
-        );
-          
-        if (!workflowResult.data) {
-          console.error("Erro ao criar workflow:", workflowResult.error);
-          toast.error("Erro ao criar fluxo de trabalho para esta ordem.");
-        }
+      if (onOrderCreated) {
+        onOrderCreated();
       }
-      
-      toast.success("Ordem criada com sucesso");
-      handleOpenChange(false); // Use the safe close handler
-      
-    } catch (error: any) {
+
+    } catch (error) {
       console.error('Erro ao criar ordem:', error);
-      toast.error(`Ocorreu um erro ao criar a ordem: ${error.message}`);
+      toast.error('Erro ao criar ordem de serviço');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent 
-        className="sm:max-w-[600px]"
-        onPointerDownOutside={(e) => {
-          // Prevent closing when clicking outside during loading
-          if (loading || isDataLoading) {
-            e.preventDefault();
-          }
-        }}
-        onEscapeKeyDown={(e) => {
-          // Prevent closing with escape during loading
-          if (loading || isDataLoading) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Ordem de Serviço</DialogTitle>
-          <DialogDescription>
-            Preencha as informações para criar uma nova ordem de serviço
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Nova Ordem de Serviço
+          </DialogTitle>
         </DialogHeader>
         
-        {isDataLoading ? (
-          <div className="flex items-center justify-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dentalblue-600"></div>
-            <span className="ml-3">Carregando dados...</span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="client">Cliente *</Label>
+              <Select value={formData.clientId} onValueChange={(value) => setFormData({...formData, clientId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service">Serviço *</Label>
+              <Select value={formData.serviceId} onValueChange={(value) => setFormData({...formData, serviceId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - R$ {service.price}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cliente</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                        disabled={loading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um cliente" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {clients.length > 0 ? (
-                            clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-clients" disabled>
-                              Nenhum cliente encontrado
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="patientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Paciente</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Nome do paciente" 
-                          disabled={loading}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="patientName" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Nome do Paciente
+              </Label>
+              <Input
+                id="patientName"
+                value={formData.patientName}
+                onChange={(e) => setFormData({...formData, patientName: e.target.value})}
+                placeholder="Nome do paciente"
+              />
+            </div>
 
-              <FormField
-                control={form.control}
-                name="service"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Serviço</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={loading}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um serviço" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {services.length > 0 ? (
-                          services.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-services" disabled>
-                            Nenhum serviço encontrado
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="dueDate" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Data de Entrega
+              </Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
               />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="dueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data de Entrega</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          disabled={loading}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="isUrgent"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Ordem Urgente</FormLabel>
-                        <FormDescription>
-                          Prazo de entrega reduzido (3 dias úteis)
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="shade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cor/Escala</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Ex: A2" 
-                        disabled={loading}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="prosthesisType">Tipo de Prótese</Label>
+              <Select value={formData.prosthesisType} onValueChange={(value) => setFormData({...formData, prosthesisType: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="coroa">Coroa</SelectItem>
+                  <SelectItem value="ponte">Ponte</SelectItem>
+                  <SelectItem value="protese_total">Prótese Total</SelectItem>
+                  <SelectItem value="protese_parcial">PPR</SelectItem>
+                  <SelectItem value="implante">Implante</SelectItem>
+                  <SelectItem value="faceta">Faceta</SelectItem>
+                  <SelectItem value="onlay">Onlay</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="material">Material</Label>
+              <Input
+                id="material"
+                value={formData.material}
+                onChange={(e) => setFormData({...formData, material: e.target.value})}
+                placeholder="Ex: Zircônia, Metal..."
               />
-              
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Instruções especiais ou observações adicionais" 
-                        className="resize-none" 
-                        disabled={loading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shadeDetails">Cor/Tonalidade</Label>
+              <Input
+                id="shadeDetails"
+                value={formData.shadeDetails}
+                onChange={(e) => setFormData({...formData, shadeDetails: e.target.value})}
+                placeholder="Ex: A2, B1..."
               />
-              
-              <FormField
-                control={form.control}
-                name="workflowTemplateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1">
-                      Fluxo de Trabalho 
-                      <HelpCircle className="h-4 w-4 text-gray-400" />
-                    </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange}
-                      value={field.value || "none"}
-                      disabled={!!selectedServiceWorkflow || loading}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={selectedServiceWorkflow ? "Fluxo de trabalho do serviço" : "Selecione um fluxo de trabalho (opcional)"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {workflowTemplates.length > 0 ? (
-                          workflowTemplates.map(template => (
-                            <SelectItem key={template.id} value={template.id}>
-                              {template.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-templates" disabled>
-                            Nenhum template encontrado
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {selectedServiceWorkflow ? (
-                      <p className="text-xs text-blue-600 mt-1">
-                        Este serviço já tem um fluxo de trabalho associado
-                      </p>
-                    ) : (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Associar um fluxo de trabalho para acompanhar as etapas de produção
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => handleOpenChange(false)}
-                  disabled={loading}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-dentalblue-600 hover:bg-dentalblue-700" 
-                  disabled={loading || isDataLoading}
-                >
-                  {loading ? 'Criando...' : 'Criar Ordem'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="priority" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Prioridade
+            </Label>
+            <Select value={formData.priority} onValueChange={(value: 'normal' | 'urgent') => setFormData({...formData, priority: value})}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="urgent">Urgente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Observações
+            </Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              placeholder="Observações adicionais sobre a ordem..."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-dentalblue-600 hover:bg-dentalblue-700">
+              {loading ? 'Criando...' : 'Criar Ordem'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

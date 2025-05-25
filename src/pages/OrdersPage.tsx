@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Package } from 'lucide-react';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderList } from '@/components/orders/OrderList';
 import { useOrdersData } from '@/hooks/useOrdersData';
@@ -43,7 +43,6 @@ export default function OrdersPage() {
 
   // Aplicar filtros da URL ao carregar a página
   useEffect(() => {
-    // Obter parâmetros da URL
     const status = searchParams.get('status');
     const search = searchParams.get('search');
     const startDateParam = searchParams.get('startDate');
@@ -51,7 +50,6 @@ export default function OrdersPage() {
     const urgent = searchParams.get('urgent');
     const sortByDueDateParam = searchParams.get('sortByDueDate');
     
-    // Aplicar filtros se existirem
     let filtersApplied = false;
     
     if (status) {
@@ -84,12 +82,8 @@ export default function OrdersPage() {
       filtersApplied = true;
     }
 
-    // Limpar parâmetros da URL após aplicar os filtros
     if (filtersApplied) {
-      // Mostrar mensagem sobre os filtros aplicados
       toast.info('Filtros aplicados de acordo com a seleção no dashboard');
-      
-      // Limpar URL para evitar que os filtros sejam aplicados novamente ao recarregar a página
       navigate('/orders', { replace: true });
     }
   }, [searchParams, setStatusFilter, setSearchTerm, setStartDate, setEndDate, setSortByDueDate, setUrgentOnly, navigate]);
@@ -124,20 +118,45 @@ export default function OrdersPage() {
     }
   };
 
+  const handleOrderCreated = () => {
+    refetch();
+    toast.success("Nova ordem criada! Recarregando lista...");
+  };
+
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-dentalblue-800">Ordens de Serviço</h1>
-          <p className="text-gray-600">Gerencie todas as ordens do laboratório</p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-dentalblue-800 flex items-center gap-2">
+            <Package className="h-8 w-8" />
+            Ordens de Serviço
+          </h1>
+          <p className="text-gray-600">
+            Gerencie todas as ordens do laboratório - {filteredOrders.length} ordem(ns) encontrada(s)
+          </p>
         </div>
-        <NewOrderDialog>
-          <Button className="bg-dentalblue-600 hover:bg-dentalblue-700">
-            <Plus className="mr-2 h-4 w-4" /> Nova Ordem
+        
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRetry}
+            disabled={isRetrying || loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${(isRetrying || loading) ? 'animate-spin' : ''}`} />
+            Atualizar
           </Button>
-        </NewOrderDialog>
+          
+          <NewOrderDialog onOrderCreated={handleOrderCreated}>
+            <Button className="bg-dentalblue-600 hover:bg-dentalblue-700">
+              <Plus className="mr-2 h-4 w-4" /> Nova Ordem
+            </Button>
+          </NewOrderDialog>
+        </div>
       </div>
 
+      {/* Filtros */}
       <OrderFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -154,42 +173,42 @@ export default function OrdersPage() {
         setUrgentOnly={setUrgentOnly}
       />
 
-      <div className="mt-6">
-        {error ? (
-          <div className="p-6 text-center bg-white rounded-lg shadow border border-red-100">
-            <p className="text-red-500 mb-4">
-              Erro ao carregar dados: {typeof error === 'string' ? error : 'Erro desconhecido. Verifique o console para mais detalhes.'}
-            </p>
-            <Button 
-              onClick={handleRetry} 
-              variant="default" 
-              className="bg-dentalblue-600 hover:bg-dentalblue-700"
-              disabled={isRetrying}
-            >
-              {isRetrying ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 
-                  Carregando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" /> 
-                  Tentar novamente
-                </>
-              )}
-            </Button>
-          </div>
-        ) : (
-          <OrderList
-            orders={filteredOrders}
-            loading={loading}
-            onViewOrder={handleViewOrder}
-            onEditOrder={handleEditOrder}
-          />
-        )}
-      </div>
+      {/* Lista de Ordens */}
+      {error ? (
+        <div className="p-6 text-center bg-white rounded-lg shadow border border-red-100">
+          <Package className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-500 mb-4">
+            Erro ao carregar dados: {typeof error === 'string' ? error : 'Erro desconhecido. Verifique o console para mais detalhes.'}
+          </p>
+          <Button 
+            onClick={handleRetry} 
+            variant="default" 
+            className="bg-dentalblue-600 hover:bg-dentalblue-700"
+            disabled={isRetrying}
+          >
+            {isRetrying ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 
+                Carregando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" /> 
+                Tentar novamente
+              </>
+            )}
+          </Button>
+        </div>
+      ) : (
+        <OrderList
+          orders={filteredOrders}
+          loading={loading}
+          onViewOrder={handleViewOrder}
+          onEditOrder={handleEditOrder}
+        />
+      )}
 
-      {/* Diálogos para visualizar e editar ordens */}
+      {/* Diálogos */}
       <OrderDetailsDialog 
         open={isViewDialogOpen} 
         onOpenChange={setIsViewDialogOpen}

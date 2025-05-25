@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Calendar } from 'lucide-react';
+import { Search, Calendar, Filter } from 'lucide-react';
 
 interface OrderFiltersProps {
   searchTerm: string;
@@ -52,7 +52,10 @@ export function OrderFilters({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Filtrar Ordens</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Filter className="h-5 w-5" />
+          Filtrar Ordens
+        </CardTitle>
         <CardDescription>Use os campos abaixo para filtrar as ordens de serviço</CardDescription>
       </CardHeader>
       <CardContent>
@@ -82,26 +85,28 @@ export function OrderFilters({
               <SelectItem value="delivered">Entregue</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex gap-4">
+          <div className="flex gap-2">
             <Input
               type="date"
               className="flex-1"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              placeholder="Data inicial"
             />
             <Input
               type="date"
               className="flex-1"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              placeholder="Data final"
             />
           </div>
-          <div>
-            <Button className="w-full" onClick={handleFilter}>Filtrar</Button>
-          </div>
+          <Button className="w-full bg-dentalblue-600 hover:bg-dentalblue-700" onClick={handleFilter}>
+            <Filter className="mr-2 h-4 w-4" />
+            Aplicar Filtros
+          </Button>
         </div>
         
-        {/* Adicionando opções de ordenação e filtros especiais */}
         <div className="grid gap-4 md:grid-cols-2 mt-4">
           <div className="flex items-center space-x-2">
             <input
@@ -109,7 +114,7 @@ export function OrderFilters({
               id="sortByDueDate"
               checked={sortByDueDate}
               onChange={(e) => setSortByDueDate(e.target.checked)}
-              className="rounded border-gray-300 text-primary focus:ring-primary"
+              className="rounded border-gray-300 text-dentalblue-600 focus:ring-dentalblue-500"
             />
             <label htmlFor="sortByDueDate" className="text-sm font-medium cursor-pointer flex items-center">
               <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -124,8 +129,8 @@ export function OrderFilters({
               onChange={(e) => setUrgentOnly(e.target.checked)}
               className="rounded border-gray-300 text-red-600 focus:ring-red-500"
             />
-            <label htmlFor="urgentOnly" className="text-sm font-medium cursor-pointer">
-              Mostrar apenas ordens urgentes
+            <label htmlFor="urgentOnly" className="text-sm font-medium cursor-pointer flex items-center">
+              🚨 Mostrar apenas ordens urgentes
             </label>
           </div>
         </div>
