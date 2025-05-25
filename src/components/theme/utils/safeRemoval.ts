@@ -97,9 +97,9 @@ export const cleanupPortalElements = (): void => {
  * Safe mutation observer cleanup
  */
 export const createSafeMutationObserver = (callback: MutationCallback): MutationObserver => {
-  const observer = new MutationObserver((mutations) => {
+  const observer = new MutationObserver((mutations, observerInstance) => {
     try {
-      callback(mutations);
+      callback(mutations, observerInstance);
     } catch (error) {
       console.debug('Mutation observer callback error:', error);
     }
