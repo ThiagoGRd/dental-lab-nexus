@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -402,7 +403,6 @@ export default function ClientsPage() {
     return true;
   });
 
-  // O restante do JSX permanece igual
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
