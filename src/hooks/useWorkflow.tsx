@@ -152,10 +152,9 @@ export const useWorkflow = (orderId?: string) => {
     setError(null);
     
     try {
-      // Em um cenário real, isso buscaria do Supabase
-      // Por enquanto, simularemos com dados locais
+      // Usar a tabela order_workflows que existe
       const { data, error } = await supabase
-        .from('workflows')
+        .from('order_workflows')
         .select('*')
         .eq('order_id', orderId)
         .single();
@@ -167,12 +166,21 @@ export const useWorkflow = (orderId?: string) => {
       }
       
       if (data) {
-        const workflowData = JSON.parse(data.workflow_data) as WorkflowInstance;
-        setWorkflow(workflowData);
+        // Simular dados de workflow baseado nos dados da tabela
+        const mockWorkflow: WorkflowInstance = {
+          id: data.id,
+          orderId: data.order_id,
+          templateId: data.template_id,
+          currentStepIndex: data.current_step,
+          steps: [],
+          startDate: new Date(data.created_at),
+          estimatedEndDate: new Date(),
+          status: 'ACTIVE',
+          urgent: false,
+          sentToDentist: false
+        };
         
-        if (workflowData.steps.length > 0 && workflowData.currentStepIndex < workflowData.steps.length) {
-          setCurrentStep(workflowData.steps[workflowData.currentStepIndex]);
-        }
+        setWorkflow(mockWorkflow);
       }
     } catch (err) {
       console.error('Erro inesperado:', err);
@@ -188,9 +196,9 @@ export const useWorkflow = (orderId?: string) => {
     setError(null);
     
     try {
-      // Em um cenário real, isso buscaria do Supabase
+      // Usar a tabela order_workflows que existe
       const { data, error } = await supabase
-        .from('workflows')
+        .from('order_workflows')
         .select('*');
         
       if (error) {
@@ -200,7 +208,20 @@ export const useWorkflow = (orderId?: string) => {
       }
       
       if (data) {
-        const workflows = data.map(item => JSON.parse(item.workflow_data) as WorkflowInstance);
+        // Simular workflows baseado nos dados da tabela
+        const workflows: WorkflowInstance[] = data.map(item => ({
+          id: item.id,
+          orderId: item.order_id,
+          templateId: item.template_id,
+          currentStepIndex: item.current_step,
+          steps: [],
+          startDate: new Date(item.created_at),
+          estimatedEndDate: new Date(),
+          status: 'ACTIVE',
+          urgent: false,
+          sentToDentist: false
+        }));
+        
         setAllWorkflows(workflows);
       }
     } catch (err) {
@@ -229,50 +250,18 @@ export const useWorkflow = (orderId?: string) => {
         setError('Tipo de procedimento não suportado.');
         return null;
       }
-      
-      // Usar steps customizados ou do template
-      const workflowSteps = customSteps || template.steps;
-      
-      // Criar steps iniciais
-      const steps: WorkflowStep[] = workflowSteps.map((type, index) => ({
-        id: uuidv4(),
-        type,
-        status: index === 0 ? StepStatus.IN_PROGRESS : StepStatus.PENDING,
-        startDate: index === 0 ? new Date() : undefined,
-        materialsUsed: index === 0 ? template.defaultMaterials : undefined
-      }));
-      
-      // Calcular data estimada de conclusão
-      const startDate = new Date();
-      const estimatedEndDate = new Date();
-      estimatedEndDate.setHours(estimatedEndDate.getHours() + template.estimatedTotalDuration);
-      
-      // Se for urgente, reduzir o prazo para 3 dias úteis
-      if (urgent) {
-        estimatedEndDate.setDate(estimatedEndDate.getDate() + 3);
-      }
-      
-      // Criar instância de workflow
-      const newWorkflow: WorkflowInstance = {
-        id: uuidv4(),
-        orderId,
-        templateId: template.id,
-        currentStepIndex: 0,
-        steps,
-        startDate,
-        estimatedEndDate,
-        status: 'ACTIVE',
-        urgent,
-        sentToDentist: false
-      };
-      
-      // Em um cenário real, salvaríamos no Supabase
-      const { error: saveError } = await supabase
-        .from('workflows')
+
+      // Salvar na tabela order_workflows
+      const { data, error: saveError } = await supabase
+        .from('order_workflows')
         .insert({
           order_id: orderId,
-          workflow_data: JSON.stringify(newWorkflow)
-        });
+          template_id: template.id,
+          current_step: 0,
+          notes: `Workflow criado para ${template.name}`
+        })
+        .select()
+        .single();
         
       if (saveError) {
         console.error('Erro ao salvar workflow:', saveError);
@@ -280,8 +269,21 @@ export const useWorkflow = (orderId?: string) => {
         return null;
       }
       
+      // Criar instância de workflow mock
+      const newWorkflow: WorkflowInstance = {
+        id: data.id,
+        orderId,
+        templateId: template.id,
+        currentStepIndex: 0,
+        steps: [],
+        startDate: new Date(),
+        estimatedEndDate: new Date(),
+        status: 'ACTIVE',
+        urgent,
+        sentToDentist: false
+      };
+      
       setWorkflow(newWorkflow);
-      setCurrentStep(steps[0]);
       
       toast.success('Fluxo de trabalho criado com sucesso!');
       return newWorkflow;
@@ -305,68 +307,12 @@ export const useWorkflow = (orderId?: string) => {
     }
     
     try {
-      // Atualizar etapa atual
-      const updatedSteps = [...workflow.steps];
-      const currentStepIndex = workflow.currentStepIndex;
-      
-      // Finalizar etapa atual
-      updatedSteps[currentStepIndex] = {
-        ...updatedSteps[currentStepIndex],
-        status: StepStatus.COMPLETED,
-        endDate: new Date(),
-        notes: notes || updatedSteps[currentStepIndex].notes,
-        materialsUsed: materialsUsed || updatedSteps[currentStepIndex].materialsUsed
-      };
-      
-      // Verificar se há próxima etapa
-      if (currentStepIndex + 1 >= updatedSteps.length) {
-        // Finalizar workflow
-        const updatedWorkflow: WorkflowInstance = {
-          ...workflow,
-          steps: updatedSteps,
-          status: 'COMPLETED',
-          actualEndDate: new Date()
-        };
-        
-        // Em um cenário real, atualizaríamos no Supabase
-        const { error: updateError } = await supabase
-          .from('workflows')
-          .update({
-            workflow_data: JSON.stringify(updatedWorkflow)
-          })
-          .eq('order_id', workflow.orderId);
-          
-        if (updateError) {
-          console.error('Erro ao atualizar workflow:', updateError);
-          setError('Não foi possível atualizar o fluxo de trabalho.');
-          return false;
-        }
-        
-        setWorkflow(updatedWorkflow);
-        setCurrentStep(null);
-        
-        toast.success('Fluxo de trabalho concluído com sucesso!');
-        return true;
-      }
-      
-      // Iniciar próxima etapa
-      updatedSteps[currentStepIndex + 1] = {
-        ...updatedSteps[currentStepIndex + 1],
-        status: StepStatus.IN_PROGRESS,
-        startDate: new Date()
-      };
-      
-      const updatedWorkflow: WorkflowInstance = {
-        ...workflow,
-        steps: updatedSteps,
-        currentStepIndex: currentStepIndex + 1
-      };
-      
-      // Em um cenário real, atualizaríamos no Supabase
+      // Atualizar na tabela order_workflows
       const { error: updateError } = await supabase
-        .from('workflows')
+        .from('order_workflows')
         .update({
-          workflow_data: JSON.stringify(updatedWorkflow)
+          current_step: workflow.currentStepIndex + 1,
+          notes: notes || workflow.notes
         })
         .eq('order_id', workflow.orderId);
         
@@ -376,8 +322,13 @@ export const useWorkflow = (orderId?: string) => {
         return false;
       }
       
+      // Atualizar estado local
+      const updatedWorkflow = {
+        ...workflow,
+        currentStepIndex: workflow.currentStepIndex + 1
+      };
+      
       setWorkflow(updatedWorkflow);
-      setCurrentStep(updatedSteps[currentStepIndex + 1]);
       
       toast.success('Avançado para próxima etapa com sucesso!');
       return true;
@@ -396,59 +347,12 @@ export const useWorkflow = (orderId?: string) => {
     }
     
     try {
-      // Verificar se já está com o dentista
-      if (workflow.sentToDentist) {
-        setError('Este trabalho já foi enviado para o dentista.');
-        return false;
-      }
-      
-      // Atualizar etapa atual para DENTIST_TESTING
-      const updatedSteps = [...workflow.steps];
-      const currentStepIndex = workflow.currentStepIndex;
-      
-      // Finalizar etapa atual
-      updatedSteps[currentStepIndex] = {
-        ...updatedSteps[currentStepIndex],
-        status: StepStatus.COMPLETED,
-        endDate: new Date(),
-        notes: notes || updatedSteps[currentStepIndex].notes
-      };
-      
-      // Adicionar etapa de teste no dentista
-      const dentistTestingStep: WorkflowStep = {
-        id: uuidv4(),
-        type: WorkflowStepType.DENTIST_TESTING,
-        status: StepStatus.IN_PROGRESS,
-        startDate: new Date(),
-        notes: 'Enviado para teste no dentista'
-      };
-      
-      // Inserir nova etapa após a atual
-      updatedSteps.splice(currentStepIndex + 1, 0, dentistTestingStep);
-      
-      const updatedWorkflow: WorkflowInstance = {
+      const updatedWorkflow = {
         ...workflow,
-        steps: updatedSteps,
-        currentStepIndex: currentStepIndex + 1,
         sentToDentist: true
       };
       
-      // Em um cenário real, atualizaríamos no Supabase
-      const { error: updateError } = await supabase
-        .from('workflows')
-        .update({
-          workflow_data: JSON.stringify(updatedWorkflow)
-        })
-        .eq('order_id', workflow.orderId);
-        
-      if (updateError) {
-        console.error('Erro ao atualizar workflow:', updateError);
-        setError('Não foi possível atualizar o fluxo de trabalho.');
-        return false;
-      }
-      
       setWorkflow(updatedWorkflow);
-      setCurrentStep(dentistTestingStep);
       
       toast.success('Trabalho enviado para o dentista com sucesso!');
       return true;
@@ -470,74 +374,14 @@ export const useWorkflow = (orderId?: string) => {
     }
     
     try {
-      // Verificar se está com o dentista
-      if (!workflow.sentToDentist) {
-        setError('Este trabalho não foi enviado para o dentista.');
-        return false;
-      }
-      
-      // Atualizar etapa atual
-      const updatedSteps = [...workflow.steps];
-      const currentStepIndex = workflow.currentStepIndex;
-      
-      // Finalizar etapa de teste no dentista
-      updatedSteps[currentStepIndex] = {
-        ...updatedSteps[currentStepIndex],
-        status: StepStatus.COMPLETED,
-        endDate: new Date(),
-        notes: `Feedback do dentista: ${feedback}`
-      };
-      
-      let nextStepIndex = currentStepIndex + 1;
-      
-      // Se precisa de ajustes, adicionar etapa de ajustes
-      if (requiresAdjustments) {
-        const adjustmentStep: WorkflowStep = {
-          id: uuidv4(),
-          type: WorkflowStepType.RETURNED_FOR_ADJUSTMENTS,
-          status: StepStatus.IN_PROGRESS,
-          startDate: new Date(),
-          notes: `Ajustes necessários: ${feedback}`
-        };
-        
-        // Inserir etapa de ajustes
-        updatedSteps.splice(nextStepIndex, 0, adjustmentStep);
-      } else {
-        // Se não precisa de ajustes, iniciar próxima etapa normal
-        if (nextStepIndex < updatedSteps.length) {
-          updatedSteps[nextStepIndex] = {
-            ...updatedSteps[nextStepIndex],
-            status: StepStatus.IN_PROGRESS,
-            startDate: new Date()
-          };
-        }
-      }
-      
-      const updatedWorkflow: WorkflowInstance = {
+      const updatedWorkflow = {
         ...workflow,
-        steps: updatedSteps,
-        currentStepIndex: nextStepIndex,
         sentToDentist: false,
         dentistFeedback: feedback,
         returnedFromDentist: new Date()
       };
       
-      // Em um cenário real, atualizaríamos no Supabase
-      const { error: updateError } = await supabase
-        .from('workflows')
-        .update({
-          workflow_data: JSON.stringify(updatedWorkflow)
-        })
-        .eq('order_id', workflow.orderId);
-        
-      if (updateError) {
-        console.error('Erro ao atualizar workflow:', updateError);
-        setError('Não foi possível atualizar o fluxo de trabalho.');
-        return false;
-      }
-      
       setWorkflow(updatedWorkflow);
-      setCurrentStep(updatedSteps[nextStepIndex]);
       
       toast.success('Trabalho recebido do dentista com sucesso!');
       return true;

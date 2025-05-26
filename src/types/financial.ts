@@ -122,14 +122,16 @@ export interface FinancialReport {
 
 // Interface para fluxo de caixa
 export interface CashFlow {
+  id: string;
   date: Date;
   openingBalance: number;
   closingBalance: number;
+  dailyBalance: number;
   incomes: FinancialTransaction[];
   expenses: FinancialTransaction[];
   totalIncome: number;
   totalExpense: number;
-  dailyBalance: number;
+  netFlow: number;
 }
 
 // Interface para previsão financeira

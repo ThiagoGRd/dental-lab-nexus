@@ -7,11 +7,11 @@ export interface Notification {
   id: number | string;
   title: string;
   message: string;
-  description: string; // Propriedade obrigatória
+  description: string;
   type: NotificationType;
   priority?: NotificationPriority;
   time: string;
-  date: string; // Propriedade obrigatória
+  date: string;
   read: boolean;
   createdAt: string;
   link?: string;

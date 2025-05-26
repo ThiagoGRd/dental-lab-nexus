@@ -132,12 +132,13 @@ export const useFinancial = () => {
       }
       
       if (data) {
-        // Mapear dados para CashFlow básico
+        // Mapear dados para CashFlow completo
         const cashFlowData: CashFlow[] = data.map(item => ({
           id: item.id,
           date: new Date(item.created_at),
           openingBalance: 0,
           closingBalance: 0,
+          dailyBalance: 0,
           incomes: item.type === 'income' ? [item] : [],
           expenses: item.type === 'expense' ? [item] : [],
           totalIncome: item.type === 'income' ? item.amount : 0,
