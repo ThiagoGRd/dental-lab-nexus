@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
@@ -66,7 +65,7 @@ export const useFinancial = () => {
           amount: item.amount,
           description: item.description,
           date: new Date(item.created_at),
-          category: (item.category as TransactionCategory) || 'other' as TransactionCategory,
+          category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
           status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
           createdBy: 'system',
           createdAt: new Date(item.created_at),
@@ -133,18 +132,35 @@ export const useFinancial = () => {
       
       if (data) {
         // Mapear dados para CashFlow completo
-        const cashFlowData: CashFlow[] = data.map(item => ({
-          id: item.id,
-          date: new Date(item.created_at),
-          openingBalance: 0,
-          closingBalance: 0,
-          dailyBalance: 0,
-          incomes: item.type === 'income' ? [item] : [],
-          expenses: item.type === 'expense' ? [item] : [],
-          totalIncome: item.type === 'income' ? item.amount : 0,
-          totalExpense: item.type === 'expense' ? item.amount : 0,
-          netFlow: item.type === 'income' ? item.amount : -item.amount
-        }));
+        const cashFlowData: CashFlow[] = data.map(item => {
+          const mappedTransaction: FinancialTransaction = {
+            id: item.id,
+            type: item.type as TransactionType,
+            amount: item.amount,
+            description: item.description,
+            date: new Date(item.created_at),
+            category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
+            status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
+            createdBy: 'system',
+            createdAt: new Date(item.created_at),
+            dueDate: item.due_date ? new Date(item.due_date) : undefined,
+            notes: item.notes || undefined,
+            isInstallment: false
+          };
+
+          return {
+            id: item.id,
+            date: new Date(item.created_at),
+            openingBalance: 0,
+            closingBalance: 0,
+            dailyBalance: 0,
+            incomes: item.type === 'INCOME' ? [mappedTransaction] : [],
+            expenses: item.type === 'EXPENSE' ? [mappedTransaction] : [],
+            totalIncome: item.type === 'INCOME' ? item.amount : 0,
+            totalExpense: item.type === 'EXPENSE' ? item.amount : 0,
+            netFlow: item.type === 'INCOME' ? item.amount : -item.amount
+          };
+        });
         
         setCashFlow(cashFlowData);
       }
@@ -170,8 +186,7 @@ export const useFinancial = () => {
         category: transaction.category,
         status: transaction.status || PaymentStatus.PENDING,
         due_date: transaction.dueDate?.toISOString(),
-        notes: transaction.notes,
-        related_order_id: undefined // Removendo propriedade que não existe
+        notes: transaction.notes
       };
       
       const { data, error } = await supabase
@@ -192,7 +207,7 @@ export const useFinancial = () => {
         amount: data.amount,
         description: data.description,
         date: new Date(data.created_at),
-        category: (data.category as TransactionCategory) || 'other' as TransactionCategory,
+        category: (data.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
         status: (data.status as PaymentStatus) || PaymentStatus.PENDING,
         createdBy: 'system',
         createdAt: new Date(data.created_at),
@@ -372,7 +387,7 @@ export const useFinancial = () => {
         amount: item.amount,
         description: item.description,
         date: new Date(item.created_at),
-        category: (item.category as TransactionCategory) || 'other' as TransactionCategory,
+        category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
         status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
         createdBy: 'system',
         createdAt: new Date(item.created_at),
@@ -382,11 +397,11 @@ export const useFinancial = () => {
       }));
       
       const incomes = reportTransactions.filter(
-        t => (t.type === TransactionType.RECEIVABLE) && t.status === PaymentStatus.PAID
+        t => (t.type === TransactionType.RECEIVABLE || t.type === TransactionType.INCOME) && t.status === PaymentStatus.PAID
       );
       
       const expenses = reportTransactions.filter(
-        t => (t.type === TransactionType.PAYABLE) && t.status === PaymentStatus.PAID
+        t => (t.type === TransactionType.PAYABLE || t.type === TransactionType.EXPENSE) && t.status === PaymentStatus.PAID
       );
       
       const totalIncome = incomes.reduce((sum, t) => sum + t.amount, 0);
@@ -424,7 +439,7 @@ export const useFinancial = () => {
     description: string,
     dueDate: Date,
     installments: number = 1,
-    category: TransactionCategory = 'service' as TransactionCategory
+    category: TransactionCategory = TransactionCategory.SERVICE
   ) => {
     setLoading(true);
     setError(null);

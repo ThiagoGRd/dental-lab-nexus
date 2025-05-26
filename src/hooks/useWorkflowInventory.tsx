@@ -1,8 +1,8 @@
+
 import { useCallback, useEffect } from 'react';
 import useWorkflow from './useWorkflow';
 import useInventory from './useInventory';
 import { WorkflowStep, WorkflowStepType, MaterialUsage } from '@/types/workflow';
-import { MeasurementUnit } from '@/types/inventory';
 import { toast } from 'sonner';
 
 // Hook para integrar workflow com controle de estoque
@@ -15,44 +15,11 @@ export const useWorkflowInventory = (orderId?: string) => {
   } = useWorkflow(orderId);
   
   const {
-    registerWorkflowMaterialUsage,
-    confirmPendingDeduction,
-    pendingDeductions,
     inventoryItems,
-    refreshPendingDeductions
+    refreshItems
   } = useInventory();
 
-  // Verificar se há deduções pendentes para o workflow atual
-  const hasPendingDeductions = useCallback(() => {
-    if (!workflow) return false;
-    
-    return pendingDeductions.some(
-      pd => pd.workflowId === workflow.id
-    );
-  }, [workflow, pendingDeductions]);
-
-  // Obter deduções pendentes para o workflow atual
-  const getCurrentPendingDeductions = useCallback(() => {
-    if (!workflow) return [];
-    
-    const currentDeductions = pendingDeductions.filter(
-      pd => pd.workflowId === workflow.id
-    );
-    
-    return currentDeductions;
-  }, [workflow, pendingDeductions]);
-
-  // Converter MaterialUsage do workflow para formato compatível com estoque
-  const convertMaterialUsage = useCallback((materials: MaterialUsage[]) => {
-    return materials.map(material => ({
-      materialId: material.materialId,
-      quantity: material.quantity,
-      unit: material.unit as MeasurementUnit,
-      automaticDeduction: material.automaticDeduction
-    }));
-  }, []);
-
-  // Avançar workflow com dedução de materiais
+  // Avançar workflow com dedução de materiais (simplificado)
   const advanceWorkflowWithMaterialDeduction = useCallback(async (
     notes?: string,
     materials?: MaterialUsage[]
@@ -63,115 +30,20 @@ export const useWorkflowInventory = (orderId?: string) => {
     }
     
     try {
-      // Se materiais foram fornecidos, registrar uso
-      if (materials && materials.length > 0) {
-        await registerWorkflowMaterialUsage(
-          workflow.id,
-          currentStep.id,
-          convertMaterialUsage(materials)
-        );
-      } 
-      // Se não foram fornecidos, mas a etapa atual tem materiais definidos
-      else if (currentStep.materialsUsed && currentStep.materialsUsed.length > 0) {
-        await registerWorkflowMaterialUsage(
-          workflow.id,
-          currentStep.id,
-          convertMaterialUsage(currentStep.materialsUsed)
-        );
-      }
-      
-      // Avançar para próxima etapa
+      // Para agora, apenas avançar o workflow sem dedução de materiais
       const result = await advanceToNextStep(notes, materials);
       
       if (result) {
-        toast.success('Etapa avançada e materiais registrados com sucesso!');
+        toast.success('Etapa avançada com sucesso!');
       }
       
       return result;
     } catch (err) {
-      console.error('Erro ao avançar workflow com dedução de materiais:', err);
+      console.error('Erro ao avançar workflow:', err);
       toast.error('Ocorreu um erro ao processar os materiais.');
       return false;
     }
-  }, [workflow, currentStep, registerWorkflowMaterialUsage, advanceToNextStep, convertMaterialUsage]);
-
-  // Confirmar dedução de material específico
-  const confirmMaterialDeduction = useCallback(async (
-    stepId: string,
-    materialId: string,
-    confirmedQuantity?: number
-  ) => {
-    if (!workflow) {
-      toast.error('Nenhum fluxo de trabalho ativo.');
-      return false;
-    }
-    
-    try {
-      const result = await confirmPendingDeduction(
-        workflow.id,
-        stepId,
-        materialId,
-        confirmedQuantity
-      );
-      
-      if (result) {
-        await refreshPendingDeductions();
-        toast.success('Dedução de material confirmada com sucesso!');
-      }
-      
-      return result;
-    } catch (err) {
-      console.error('Erro ao confirmar dedução de material:', err);
-      toast.error('Ocorreu um erro ao confirmar a dedução de material.');
-      return false;
-    }
-  }, [workflow, confirmPendingDeduction, refreshPendingDeductions]);
-
-  // Confirmar todas as deduções pendentes para uma etapa
-  const confirmAllPendingDeductions = useCallback(async (stepId: string) => {
-    if (!workflow) {
-      toast.error('Nenhum fluxo de trabalho ativo.');
-      return false;
-    }
-    
-    try {
-      const pendingForStep = pendingDeductions.find(
-        pd => pd.workflowId === workflow.id && pd.stepId === stepId
-      );
-      
-      if (!pendingForStep) {
-        toast.info('Não há deduções pendentes para esta etapa.');
-        return true;
-      }
-      
-      let allSuccess = true;
-      
-      for (const material of pendingForStep.materialUsages) {
-        if (!material.deducted) {
-          const result = await confirmMaterialDeduction(
-            stepId,
-            material.materialId
-          );
-          
-          if (!result) {
-            allSuccess = false;
-          }
-        }
-      }
-      
-      if (allSuccess) {
-        toast.success('Todas as deduções foram confirmadas com sucesso!');
-      } else {
-        toast.warning('Algumas deduções não puderam ser confirmadas.');
-      }
-      
-      return allSuccess;
-    } catch (err) {
-      console.error('Erro ao confirmar todas as deduções:', err);
-      toast.error('Ocorreu um erro ao confirmar as deduções de material.');
-      return false;
-    }
-  }, [workflow, pendingDeductions, confirmMaterialDeduction]);
+  }, [workflow, currentStep, advanceToNextStep]);
 
   // Obter informações de estoque para um material
   const getMaterialStockInfo = useCallback((materialId: string) => {
@@ -185,12 +57,12 @@ export const useWorkflowInventory = (orderId?: string) => {
     for (const material of materials) {
       const stockItem = getMaterialStockInfo(material.materialId);
       
-      if (!stockItem || stockItem.currentQuantity < material.quantity) {
+      if (!stockItem || stockItem.quantity < material.quantity) {
         insufficientItems.push({
           materialId: material.materialId,
           materialName: stockItem?.name || 'Material desconhecido',
           required: material.quantity,
-          available: stockItem?.currentQuantity || 0,
+          available: stockItem?.quantity || 0,
           unit: stockItem?.unit || material.unit
         });
       }
@@ -202,12 +74,35 @@ export const useWorkflowInventory = (orderId?: string) => {
     };
   }, [getMaterialStockInfo]);
 
+  // Funções simplificadas para compatibilidade
+  const hasPendingDeductions = useCallback(() => {
+    return false; // Simplificado por enquanto
+  }, []);
+
+  const getCurrentPendingDeductions = useCallback(() => {
+    return []; // Simplificado por enquanto
+  }, []);
+
+  const confirmMaterialDeduction = useCallback(async (
+    stepId: string,
+    materialId: string,
+    confirmedQuantity?: number
+  ) => {
+    toast.info('Funcionalidade de dedução de materiais ainda não implementada.');
+    return false;
+  }, []);
+
+  const confirmAllPendingDeductions = useCallback(async (stepId: string) => {
+    toast.info('Funcionalidade de dedução de materiais ainda não implementada.');
+    return false;
+  }, []);
+
   // Atualizar dados quando o workflow mudar
   useEffect(() => {
     if (workflow) {
-      refreshPendingDeductions();
+      refreshItems();
     }
-  }, [workflow, refreshPendingDeductions]);
+  }, [workflow, refreshItems]);
 
   return {
     workflow,

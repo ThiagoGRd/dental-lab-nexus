@@ -49,7 +49,7 @@ const workflowTemplates: WorkflowTemplate[] = [
   {
     id: 'template-ppr',
     name: 'Prótese Parcial Removível',
-    procedureType: ProcedureType.PARTIAL_REMOVABLE_PROSTHESIS,
+    procedureType: ProcedureType.PARTIAL_REMOVIBLE_PROSTHESIS,
     steps: [
       WorkflowStepType.RECEPTION,
       WorkflowStepType.MODELING,
@@ -312,7 +312,7 @@ export const useWorkflow = (orderId?: string) => {
         .from('order_workflows')
         .update({
           current_step: workflow.currentStepIndex + 1,
-          notes: notes || workflow.notes
+          notes: notes || 'Avançado para próxima etapa'
         })
         .eq('order_id', workflow.orderId);
         

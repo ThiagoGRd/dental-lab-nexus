@@ -1,138 +1,137 @@
-// Definição de tipos para o fluxo de trabalho do laboratório de prótese
 
-// Enum para os tipos de procedimentos
-export enum ProcedureType {
-  TOTAL_PROSTHESIS = 'TOTAL_PROSTHESIS',
-  PARTIAL_REMOVABLE_PROSTHESIS = 'PARTIAL_REMOVABLE_PROSTHESIS',
-  IMPLANT_PROTOCOL = 'IMPLANT_PROTOCOL',
-  PROVISIONAL = 'PROVISIONAL',
-  CUSTOM = 'CUSTOM'
-}
-
-// Enum para as etapas do fluxo de trabalho
+// Enums para tipos de etapas de workflow
 export enum WorkflowStepType {
   RECEPTION = 'RECEPTION',
   MODELING = 'MODELING',
-  CASTING = 'CASTING',
-  TESTING = 'TESTING',
-  BAR_CASTING = 'BAR_CASTING', // Específico para próteses sobre implante
   TEETH_MOUNTING = 'TEETH_MOUNTING',
+  DENTIST_TESTING = 'DENTIST_TESTING',
   ACRYLIZATION = 'ACRYLIZATION',
   FINISHING = 'FINISHING',
   QUALITY_CONTROL = 'QUALITY_CONTROL',
   SHIPPING = 'SHIPPING',
-  DENTIST_TESTING = 'DENTIST_TESTING', // Quando enviado para teste no dentista
-  RETURNED_FOR_ADJUSTMENTS = 'RETURNED_FOR_ADJUSTMENTS', // Quando retorna do dentista
-  COMPLETED = 'COMPLETED'
+  CASTING = 'CASTING',
+  BAR_CASTING = 'BAR_CASTING'
 }
 
-// Enum para o status da etapa
+// Enum para status de etapas
 export enum StepStatus {
   PENDING = 'PENDING',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
-  BLOCKED = 'BLOCKED',
-  DELAYED = 'DELAYED'
+  SKIPPED = 'SKIPPED',
+  BLOCKED = 'BLOCKED'
 }
 
-// Enum para arcada
-export enum ArchType {
-  UPPER = 'UPPER',
-  LOWER = 'LOWER',
-  BOTH = 'BOTH'
+// Enum para tipos de procedimentos
+export enum ProcedureType {
+  TOTAL_PROSTHESIS = 'TOTAL_PROSTHESIS',
+  PARTIAL_REMOVIBLE_PROSTHESIS = 'PARTIAL_REMOVIBLE_PROSTHESIS',
+  IMPLANT_PROTOCOL = 'IMPLANT_PROTOCOL',
+  PROVISIONAL = 'PROVISIONAL'
 }
 
-// Enum para escala de cor
-export enum ColorScale {
-  VITA_CLASSIC = 'VITA_CLASSIC',
-  VITA_3D_MASTER = 'VITA_3D_MASTER',
-  CHROMASCOP = 'CHROMASCOP',
-  OTHER = 'OTHER'
+// Enum para status do workflow
+export enum WorkflowStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  PAUSED = 'PAUSED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
 }
 
-// Enum para materiais
-export enum MaterialType {
-  ZIRCONIA = 'ZIRCONIA',
-  LITHIUM_DISILICATE = 'LITHIUM_DISILICATE',
-  PMMA = 'PMMA',
-  ACRYLIC = 'ACRYLIC',
-  METAL = 'METAL',
-  COMPOSITE = 'COMPOSITE',
-  OTHER = 'OTHER'
+// Interface para uso de materiais
+export interface MaterialUsage {
+  materialId: string;
+  materialName: string;
+  quantity: number;
+  unit: string;
+  automaticDeduction: boolean;
+  cost?: number;
+  notes?: string;
 }
 
 // Interface para etapa do workflow
 export interface WorkflowStep {
   id: string;
   type: WorkflowStepType;
+  name: string;
+  description: string;
   status: StepStatus;
-  assignedTo?: string; // ID do técnico responsável
-  startDate?: Date;
-  endDate?: Date;
+  estimatedDuration: number; // em horas
+  actualDuration?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  assignedTo?: string;
   notes?: string;
-  estimatedDuration?: number; // Em horas
-  actualDuration?: number; // Em horas
-  materialsUsed?: MaterialUsage[]; // Materiais utilizados nesta etapa
+  materialsUsed?: MaterialUsage[];
+  requiresApproval?: boolean;
+  isOptional?: boolean;
 }
 
-// Interface para uso de material
-export interface MaterialUsage {
-  materialId: string;
-  materialName: string;
-  quantity: number;
-  unit: string;
-  automaticDeduction: boolean; // Se deve ser deduzido automaticamente do estoque
-}
-
-// Interface para configuração de workflow por tipo de procedimento
+// Interface para template de workflow
 export interface WorkflowTemplate {
   id: string;
   name: string;
   procedureType: ProcedureType;
-  steps: WorkflowStepType[]; // Etapas ordenadas para este tipo de procedimento
-  estimatedTotalDuration: number; // Em horas
-  defaultMaterials?: MaterialUsage[]; // Materiais padrão para este tipo de procedimento
+  steps: WorkflowStepType[];
+  estimatedTotalDuration: number; // em horas
+  defaultMaterials?: MaterialUsage[];
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-// Interface para instância de workflow associada a uma ordem
+// Interface para instância de workflow
 export interface WorkflowInstance {
   id: string;
   orderId: string;
   templateId: string;
   currentStepIndex: number;
   steps: WorkflowStep[];
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'PAUSED';
   startDate: Date;
   estimatedEndDate: Date;
   actualEndDate?: Date;
-  status: 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
   urgent: boolean;
+  priority?: number;
+  assignedTechnician?: string;
   sentToDentist: boolean;
   dentistFeedback?: string;
   returnedFromDentist?: Date;
+  qualityCheckPassed?: boolean;
+  finalNotes?: string;
+  createdBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-// Interface para detalhes específicos de prótese
-export interface ProsthesisDetails {
-  procedureType: ProcedureType;
-  archType: ArchType;
-  toothColor: string;
-  colorScale: ColorScale;
-  materialType: MaterialType;
-  teethNumbers?: string[]; // Números dos dentes envolvidos
-  customProcedureName?: string; // Para procedimentos personalizados
-}
-
-// Interface estendida para ordem de serviço com workflow
-export interface OrderWithWorkflow {
+// Interface para histórico de workflow
+export interface WorkflowHistory {
   id: string;
-  clientId: string;
-  patientName: string;
-  creationDate: Date;
-  dueDate: Date;
-  urgent: boolean;
-  prosthesisDetails: ProsthesisDetails;
-  workflow: WorkflowInstance;
-  price: number;
-  notes?: string;
-  attachments?: string[]; // URLs ou caminhos para arquivos anexados
+  workflowId: string;
+  stepId?: string;
+  action: string;
+  description: string;
+  performedBy: string;
+  performedAt: Date;
+  previousValue?: any;
+  newValue?: any;
 }
+
+// Interface para métricas de performance
+export interface WorkflowMetrics {
+  totalWorkflows: number;
+  completedWorkflows: number;
+  averageCompletionTime: number;
+  onTimeCompletionRate: number;
+  mostCommonDelayReasons: string[];
+  averageStepDuration: { [stepType: string]: number };
+  technicianPerformance: { [technicianId: string]: number };
+}
+
+// Tipos adicionais para compatibilidade
+export type Workflow = WorkflowInstance;
+export type WorkflowStepStatus = StepStatus;
+
+// Re-exportar ProcedureType como string union para compatibilidade
+export type ProcedureTypeString = 'TOTAL_PROSTHESIS' | 'PARTIAL_REMOVIBLE_PROSTHESIS' | 'IMPLANT_PROTOCOL' | 'PROVISIONAL';
