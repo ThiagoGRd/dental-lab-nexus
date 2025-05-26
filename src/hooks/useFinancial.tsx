@@ -23,7 +23,7 @@ export const useFinancial = () => {
   const [installmentPlans, setInstallmentPlans] = useState<InstallmentPlan[]>([]);
   const [cashFlow, setCashFlow] = useState<CashFlow[]>([]);
 
-  // Carregar todas as transações
+  // Carregar todas as transações da tabela 'finances'
   const fetchTransactions = useCallback(async (
     startDate?: Date,
     endDate?: Date,
@@ -34,22 +34,22 @@ export const useFinancial = () => {
     
     try {
       let query = supabase
-        .from('financial_transactions')
+        .from('finances') // Usando tabela 'finances' em vez de 'financial_transactions'
         .select('*');
       
       if (startDate) {
-        query = query.gte('date', startDate.toISOString());
+        query = query.gte('created_at', startDate.toISOString());
       }
       
       if (endDate) {
-        query = query.lte('date', endDate.toISOString());
+        query = query.lte('created_at', endDate.toISOString());
       }
       
       if (type) {
         query = query.eq('type', type);
       }
       
-      const { data, error } = await query.order('date', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) {
         console.error('Erro ao buscar transações:', error);
@@ -58,16 +58,34 @@ export const useFinancial = () => {
       }
       
       if (data) {
-        setTransactions(data as unknown as FinancialTransaction[]);
+        // Mapear dados da tabela 'finances' para o tipo FinancialTransaction
+        const mappedTransactions: FinancialTransaction[] = data.map(item => ({
+          id: item.id,
+          type: item.type as TransactionType,
+          amount: item.amount,
+          description: item.description,
+          date: new Date(item.created_at),
+          category: (item.category as TransactionCategory) || TransactionCategory.OTHER,
+          status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
+          createdBy: 'system',
+          createdAt: new Date(item.created_at),
+          dueDate: item.due_date ? new Date(item.due_date) : undefined,
+          paymentDate: item.payment_date ? new Date(item.payment_date) : undefined,
+          notes: item.notes || undefined,
+          relatedOrderId: item.related_order_id || undefined,
+          isInstallment: false
+        }));
+        
+        setTransactions(mappedTransactions);
         
         // Filtrar contas a receber e a pagar
-        const receivables = data.filter(
+        const receivables = mappedTransactions.filter(
           t => t.type === TransactionType.RECEIVABLE
-        ) as unknown as FinancialTransaction[];
+        );
         
-        const payables = data.filter(
+        const payables = mappedTransactions.filter(
           t => t.type === TransactionType.PAYABLE
-        ) as unknown as FinancialTransaction[];
+        );
         
         setReceivables(receivables);
         setPayables(payables);
@@ -80,25 +98,15 @@ export const useFinancial = () => {
     }
   }, []);
 
-  // Carregar planos de parcelamento
+  // Carregar planos de parcelamento (mock por enquanto)
   const fetchInstallmentPlans = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('installment_plans')
-        .select('*');
-      
-      if (error) {
-        console.error('Erro ao buscar planos de parcelamento:', error);
-        setError('Não foi possível carregar os planos de parcelamento.');
-        return;
-      }
-      
-      if (data) {
-        setInstallmentPlans(data as unknown as InstallmentPlan[]);
-      }
+      // Como não temos tabela específica para planos de parcelamento,
+      // vamos usar um mock por enquanto
+      setInstallmentPlans([]);
     } catch (err) {
       console.error('Erro inesperado:', err);
       setError('Ocorreu um erro ao processar os planos de parcelamento.');
@@ -107,7 +115,7 @@ export const useFinancial = () => {
     }
   }, []);
 
-  // Carregar fluxo de caixa
+  // Carregar fluxo de caixa (usando dados da tabela finances)
   const fetchCashFlow = useCallback(async (
     startDate: Date,
     endDate: Date
@@ -117,11 +125,11 @@ export const useFinancial = () => {
     
     try {
       const { data, error } = await supabase
-        .from('cash_flow')
+        .from('finances')
         .select('*')
-        .gte('date', startDate.toISOString())
-        .lte('date', endDate.toISOString())
-        .order('date', { ascending: true });
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: true });
       
       if (error) {
         console.error('Erro ao buscar fluxo de caixa:', error);
@@ -130,7 +138,18 @@ export const useFinancial = () => {
       }
       
       if (data) {
-        setCashFlow(data as unknown as CashFlow[]);
+        // Mapear dados para CashFlow
+        const cashFlowData: CashFlow[] = data.map(item => ({
+          id: item.id,
+          date: new Date(item.created_at),
+          type: item.type as 'income' | 'expense',
+          amount: item.amount,
+          description: item.description,
+          category: item.category || 'other',
+          balance: 0 // Será calculado posteriormente
+        }));
+        
+        setCashFlow(cashFlowData);
       }
     } catch (err) {
       console.error('Erro inesperado:', err);
@@ -148,22 +167,47 @@ export const useFinancial = () => {
     setError(null);
     
     try {
-      const newTransaction: FinancialTransaction = {
-        ...transaction,
-        id: uuidv4(),
-        createdAt: new Date(),
-        isInstallment: false
+      const newFinanceRecord = {
+        type: transaction.type,
+        amount: transaction.amount,
+        description: transaction.description,
+        category: transaction.category,
+        status: transaction.status || PaymentStatus.PENDING,
+        due_date: transaction.dueDate?.toISOString(),
+        payment_date: transaction.paymentDate?.toISOString(),
+        notes: transaction.notes,
+        related_order_id: transaction.relatedOrderId
       };
       
-      const { error } = await supabase
-        .from('financial_transactions')
-        .insert(newTransaction);
+      const { data, error } = await supabase
+        .from('finances')
+        .insert(newFinanceRecord)
+        .select()
+        .single();
       
       if (error) {
         console.error('Erro ao adicionar transação:', error);
         setError('Não foi possível adicionar a transação.');
         return null;
       }
+      
+      // Mapear dados de volta para FinancialTransaction
+      const newTransaction: FinancialTransaction = {
+        id: data.id,
+        type: data.type as TransactionType,
+        amount: data.amount,
+        description: data.description,
+        date: new Date(data.created_at),
+        category: (data.category as TransactionCategory) || TransactionCategory.OTHER,
+        status: (data.status as PaymentStatus) || PaymentStatus.PENDING,
+        createdBy: 'system',
+        createdAt: new Date(data.created_at),
+        dueDate: data.due_date ? new Date(data.due_date) : undefined,
+        paymentDate: data.payment_date ? new Date(data.payment_date) : undefined,
+        notes: data.notes || undefined,
+        relatedOrderId: data.related_order_id || undefined,
+        isInstallment: false
+      };
       
       setTransactions(prev => [newTransaction, ...prev]);
       
@@ -194,12 +238,19 @@ export const useFinancial = () => {
     setError(null);
     
     try {
+      const updateData: any = {};
+      
+      if (updates.amount !== undefined) updateData.amount = updates.amount;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.category !== undefined) updateData.category = updates.category;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate?.toISOString();
+      if (updates.paymentDate !== undefined) updateData.payment_date = updates.paymentDate?.toISOString();
+      if (updates.notes !== undefined) updateData.notes = updates.notes;
+      
       const { error } = await supabase
-        .from('financial_transactions')
-        .update({
-          ...updates,
-          updatedAt: new Date()
-        })
+        .from('finances')
+        .update(updateData)
         .eq('id', id);
       
       if (error) {
@@ -238,7 +289,7 @@ export const useFinancial = () => {
     }
   }, [transactions]);
 
-  // Criar plano de parcelamento
+  // Criar plano de parcelamento (implementação simplificada)
   const createInstallmentPlan = useCallback(async (
     totalAmount: number,
     numberOfInstallments: number,
@@ -256,82 +307,29 @@ export const useFinancial = () => {
     try {
       // Calcular valor de cada parcela
       const installmentAmount = parseFloat((totalAmount / numberOfInstallments).toFixed(2));
-      const installments: Installment[] = [];
       
-      // Criar parcelas
+      // Criar transações para cada parcela
       for (let i = 0; i < numberOfInstallments; i++) {
         const dueDate = new Date(firstDueDate);
         dueDate.setMonth(dueDate.getMonth() + i);
         
-        installments.push({
-          id: uuidv4(),
-          installmentNumber: i + 1,
-          amount: installmentAmount,
-          dueDate,
-          status: PaymentStatus.PENDING,
-          hasInterest: false,
-          hasFine: false,
-          totalAmount: installmentAmount
-        });
-      }
-      
-      // Ajustar última parcela para garantir soma exata
-      const sumInstallments = installmentAmount * numberOfInstallments;
-      const difference = totalAmount - sumInstallments;
-      
-      if (difference !== 0) {
-        const lastInstallment = installments[installments.length - 1];
-        lastInstallment.amount = parseFloat((lastInstallment.amount + difference).toFixed(2));
-        lastInstallment.totalAmount = lastInstallment.amount;
-      }
-      
-      // Criar plano de parcelamento
-      const installmentPlan: InstallmentPlan = {
-        id: uuidv4(),
-        totalAmount,
-        numberOfInstallments,
-        installments,
-        createdAt: new Date()
-      };
-      
-      // Salvar plano de parcelamento
-      const { error: planError } = await supabase
-        .from('installment_plans')
-        .insert(installmentPlan);
-      
-      if (planError) {
-        console.error('Erro ao criar plano de parcelamento:', planError);
-        setError('Não foi possível criar o plano de parcelamento.');
-        return null;
-      }
-      
-      // Criar transações para cada parcela
-      for (const installment of installments) {
         const transaction: Omit<FinancialTransaction, 'id' | 'createdAt' | 'isInstallment'> = {
           type: installmentType,
-          amount: installment.amount,
-          description: `${description} - Parcela ${installment.installmentNumber}/${numberOfInstallments}`,
+          amount: installmentAmount,
+          description: `${description} - Parcela ${i + 1}/${numberOfInstallments}`,
           date: new Date(),
           category,
           status: PaymentStatus.PENDING,
           createdBy: 'system',
-          dueDate: installment.dueDate,
-          clientId,
-          supplierId,
-          orderId,
-          installmentPlan: {
-            ...installmentPlan,
-            installments: [installment]
-          }
+          dueDate,
+          relatedOrderId: orderId
         };
         
         await addTransaction(transaction);
       }
       
-      setInstallmentPlans(prev => [...prev, installmentPlan]);
-      
       toast.success('Plano de parcelamento criado com sucesso!');
-      return installmentPlan;
+      return { id: uuidv4(), totalAmount, numberOfInstallments, installments: [], createdAt: new Date() };
     } catch (err) {
       console.error('Erro inesperado:', err);
       setError('Ocorreu um erro ao criar o plano de parcelamento.');
@@ -341,7 +339,7 @@ export const useFinancial = () => {
     }
   }, [addTransaction]);
 
-  // Registrar pagamento de parcela
+  // Registrar pagamento de parcela (implementação simplificada)
   const registerInstallmentPayment = useCallback(async (
     transactionId: string,
     installmentNumber: number,
@@ -354,122 +352,12 @@ export const useFinancial = () => {
     fineAmount: number = 0,
     notes?: string
   ) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Buscar transação
-      const transaction = transactions.find(t => t.id === transactionId);
-      
-      if (!transaction || !transaction.installmentPlan) {
-        setError('Transação ou plano de parcelamento não encontrado.');
-        return false;
-      }
-      
-      // Encontrar parcela específica
-      const installmentPlan = { ...transaction.installmentPlan };
-      const installmentIndex = installmentPlan.installments.findIndex(
-        i => i.installmentNumber === installmentNumber
-      );
-      
-      if (installmentIndex === -1) {
-        setError('Parcela não encontrada.');
-        return false;
-      }
-      
-      // Atualizar parcela
-      const installment = { ...installmentPlan.installments[installmentIndex] };
-      installment.status = PaymentStatus.PAID;
-      installment.paymentDate = paymentDate;
-      installment.paymentMethod = paymentMethod;
-      installment.notes = notes;
-      installment.hasInterest = hasInterest;
-      installment.interestAmount = interestAmount;
-      installment.hasFine = hasFine;
-      installment.fineAmount = fineAmount;
-      
-      // Calcular valor total pago
-      const baseAmount = paidAmount !== undefined ? paidAmount : installment.amount;
-      installment.totalAmount = baseAmount + (interestAmount || 0) + (fineAmount || 0);
-      
-      // Atualizar plano de parcelamento
-      const updatedInstallments = [...installmentPlan.installments];
-      updatedInstallments[installmentIndex] = installment;
-      
-      const updatedPlan = {
-        ...installmentPlan,
-        installments: updatedInstallments,
-        updatedAt: new Date()
-      };
-      
-      // Atualizar transação
-      const updatedTransaction: Partial<FinancialTransaction> = {
-        status: PaymentStatus.PAID,
-        paymentMethod,
-        updatedAt: new Date(),
-        notes: notes ? `${transaction.notes || ''} ${notes}` : transaction.notes,
-        installmentPlan: {
-          ...updatedPlan,
-          installments: [installment]
-        }
-      };
-      
-      // Salvar alterações
-      const { error } = await supabase
-        .from('financial_transactions')
-        .update(updatedTransaction)
-        .eq('id', transactionId);
-      
-      if (error) {
-        console.error('Erro ao registrar pagamento:', error);
-        setError('Não foi possível registrar o pagamento da parcela.');
-        return false;
-      }
-      
-      // Atualizar plano de parcelamento completo
-      const { error: planError } = await supabase
-        .from('installment_plans')
-        .update({
-          installments: updatedInstallments,
-          updatedAt: new Date()
-        })
-        .eq('id', installmentPlan.id);
-      
-      if (planError) {
-        console.error('Erro ao atualizar plano de parcelamento:', planError);
-        // Não falhar completamente, já que o pagamento foi registrado
-      }
-      
-      // Atualizar estados locais
-      setTransactions(prev => 
-        prev.map(t => t.id === transactionId ? { ...t, ...updatedTransaction } : t)
-      );
-      
-      setInstallmentPlans(prev => 
-        prev.map(p => p.id === installmentPlan.id ? updatedPlan : p)
-      );
-      
-      // Atualizar contas a receber ou a pagar
-      if (transaction.type === TransactionType.RECEIVABLE) {
-        setReceivables(prev => 
-          prev.map(t => t.id === transactionId ? { ...t, ...updatedTransaction } : t)
-        );
-      } else if (transaction.type === TransactionType.PAYABLE) {
-        setPayables(prev => 
-          prev.map(t => t.id === transactionId ? { ...t, ...updatedTransaction } : t)
-        );
-      }
-      
-      toast.success('Pagamento registrado com sucesso!');
-      return true;
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setError('Ocorreu um erro ao registrar o pagamento da parcela.');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [transactions]);
+    return await updateTransaction(transactionId, {
+      status: PaymentStatus.PAID,
+      paymentDate,
+      notes
+    });
+  }, [updateTransaction]);
 
   // Gerar relatório financeiro
   const generateFinancialReport = useCallback(async (
@@ -483,10 +371,10 @@ export const useFinancial = () => {
     try {
       // Buscar transações no período
       const { data, error } = await supabase
-        .from('financial_transactions')
+        .from('finances')
         .select('*')
-        .gte('date', startDate.toISOString())
-        .lte('date', endDate.toISOString());
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
       
       if (error) {
         console.error('Erro ao buscar transações para relatório:', error);
@@ -499,17 +387,31 @@ export const useFinancial = () => {
         return null;
       }
       
-      const reportTransactions = data as unknown as FinancialTransaction[];
+      // Mapear dados para FinancialTransaction
+      const reportTransactions: FinancialTransaction[] = data.map(item => ({
+        id: item.id,
+        type: item.type as TransactionType,
+        amount: item.amount,
+        description: item.description,
+        date: new Date(item.created_at),
+        category: (item.category as TransactionCategory) || TransactionCategory.OTHER,
+        status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
+        createdBy: 'system',
+        createdAt: new Date(item.created_at),
+        dueDate: item.due_date ? new Date(item.due_date) : undefined,
+        paymentDate: item.payment_date ? new Date(item.payment_date) : undefined,
+        notes: item.notes || undefined,
+        relatedOrderId: item.related_order_id || undefined,
+        isInstallment: false
+      }));
       
       // Calcular totais
       const incomes = reportTransactions.filter(
-        t => t.type === TransactionType.INCOME || 
-             (t.type === TransactionType.RECEIVABLE && t.status === PaymentStatus.PAID)
+        t => (t.type === 'income' || t.type === TransactionType.RECEIVABLE) && t.status === PaymentStatus.PAID
       );
       
       const expenses = reportTransactions.filter(
-        t => t.type === TransactionType.EXPENSE || 
-             (t.type === TransactionType.PAYABLE && t.status === PaymentStatus.PAID)
+        t => (t.type === 'expense' || t.type === TransactionType.PAYABLE) && t.status === PaymentStatus.PAID
       );
       
       const totalIncome = incomes.reduce((sum, t) => sum + t.amount, 0);
@@ -529,8 +431,6 @@ export const useFinancial = () => {
         generatedAt: new Date(),
         generatedBy: 'system'
       };
-      
-      // Em um cenário real, salvaríamos o relatório
       
       toast.success('Relatório financeiro gerado com sucesso!');
       return report;
@@ -567,8 +467,7 @@ export const useFinancial = () => {
           category,
           status: PaymentStatus.PENDING,
           dueDate,
-          clientId,
-          orderId,
+          relatedOrderId: orderId,
           createdBy: 'system'
         };
         

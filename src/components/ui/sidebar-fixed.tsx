@@ -70,22 +70,23 @@ const SidebarProvider = React.forwardRef<
     const isControlled = controlledOpen !== undefined
     const open = isControlled ? controlledOpen : uncontrolledOpen
     const setOpen = React.useCallback(
-      (open: boolean) => {
+      (value: boolean | ((prev: boolean) => boolean)) => { // Corrigindo tipo
+        const newValue = typeof value === 'function' ? value(open) : value;
         if (isControlled) {
-          onOpenChange?.(open)
+          onOpenChange?.(newValue)
         } else {
-          setUncontrolledOpen(open)
+          setUncontrolledOpen(newValue)
         }
         // Save state to cookie
         try {
           document.cookie = `${SIDEBAR_COOKIE_NAME}=${
-            open ? "expanded" : "collapsed"
+            newValue ? "expanded" : "collapsed"
           }; max-age=${SIDEBAR_COOKIE_MAX_AGE}; path=/`
         } catch (error) {
           // Ignore
         }
       },
-      [isControlled, onOpenChange]
+      [isControlled, onOpenChange, open]
     )
 
     // Read cookie on mount
@@ -198,7 +199,6 @@ const Sidebar = React.forwardRef<
             <SheetContent
               side={side}
               className="w-[var(--sidebar-width-mobile,18rem)] p-0"
-              hideCloseButton
             >
               <div
                 ref={ref}

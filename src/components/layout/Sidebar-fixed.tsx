@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react'; // Corrigindo import
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sidebar as SidebarComponent,
@@ -163,6 +164,3 @@ export default function Sidebar() {
     </SidebarComponent>
   );
 }
-
-// Adicionar o import que estava faltando
-import { useState } from 'react';

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -50,9 +51,9 @@ export function useAuth() {
       }
       
       if (session) {
-        // Buscar dados adicionais do usuário
+        // Buscar dados adicionais do usuário da tabela profiles
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
@@ -67,7 +68,7 @@ export function useAuth() {
           email: session.user.email || '',
           name: userData?.name || 'Usuário',
           role: userData?.role || 'technician',
-          avatar: userData?.avatar_url,
+          avatar: userData?.avatar,
         };
         
         // Salvar dados do usuário no localStorage para acesso offline
@@ -146,7 +147,7 @@ export function useAuth() {
           if (session) {
             // Buscar dados adicionais do usuário
             const { data: userData, error: userError } = await supabase
-              .from('users')
+              .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
@@ -162,7 +163,7 @@ export function useAuth() {
               email: session.user.email || '',
               name: userData?.name || 'Usuário',
               role: userData?.role || 'technician',
-              avatar: userData?.avatar_url,
+              avatar: userData?.avatar,
             };
             
             // Salvar dados do usuário no localStorage para acesso offline
@@ -307,10 +308,10 @@ export function useAuth() {
       
       // Atualizar dados na tabela de usuários
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({
           name: userData.name,
-          avatar_url: userData.avatar,
+          avatar: userData.avatar,
         })
         .eq('id', user.id);
       
