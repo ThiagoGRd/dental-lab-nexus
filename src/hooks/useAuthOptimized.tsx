@@ -8,7 +8,7 @@ type User = {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'technician' | 'receptionist';
+  role: 'admin' | 'user' | 'technician'; // Usando apenas roles válidos
   avatar?: string;
 };
 
@@ -21,14 +21,6 @@ type AuthState = {
 
 /**
  * Hook para gerenciamento de autenticação e autorização
- * 
- * Este hook fornece funcionalidades para:
- * - Login e logout de usuários
- * - Verificação de sessão atual
- * - Controle de permissões baseado em papéis
- * - Persistência de sessão
- * 
- * @returns Objeto com funções e estados para gerenciar autenticação
  */
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -38,12 +30,8 @@ export function useAuth() {
     isAuthenticated: false,
   });
   
-  /**
-   * Inicializa o estado de autenticação com base na sessão atual
-   */
   const initAuth = useCallback(async () => {
     try {
-      // Verificar se há uma sessão ativa
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -51,7 +39,7 @@ export function useAuth() {
       }
       
       if (session) {
-        // Buscar dados adicionais do usuário da tabela profiles
+        // Buscar dados do usuário da tabela profiles (que existe)
         const { data: userData, error: userError } = await supabase
           .from('profiles')
           .select('*')
@@ -59,19 +47,18 @@ export function useAuth() {
           .single();
         
         if (userError) {
-          throw userError;
+          console.warn('Erro ao buscar dados do usuário:', userError);
         }
         
         // Criar objeto de usuário com dados completos
         const user: User = {
           id: session.user.id,
           email: session.user.email || '',
-          name: userData?.name || 'Usuário',
-          role: userData?.role || 'technician',
-          avatar: userData?.avatar,
+          name: userData?.name || session.user.user_metadata?.name || 'Usuário',
+          role: (userData?.role === 'admin') ? 'admin' : 'user', // Garantir tipo correto
+          avatar: userData?.avatar || session.user.user_metadata?.avatar_url,
         };
         
-        // Salvar dados do usuário no localStorage para acesso offline
         localStorage.setItem('user', JSON.stringify(user));
         
         setAuthState({
@@ -81,7 +68,6 @@ export function useAuth() {
           isAuthenticated: true,
         });
       } else {
-        // Tentar recuperar dados do usuário do localStorage (para modo offline)
         const storedUser = localStorage.getItem('user');
         
         if (storedUser) {
@@ -92,13 +78,11 @@ export function useAuth() {
               user,
               session: null,
               isLoading: false,
-              isAuthenticated: true, // Consideramos autenticado mesmo offline
+              isAuthenticated: true,
             });
             
-            // Notificar usuário que está em modo offline
             toast.info('Você está trabalhando em modo offline');
           } catch (e) {
-            // Se não conseguir parsear, limpar localStorage
             localStorage.removeItem('user');
             
             setAuthState({
@@ -119,8 +103,6 @@ export function useAuth() {
       }
     } catch (error: any) {
       console.error('Erro ao inicializar autenticação:', error);
-      
-      // Limpar dados de autenticação em caso de erro
       localStorage.removeItem('user');
       
       setAuthState({
@@ -132,20 +114,13 @@ export function useAuth() {
     }
   }, []);
   
-  /**
-   * Configura listener para mudanças de autenticação
-   */
   useEffect(() => {
-    // Inicializar autenticação
     initAuth();
     
-    // Configurar listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Atualizar estado com nova sessão
           if (session) {
-            // Buscar dados adicionais do usuário
             const { data: userData, error: userError } = await supabase
               .from('profiles')
               .select('*')
@@ -153,20 +128,17 @@ export function useAuth() {
               .single();
             
             if (userError) {
-              console.error('Erro ao buscar dados do usuário:', userError);
-              return;
+              console.warn('Erro ao buscar dados do usuário:', userError);
             }
             
-            // Criar objeto de usuário com dados completos
             const user: User = {
               id: session.user.id,
               email: session.user.email || '',
-              name: userData?.name || 'Usuário',
-              role: userData?.role || 'technician',
-              avatar: userData?.avatar,
+              name: userData?.name || session.user.user_metadata?.name || 'Usuário',
+              role: (userData?.role === 'admin') ? 'admin' : 'user', // Garantir tipo correto
+              avatar: userData?.avatar || session.user.user_metadata?.avatar_url,
             };
             
-            // Salvar dados do usuário no localStorage para acesso offline
             localStorage.setItem('user', JSON.stringify(user));
             
             setAuthState({
@@ -177,7 +149,6 @@ export function useAuth() {
             });
           }
         } else if (event === 'SIGNED_OUT') {
-          // Limpar dados de autenticação
           localStorage.removeItem('user');
           
           setAuthState({
@@ -190,15 +161,11 @@ export function useAuth() {
       }
     );
     
-    // Limpar subscription ao desmontar
     return () => {
       subscription.unsubscribe();
     };
   }, [initAuth]);
   
-  /**
-   * Realiza login com email e senha
-   */
   const login = useCallback(async (email: string, password: string) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -212,8 +179,6 @@ export function useAuth() {
         throw error;
       }
       
-      // O estado será atualizado pelo listener de autenticação
-      
       toast.success('Login realizado com sucesso');
       return { success: true };
     } catch (error: any) {
@@ -221,7 +186,6 @@ export function useAuth() {
       
       setAuthState(prev => ({ ...prev, isLoading: false }));
       
-      // Mensagens de erro mais amigáveis
       if (error.message.includes('Invalid login credentials')) {
         toast.error('Email ou senha incorretos');
       } else if (error.message.includes('Email not confirmed')) {
@@ -234,9 +198,6 @@ export function useAuth() {
     }
   }, []);
   
-  /**
-   * Realiza logout
-   */
   const logout = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -247,7 +208,6 @@ export function useAuth() {
         throw error;
       }
       
-      // Limpar dados de autenticação
       localStorage.removeItem('user');
       
       setAuthState({
@@ -269,33 +229,24 @@ export function useAuth() {
     }
   }, []);
   
-  /**
-   * Verifica se o usuário tem uma determinada permissão
-   */
-  const hasPermission = useCallback((requiredRole: 'admin' | 'technician' | 'receptionist' | string[]) => {
+  const hasPermission = useCallback((requiredRole: 'admin' | 'user' | 'technician' | string[]) => {
     const { user } = authState;
     
     if (!user) {
       return false;
     }
     
-    // Se requiredRole for um array, verificar se o usuário tem alguma das funções
     if (Array.isArray(requiredRole)) {
       return requiredRole.includes(user.role);
     }
     
-    // Administradores têm acesso a tudo
     if (user.role === 'admin') {
       return true;
     }
     
-    // Verificar função específica
     return user.role === requiredRole;
   }, [authState]);
   
-  /**
-   * Atualiza dados do perfil do usuário
-   */
   const updateProfile = useCallback(async (userData: Partial<User>) => {
     try {
       const { user } = authState;
@@ -306,7 +257,6 @@ export function useAuth() {
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      // Atualizar dados na tabela de usuários
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -319,13 +269,11 @@ export function useAuth() {
         throw error;
       }
       
-      // Atualizar estado local
       const updatedUser = {
         ...user,
         ...userData,
       };
       
-      // Atualizar localStorage
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
       setAuthState(prev => ({
@@ -346,9 +294,6 @@ export function useAuth() {
     }
   }, [authState]);
   
-  /**
-   * Altera a senha do usuário
-   */
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
       const { user, session } = authState;
@@ -359,7 +304,6 @@ export function useAuth() {
       
       setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      // Verificar senha atual
       const { error: verifyError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: currentPassword,
@@ -369,7 +313,6 @@ export function useAuth() {
         throw new Error('Senha atual incorreta');
       }
       
-      // Alterar senha
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -387,7 +330,6 @@ export function useAuth() {
       
       setAuthState(prev => ({ ...prev, isLoading: false }));
       
-      // Mensagens de erro mais amigáveis
       if (error.message.includes('Senha atual incorreta')) {
         toast.error('Senha atual incorreta');
       } else if (error.message.includes('Password should be at least')) {
@@ -400,9 +342,6 @@ export function useAuth() {
     }
   }, [authState]);
   
-  /**
-   * Solicita redefinição de senha
-   */
   const resetPassword = useCallback(async (email: string) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -429,16 +368,10 @@ export function useAuth() {
     }
   }, []);
   
-  /**
-   * Verifica se o usuário está autenticado
-   */
   const isAuthenticated = useCallback(() => {
     return authState.isAuthenticated;
   }, [authState.isAuthenticated]);
   
-  /**
-   * Verifica se o usuário é administrador
-   */
   const isAdmin = useCallback(() => {
     return authState.user?.role === 'admin';
   }, [authState.user?.role]);

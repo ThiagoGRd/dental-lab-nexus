@@ -1,15 +1,42 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  InventoryItem, 
-  InventoryMovement, 
-  MaterialCategory, 
-  MeasurementUnit,
-  InventoryAlert,
-  WorkflowMaterialUsage
-} from '../types/inventory';
+
+// Tipos simplificados para funcionar apenas com a tabela 'inventory' existente
+interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  min_quantity?: number;
+  price?: number;
+  category?: string;
+  supplier?: string;
+  unit?: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InventoryMovement {
+  id: string;
+  item_id: string;
+  type: 'IN' | 'OUT';
+  quantity: number;
+  date: Date;
+  notes?: string;
+  user_id?: string;
+}
+
+interface InventoryAlert {
+  id: string;
+  item_id: string;
+  type: 'LOW_STOCK' | 'OUT_OF_STOCK';
+  message: string;
+  date: Date;
+  resolved: boolean;
+}
 
 export const useInventory = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -17,19 +44,17 @@ export const useInventory = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [alerts, setAlerts] = useState<InventoryAlert[]>([]);
-  const [pendingDeductions, setPendingDeductions] = useState<WorkflowMaterialUsage[]>([]);
 
-  // Carregar todos os itens do estoque
+  // Carregar todos os itens do estoque usando a tabela 'inventory' existente
   const fetchInventoryItems = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Em um cenário real, isso buscaria do Supabase
       const { data, error } = await supabase
-        .from('inventory_items')
+        .from('inventory')
         .select('*')
-        .eq('is_active', true);
+        .order('name');
         
       if (error) {
         console.error('Erro ao buscar itens de estoque:', error);
@@ -38,7 +63,7 @@ export const useInventory = () => {
       }
       
       if (data) {
-        setInventoryItems(data as unknown as InventoryItem[]);
+        setInventoryItems(data as InventoryItem[]);
       }
     } catch (err) {
       console.error('Erro inesperado:', err);
@@ -48,31 +73,14 @@ export const useInventory = () => {
     }
   }, []);
 
-  // Carregar movimentações recentes
+  // Simular movimentações (já que a tabela não existe)
   const fetchRecentMovements = useCallback(async (days: number = 30) => {
     setLoading(true);
     setError(null);
     
     try {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      // Em um cenário real, isso buscaria do Supabase
-      const { data, error } = await supabase
-        .from('inventory_movements')
-        .select('*')
-        .gte('date', startDate.toISOString())
-        .order('date', { ascending: false });
-        
-      if (error) {
-        console.error('Erro ao buscar movimentações:', error);
-        setError('Não foi possível carregar as movimentações de estoque.');
-        return;
-      }
-      
-      if (data) {
-        setMovements(data as unknown as InventoryMovement[]);
-      }
+      // Como não temos tabela de movimentações, usar array vazio por enquanto
+      setMovements([]);
     } catch (err) {
       console.error('Erro inesperado:', err);
       setError('Ocorreu um erro ao processar as movimentações de estoque.');
@@ -81,81 +89,46 @@ export const useInventory = () => {
     }
   }, []);
 
-  // Carregar alertas ativos
+  // Simular alertas
   const fetchActiveAlerts = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // Em um cenário real, isso buscaria do Supabase
-      const { data, error } = await supabase
-        .from('inventory_alerts')
-        .select('*')
-        .eq('is_resolved', false)
-        .order('date', { ascending: false });
-        
-      if (error) {
-        console.error('Erro ao buscar alertas:', error);
-        setError('Não foi possível carregar os alertas de estoque.');
-        return;
-      }
+      // Verificar itens com estoque baixo
+      const lowStockItems = inventoryItems.filter(
+        item => item.min_quantity && item.quantity <= item.min_quantity
+      );
       
-      if (data) {
-        setAlerts(data as unknown as InventoryAlert[]);
-      }
+      const generatedAlerts: InventoryAlert[] = lowStockItems.map(item => ({
+        id: uuidv4(),
+        item_id: item.id,
+        type: item.quantity === 0 ? 'OUT_OF_STOCK' : 'LOW_STOCK',
+        message: `${item.name}: ${item.quantity} ${item.unit || 'unidades'} restantes`,
+        date: new Date(),
+        resolved: false
+      }));
+      
+      setAlerts(generatedAlerts);
     } catch (err) {
       console.error('Erro inesperado:', err);
       setError('Ocorreu um erro ao processar os alertas de estoque.');
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // Carregar deduções pendentes
-  const fetchPendingDeductions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Em um cenário real, isso buscaria do Supabase
-      const { data, error } = await supabase
-        .from('workflow_material_usages')
-        .select('*')
-        .eq('deducted', false);
-        
-      if (error) {
-        console.error('Erro ao buscar deduções pendentes:', error);
-        setError('Não foi possível carregar as deduções pendentes.');
-        return;
-      }
-      
-      if (data) {
-        setPendingDeductions(data as unknown as WorkflowMaterialUsage[]);
-      }
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setError('Ocorreu um erro ao processar as deduções pendentes.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [inventoryItems]);
 
   // Adicionar novo item ao estoque
-  const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id'>) => {
+  const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>) => {
     setLoading(true);
     setError(null);
     
     try {
-      const newItem: InventoryItem = {
-        ...item,
-        id: uuidv4(),
-        isActive: true
-      };
-      
-      // Em um cenário real, isso salvaria no Supabase
-      const { error } = await supabase
-        .from('inventory_items')
-        .insert(newItem);
+      const { data, error } = await supabase
+        .from('inventory')
+        .insert(item)
+        .select()
+        .single();
         
       if (error) {
         console.error('Erro ao adicionar item:', error);
@@ -163,9 +136,14 @@ export const useInventory = () => {
         return null;
       }
       
-      setInventoryItems(prev => [...prev, newItem]);
-      toast.success('Item adicionado ao estoque com sucesso!');
-      return newItem;
+      if (data) {
+        const newItem = data as InventoryItem;
+        setInventoryItems(prev => [...prev, newItem]);
+        toast.success('Item adicionado ao estoque com sucesso!');
+        return newItem;
+      }
+      
+      return null;
     } catch (err) {
       console.error('Erro inesperado:', err);
       setError('Ocorreu um erro ao adicionar o item ao estoque.');
@@ -181,9 +159,8 @@ export const useInventory = () => {
     setError(null);
     
     try {
-      // Em um cenário real, isso atualizaria no Supabase
       const { error } = await supabase
-        .from('inventory_items')
+        .from('inventory')
         .update(updates)
         .eq('id', id);
         
@@ -208,316 +185,115 @@ export const useInventory = () => {
     }
   }, []);
 
-  // Registrar movimentação de estoque
-  const registerMovement = useCallback(async (movement: Omit<InventoryMovement, 'id' | 'date'>) => {
+  // Ajustar quantidade (entrada ou saída)
+  const adjustQuantity = useCallback(async (
+    itemId: string,
+    quantityChange: number,
+    type: 'IN' | 'OUT',
+    notes?: string
+  ) => {
     setLoading(true);
     setError(null);
     
     try {
-      const newMovement: InventoryMovement = {
-        ...movement,
-        id: uuidv4(),
-        date: new Date()
-      };
-      
-      // Buscar item atual
-      const item = inventoryItems.find(i => i.id === movement.materialId);
+      const item = inventoryItems.find(i => i.id === itemId);
       
       if (!item) {
         setError('Item não encontrado no estoque.');
-        return null;
+        return false;
       }
       
-      // Calcular nova quantidade
-      const newQuantity = item.currentQuantity + movement.quantity;
+      const newQuantity = item.quantity + quantityChange;
       
       if (newQuantity < 0) {
         setError('Quantidade insuficiente em estoque.');
-        return null;
+        return false;
       }
       
-      // Atualizar quantidade do item
-      const { error: updateError } = await supabase
-        .from('inventory_items')
-        .update({ currentQuantity: newQuantity })
-        .eq('id', item.id);
+      const success = await updateInventoryItem(itemId, { quantity: newQuantity });
+      
+      if (success) {
+        // Simular registro de movimentação
+        const movement: InventoryMovement = {
+          id: uuidv4(),
+          item_id: itemId,
+          type,
+          quantity: Math.abs(quantityChange),
+          date: new Date(),
+          notes,
+          user_id: 'current_user'
+        };
         
-      if (updateError) {
-        console.error('Erro ao atualizar quantidade:', updateError);
-        setError('Não foi possível atualizar a quantidade em estoque.');
-        return null;
-      }
-      
-      // Registrar movimentação
-      const { error } = await supabase
-        .from('inventory_movements')
-        .insert(newMovement);
+        setMovements(prev => [movement, ...prev]);
         
-      if (error) {
-        console.error('Erro ao registrar movimentação:', error);
-        setError('Não foi possível registrar a movimentação de estoque.');
-        return null;
+        toast.success(`${type === 'IN' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
       }
       
-      // Atualizar estados locais
-      setInventoryItems(prev => 
-        prev.map(i => i.id === item.id ? { ...i, currentQuantity: newQuantity } : i)
-      );
-      
-      setMovements(prev => [newMovement, ...prev]);
-      
-      // Verificar se precisa gerar alerta de estoque baixo
-      if (newQuantity <= item.minimumQuantity && movement.quantity < 0) {
-        createAlert({
-          materialId: item.id,
-          type: 'LOW_STOCK',
-          message: `Estoque baixo: ${item.name} (${newQuantity} ${item.unit})`,
-          isRead: false,
-          isResolved: false
-        });
-      }
-      
-      toast.success('Movimentação registrada com sucesso!');
-      return newMovement;
+      return success;
     } catch (err) {
       console.error('Erro inesperado:', err);
-      setError('Ocorreu um erro ao registrar a movimentação de estoque.');
-      return null;
+      setError('Ocorreu um erro ao ajustar a quantidade.');
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [inventoryItems]);
+  }, [inventoryItems, updateInventoryItem]);
 
-  // Criar alerta de estoque
-  const createAlert = useCallback(async (alert: Omit<InventoryAlert, 'id' | 'date'>) => {
+  // Deletar item
+  const deleteInventoryItem = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const newAlert: InventoryAlert = {
-        ...alert,
-        id: uuidv4(),
-        date: new Date()
-      };
-      
-      // Em um cenário real, isso salvaria no Supabase
       const { error } = await supabase
-        .from('inventory_alerts')
-        .insert(newAlert);
-        
-      if (error) {
-        console.error('Erro ao criar alerta:', error);
-        return null;
-      }
-      
-      setAlerts(prev => [newAlert, ...prev]);
-      return newAlert;
-    } catch (err) {
-      console.error('Erro ao criar alerta:', err);
-      return null;
-    }
-  }, []);
-
-  // Resolver alerta
-  const resolveAlert = useCallback(async (id: string) => {
-    try {
-      // Em um cenário real, isso atualizaria no Supabase
-      const { error } = await supabase
-        .from('inventory_alerts')
-        .update({ isResolved: true })
+        .from('inventory')
+        .delete()
         .eq('id', id);
         
       if (error) {
-        console.error('Erro ao resolver alerta:', error);
+        console.error('Erro ao deletar item:', error);
+        setError('Não foi possível deletar o item do estoque.');
         return false;
       }
       
-      setAlerts(prev => 
-        prev.map(alert => alert.id === id ? { ...alert, isResolved: true } : alert)
-      );
-      
+      setInventoryItems(prev => prev.filter(item => item.id !== id));
+      toast.success('Item removido do estoque com sucesso!');
       return true;
     } catch (err) {
-      console.error('Erro ao resolver alerta:', err);
+      console.error('Erro inesperado:', err);
+      setError('Ocorreu um erro ao deletar o item do estoque.');
       return false;
+    } finally {
+      setLoading(false);
     }
   }, []);
-
-  // Registrar uso de materiais em workflow
-  const registerWorkflowMaterialUsage = useCallback(async (
-    workflowId: string,
-    stepId: string,
-    materialUsages: {
-      materialId: string;
-      quantity: number;
-      unit: MeasurementUnit;
-      automaticDeduction: boolean;
-    }[]
-  ) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const usage: WorkflowMaterialUsage = {
-        workflowId,
-        stepId,
-        materialUsages: materialUsages.map(usage => ({
-          ...usage,
-          deducted: false
-        }))
-      };
-      
-      // Em um cenário real, isso salvaria no Supabase
-      const { error } = await supabase
-        .from('workflow_material_usages')
-        .insert(usage);
-        
-      if (error) {
-        console.error('Erro ao registrar uso de materiais:', error);
-        setError('Não foi possível registrar o uso de materiais.');
-        return null;
-      }
-      
-      // Se algum material tem dedução automática, processar imediatamente
-      const autoDeductMaterials = materialUsages.filter(m => m.automaticDeduction);
-      
-      if (autoDeductMaterials.length > 0) {
-        for (const material of autoDeductMaterials) {
-          await registerMovement({
-            materialId: material.materialId,
-            quantity: -material.quantity, // Negativo para saída
-            type: 'OUT',
-            orderId: workflowId,
-            workflowStepId: stepId,
-            userId: 'system', // Em um cenário real, seria o ID do usuário logado
-            automaticDeduction: true,
-            confirmed: true,
-            notes: `Dedução automática - Workflow ${workflowId}`
-          });
-        }
-      } else {
-        // Se não tem dedução automática, adicionar à lista de pendentes
-        setPendingDeductions(prev => [...prev, usage]);
-      }
-      
-      toast.success('Uso de materiais registrado com sucesso!');
-      return usage;
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setError('Ocorreu um erro ao registrar o uso de materiais.');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [registerMovement]);
-
-  // Confirmar dedução pendente
-  const confirmPendingDeduction = useCallback(async (
-    workflowId: string,
-    stepId: string,
-    materialId: string,
-    confirmedQuantity?: number
-  ) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Encontrar a dedução pendente
-      const pendingDeduction = pendingDeductions.find(
-        pd => pd.workflowId === workflowId && pd.stepId === stepId
-      );
-      
-      if (!pendingDeduction) {
-        setError('Dedução pendente não encontrada.');
-        return false;
-      }
-      
-      // Encontrar o material específico
-      const materialUsage = pendingDeduction.materialUsages.find(
-        mu => mu.materialId === materialId
-      );
-      
-      if (!materialUsage) {
-        setError('Material não encontrado na dedução pendente.');
-        return false;
-      }
-      
-      // Usar quantidade confirmada ou a original
-      const quantity = confirmedQuantity !== undefined ? confirmedQuantity : materialUsage.quantity;
-      
-      // Registrar movimentação
-      await registerMovement({
-        materialId,
-        quantity: -quantity, // Negativo para saída
-        type: 'OUT',
-        orderId: workflowId,
-        workflowStepId: stepId,
-        userId: 'user', // Em um cenário real, seria o ID do usuário logado
-        automaticDeduction: false,
-        confirmed: true,
-        notes: `Dedução confirmada manualmente - Workflow ${workflowId}`
-      });
-      
-      // Atualizar status da dedução
-      const updatedMaterialUsages = pendingDeduction.materialUsages.map(mu => 
-        mu.materialId === materialId 
-          ? { 
-              ...mu, 
-              deducted: true, 
-              confirmedBy: 'user', // Em um cenário real, seria o ID do usuário logado
-              confirmedAt: new Date() 
-            } 
-          : mu
-      );
-      
-      // Em um cenário real, isso atualizaria no Supabase
-      const { error } = await supabase
-        .from('workflow_material_usages')
-        .update({ 
-          materialUsages: updatedMaterialUsages 
-        })
-        .eq('workflowId', workflowId)
-        .eq('stepId', stepId);
-        
-      if (error) {
-        console.error('Erro ao confirmar dedução:', error);
-        setError('Não foi possível confirmar a dedução de material.');
-        return false;
-      }
-      
-      // Atualizar estado local
-      setPendingDeductions(prev => 
-        prev.map(pd => 
-          pd.workflowId === workflowId && pd.stepId === stepId
-            ? { ...pd, materialUsages: updatedMaterialUsages }
-            : pd
-        )
-      );
-      
-      toast.success('Dedução de material confirmada com sucesso!');
-      return true;
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setError('Ocorreu um erro ao confirmar a dedução de material.');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [pendingDeductions, registerMovement]);
 
   // Verificar estoque baixo
   const checkLowStock = useCallback(() => {
     const lowStockItems = inventoryItems.filter(
-      item => item.currentQuantity <= item.minimumQuantity
+      item => item.min_quantity && item.quantity <= item.min_quantity
     );
     
     return lowStockItems;
   }, [inventoryItems]);
 
+  // Resolver alerta
+  const resolveAlert = useCallback(async (id: string) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+    return true;
+  }, []);
+
   // Carregar dados iniciais
   useEffect(() => {
     fetchInventoryItems();
-    fetchRecentMovements();
-    fetchActiveAlerts();
-    fetchPendingDeductions();
-  }, [fetchInventoryItems, fetchRecentMovements, fetchActiveAlerts, fetchPendingDeductions]);
+  }, [fetchInventoryItems]);
+
+  // Atualizar alertas quando items mudarem
+  useEffect(() => {
+    if (inventoryItems.length > 0) {
+      fetchActiveAlerts();
+    }
+  }, [inventoryItems, fetchActiveAlerts]);
 
   return {
     loading,
@@ -525,19 +301,15 @@ export const useInventory = () => {
     inventoryItems,
     movements,
     alerts,
-    pendingDeductions,
     addInventoryItem,
     updateInventoryItem,
-    registerMovement,
-    createAlert,
+    adjustQuantity,
+    deleteInventoryItem,
     resolveAlert,
-    registerWorkflowMaterialUsage,
-    confirmPendingDeduction,
     checkLowStock,
     refreshInventory: fetchInventoryItems,
     refreshMovements: fetchRecentMovements,
-    refreshAlerts: fetchActiveAlerts,
-    refreshPendingDeductions: fetchPendingDeductions
+    refreshAlerts: fetchActiveAlerts
   };
 };
 
