@@ -61,7 +61,7 @@ export default function Header() {
       </div>
       
       <div className="flex items-center gap-2">
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -73,7 +73,7 @@ export default function Header() {
               <span className="sr-only">Notificações</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
+          <DropdownMenuContent align="end" className="w-80" sideOffset={5}>
             <div className="flex items-center justify-between border-b px-4 py-2">
               <span className="font-medium">Notificações</span>
               {unreadNotifications > 0 && (
@@ -92,7 +92,7 @@ export default function Header() {
                 </div>
               ) : (
                 notifications.map((notification) => (
-                  <DropdownMenuItem key={notification.id} className="cursor-pointer p-0">
+                  <DropdownMenuItem key={notification.id} className="cursor-pointer p-0" asChild>
                     <Link
                       to={notification.link || '#'}
                       className={`flex w-full gap-4 p-3 ${
