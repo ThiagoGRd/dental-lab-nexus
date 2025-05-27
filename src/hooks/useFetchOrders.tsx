@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase, hasError, safeData } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -24,18 +24,27 @@ export function useFetchOrders() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Use useCallback to avoid recreating this function on each render
   const fetchOrders = useCallback(async () => {
+    // Cancelar requisição anterior se existir
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Criar novo AbortController
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     try {
-      console.log('Fetching orders...');
+      console.log('Iniciando busca de ordens...');
       setLoading(true);
       setError(null);
       
-      // Use a more efficient Promise.all for parallel requests
-      console.log('Making request to Supabase for orders...');
+      // Verificar se foi cancelado
+      if (signal.aborted) return [];
       
-      // 1. Fetch orders data
+      // 1. Buscar ordens
       const ordersResponse = await supabase
         .from('orders')
         .select(`
@@ -49,101 +58,56 @@ export function useFetchOrders() {
         `)
         .order('created_at', { ascending: false });
       
-      console.log('Orders response received:', ordersResponse);
+      if (signal.aborted) return [];
       
-      // Check for orders response error early
       if (ordersResponse.error) {
-        const errorMessage = ordersResponse.error?.message || 'Desconhecido';
-        console.error('Erro ao buscar ordens:', ordersResponse.error);
-        toast.error('Erro ao carregar as ordens de serviço.');
-        setError(`Erro ao buscar ordens: ${errorMessage}`);
-        setLoading(false);
-        return [];
+        throw new Error(`Erro ao buscar ordens: ${ordersResponse.error.message}`);
       }
       
-      // 2. Only fetch related data if we have orders
       const ordersData = ordersResponse.data || [];
-      console.log('Orders data received:', ordersData.length);
+      console.log(`Encontradas ${ordersData.length} ordens`);
       
       if (ordersData.length === 0) {
-        console.log('No orders data found');
-        setLoading(false);
+        setOrders([]);
         return [];
       }
       
-      // 3. Fetch related data in parallel
-      console.log('Fetching related data (clients, order items, services)...');
+      // 2. Buscar dados relacionados em paralelo
       const [clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
-        supabase
-          .from('clients')
-          .select('id, name'),
-          
-        supabase
-          .from('order_items')
-          .select(`
-            order_id,
-            service_id,
-            notes
-          `),
-          
-        supabase
-          .from('services')
-          .select('id, name')
+        supabase.from('clients').select('id, name'),
+        supabase.from('order_items').select('order_id, service_id, notes'),
+        supabase.from('services').select('id, name')
       ]);
       
-      console.log('Related data received');
-      console.log('Clients response:', clientsResponse);
-      console.log('Order items response:', orderItemsResponse);
-      console.log('Services response:', servicesResponse);
+      if (signal.aborted) return [];
       
-      // Check for other response errors but continue with what we have
-      if (clientsResponse.error) {
-        console.warn('Erro ao buscar clientes:', clientsResponse.error);
-      }
-      
-      if (orderItemsResponse.error) {
-        console.warn('Erro ao buscar itens de ordem:', orderItemsResponse.error);
-      }
-      
-      if (servicesResponse.error) {
-        console.warn('Erro ao buscar serviços:', servicesResponse.error);
-      }
-      
+      // Processar dados mesmo se houver erros parciais
       const clientsData = clientsResponse.data || [];
       const orderItemsData = orderItemsResponse.data || [];
       const servicesData = servicesResponse.data || [];
       
-      console.log('Extracted data:', {
-        orders: ordersData.length,
-        clients: clientsData.length,
-        orderItems: orderItemsData.length,
-        services: servicesData.length
-      });
-      
-      // Use Maps for O(1) lookups instead of find() which is O(n)
-      const clientsMap = new Map(clientsData?.map((c) => [c.id, c]));
+      // Criar mapas para lookup eficiente
+      const clientsMap = new Map(clientsData.map(c => [c.id, c]));
+      const servicesMap = new Map(servicesData.map(s => [s.id, s]));
       const orderItemsMap = new Map();
       
-      // Group order items by order_id
-      orderItemsData?.forEach((item) => {
+      orderItemsData.forEach(item => {
         orderItemsMap.set(item.order_id, item);
       });
-      
-      const servicesMap = new Map(servicesData?.map((s) => [s.id, s]));
 
-      // Format the orders data more efficiently
-      const formattedOrders = ordersData.map((order) => {
+      // Formatar ordens
+      const formattedOrders = ordersData.map(order => {
         const client = clientsMap.get(order.client_id);
         const orderItem = orderItemsMap.get(order.id);
         const service = orderItem ? servicesMap.get(orderItem.service_id) : null;
             
-        // Extract patient name once with regex
+        // Extrair nome do paciente das notas
         let patientName = '';
         let cleanNotes = order.notes || '';
         
-        if (order.notes && order.notes.includes('Paciente:')) {
+        if (order.notes?.includes('Paciente:')) {
           const patientMatch = order.notes.match(/Paciente:\s*([^,\-]+)/);
-          if (patientMatch && patientMatch[1]) {
+          if (patientMatch?.[1]) {
             patientName = patientMatch[1].trim();
             cleanNotes = cleanNotes.replace(/Paciente:\s*[^,\-]+(,|\s*-\s*|$)/, '').trim();
           }
@@ -166,28 +130,43 @@ export function useFetchOrders() {
         };
       });
 
-      console.log('Formatted orders:', formattedOrders.length);
+      console.log(`Ordens formatadas: ${formattedOrders.length}`);
+      setOrders(formattedOrders);
       return formattedOrders;
+      
     } catch (error) {
-      const errorMessage = (error as Error)?.message || 'Desconhecido';
-      console.error('Erro inesperado ao buscar ordens:', error);
-      toast.error('Ocorreu um erro inesperado ao carregar os dados.');
-      setError(`Erro inesperado: ${errorMessage}`);
+      if (signal.aborted) {
+        console.log('Busca de ordens cancelada');
+        return [];
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('Erro ao buscar ordens:', error);
+      setError(errorMessage);
+      toast.error('Erro ao carregar ordens de serviço');
       return [];
     } finally {
-      setLoading(false);
+      if (!signal.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
-    
+
   useEffect(() => {
-    console.log('useEffect triggering fetchOrders');
-    fetchOrders().then(formattedOrders => {
-      if (formattedOrders) {
-        console.log('Setting orders:', formattedOrders.length);
-        setOrders(formattedOrders);
+    fetchOrders();
+    
+    // Cleanup na desmontagem
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-    });
+    };
   }, [fetchOrders]);
 
-  return { loading, orders, error, refetch: fetchOrders };
+  return { 
+    loading, 
+    orders, 
+    error, 
+    refetch: fetchOrders 
+  };
 }

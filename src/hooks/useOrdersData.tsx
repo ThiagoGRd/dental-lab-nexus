@@ -8,19 +8,16 @@ export function useOrdersData() {
   const { loading, orders: fetchedOrders, error, refetch } = useFetchOrders();
   const [orders, setOrders] = useState<any[]>([]);
   
-  // Memoize orders update para evitar loops
-  const updateOrders = useCallback((newOrders: any[]) => {
-    if (newOrders && Array.isArray(newOrders) && newOrders.length >= 0) {
-      setOrders(prevOrders => {
-        const ordersChanged = JSON.stringify(prevOrders) !== JSON.stringify(newOrders);
-        return ordersChanged ? newOrders : prevOrders;
-      });
-    }
-  }, []);
-  
+  // Atualizar ordens locais quando fetchedOrders mudar
   useEffect(() => {
-    updateOrders(fetchedOrders || []);
-  }, [fetchedOrders, updateOrders]);
+    if (fetchedOrders && Array.isArray(fetchedOrders)) {
+      // Verificar se realmente mudou para evitar atualizações desnecessárias
+      if (JSON.stringify(orders) !== JSON.stringify(fetchedOrders)) {
+        console.log('Atualizando ordens locais:', fetchedOrders.length);
+        setOrders(fetchedOrders);
+      }
+    }
+  }, [fetchedOrders]); // Removido 'orders' da dependência para evitar loop
   
   const {
     searchTerm,
@@ -41,6 +38,7 @@ export function useOrdersData() {
   
   const { handleUpdateOrder } = useUpdateOrder(orders, setOrders);
 
+  // Memoizar o retorno para evitar re-renderizações
   return useMemo(() => ({
     searchTerm,
     setSearchTerm,
@@ -62,17 +60,11 @@ export function useOrdersData() {
     refetch
   }), [
     searchTerm,
-    setSearchTerm,
     statusFilter,
-    setStatusFilter,
     startDate,
-    setStartDate,
     endDate,
-    setEndDate,
     urgentOnly,
-    setUrgentOnly,
     sortByDueDate,
-    setSortByDueDate,
     loading,
     filteredOrders,
     handleUpdateOrder,

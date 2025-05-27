@@ -5,14 +5,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
-import { applyInitialTheme } from "./components/theme/utils/themeUtils";
 import { NotificationProvider } from "./context/NotificationContext";
 import LayoutOptimized from "./components/layout/LayoutOptimized";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 
-// Use lazy loading para componentes de página
+// Lazy loading otimizado para componentes de página
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const ClientsPage = lazy(() => import("./pages/ClientsPage"));
@@ -23,92 +22,64 @@ const FinancePage = lazy(() => import("./pages/FinancePage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 
-// Configuração do QueryClient com otimizações
+// Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minuto
+      staleTime: 30 * 1000, // 30 segundos
       gcTime: 5 * 60 * 1000, // 5 minutos
       retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
 
-// Componente de carregamento
-const LoadingFallback = () => (
-  <div className="flex h-full w-full items-center justify-center p-8">
+// Componente de loading melhorado
+const PageLoadingFallback = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-background">
     <div className="flex flex-col items-center gap-4">
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      <div className="text-lg font-medium text-primary">Carregando...</div>
+      <div className="text-sm font-medium text-muted-foreground">Carregando página...</div>
     </div>
   </div>
 );
 
-// Pre-render theme to avoid flashing
-if (typeof document !== 'undefined') {
-  applyInitialTheme();
-}
-
 const App = () => {
-  const defaultTheme = applyInitialTheme();
-  
+  // Aplicar tema inicial para evitar flash
   useEffect(() => {
     try {
-      const styleId = 'global-theme-styles';
-      let style = document.getElementById(styleId) as HTMLStyleElement;
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
       
-      if (!style) {
-        style = document.createElement('style');
-        style.id = styleId;
-        document.head.appendChild(style);
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      
+      if (!savedTheme) {
+        localStorage.setItem('theme', theme);
       }
-      
-      style.textContent = `
-        html.dark [data-radix-popper-content-wrapper] > div,
-        html[data-theme="dark"] [data-radix-popper-content-wrapper] > div,
-        .dark [data-radix-popper-content-wrapper] > div {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
-          color: #f3f4f6 !important;
-        }
-        
-        html.dark input, 
-        html.dark textarea, 
-        html.dark select,
-        html[data-theme="dark"] input,
-        html[data-theme="dark"] textarea,
-        html[data-theme="dark"] select,
-        .dark input,
-        .dark textarea,
-        .dark select {
-          background-color: #374151 !important;
-          border-color: #4b5563 !important;
-          color: #f3f4f6 !important;
-        }
-      `;
-      
-      return () => {
-        if (style && style.parentNode) {
-          style.parentNode.removeChild(style);
-        }
-      };
     } catch (error) {
-      console.debug("Error setting up global styles:", error);
+      console.debug("Erro ao configurar tema inicial:", error);
     }
   }, []);
   
   return (
     <React.StrictMode>
-      <ThemeProvider defaultTheme={defaultTheme as "light" | "dark" | "system"}>
+      <ThemeProvider defaultTheme="system" enableSystem>
         <QueryClientProvider client={queryClient}>
           <NotificationProvider>
             <TooltipProvider>
-              <Toaster />
+              <Toaster position="top-right" expand={false} richColors />
               <BrowserRouter>
-                <Suspense fallback={<LoadingFallback />}>
+                <Suspense fallback={<PageLoadingFallback />}>
                   <Routes>
+                    {/* Rota de login sem layout */}
                     <Route path="/login" element={<LoginPage />} />
                     
+                    {/* Todas as outras rotas com layout protegido */}
                     <Route path="/" element={
                       <ProtectedRoute>
                         <LayoutOptimized>
@@ -181,6 +152,7 @@ const App = () => {
                       </ProtectedRoute>
                     } />
                     
+                    {/* Rota 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
