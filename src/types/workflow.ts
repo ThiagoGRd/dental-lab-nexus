@@ -10,7 +10,10 @@ export enum WorkflowStepType {
   QUALITY_CONTROL = 'QUALITY_CONTROL',
   SHIPPING = 'SHIPPING',
   CASTING = 'CASTING',
-  BAR_CASTING = 'BAR_CASTING'
+  BAR_CASTING = 'BAR_CASTING',
+  TESTING = 'TESTING',
+  RETURNED_FOR_ADJUSTMENTS = 'RETURNED_FOR_ADJUSTMENTS',
+  COMPLETED = 'COMPLETED'
 }
 
 // Enum para status de etapas
@@ -19,7 +22,8 @@ export enum StepStatus {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   SKIPPED = 'SKIPPED',
-  BLOCKED = 'BLOCKED'
+  BLOCKED = 'BLOCKED',
+  DELAYED = 'DELAYED'
 }
 
 // Enum para tipos de procedimentos
@@ -27,7 +31,8 @@ export enum ProcedureType {
   TOTAL_PROSTHESIS = 'TOTAL_PROSTHESIS',
   PARTIAL_REMOVIBLE_PROSTHESIS = 'PARTIAL_REMOVIBLE_PROSTHESIS',
   IMPLANT_PROTOCOL = 'IMPLANT_PROTOCOL',
-  PROVISIONAL = 'PROVISIONAL'
+  PROVISIONAL = 'PROVISIONAL',
+  CUSTOM = 'CUSTOM'
 }
 
 // Enum para status do workflow
@@ -88,7 +93,7 @@ export interface WorkflowInstance {
   templateId: string;
   currentStepIndex: number;
   steps: WorkflowStep[];
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'PAUSED';
+  status: WorkflowStatus;
   startDate: Date;
   estimatedEndDate: Date;
   actualEndDate?: Date;

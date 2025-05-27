@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ const statusColors = {
   [StepStatus.IN_PROGRESS]: 'bg-blue-100 text-blue-700',
   [StepStatus.COMPLETED]: 'bg-green-100 text-green-700',
   [StepStatus.BLOCKED]: 'bg-red-100 text-red-700',
+  [StepStatus.SKIPPED]: 'bg-yellow-100 text-yellow-700',
   [StepStatus.DELAYED]: 'bg-amber-100 text-amber-700'
 };
 
@@ -67,7 +69,7 @@ const stepNames = {
 // Mapeamento de nomes para tipos de procedimento
 const procedureNames = {
   [ProcedureType.TOTAL_PROSTHESIS]: 'Prótese Total',
-  [ProcedureType.PARTIAL_REMOVABLE_PROSTHESIS]: 'Prótese Parcial Removível',
+  [ProcedureType.PARTIAL_REMOVIBLE_PROSTHESIS]: 'Prótese Parcial Removível',
   [ProcedureType.IMPLANT_PROTOCOL]: 'Protocolo de Implantes',
   [ProcedureType.PROVISIONAL]: 'Provisório em Resina',
   [ProcedureType.CUSTOM]: 'Personalizado'
@@ -105,6 +107,7 @@ const WorkflowStepCard: React.FC<WorkflowStepCardProps> = ({
             {step.status === StepStatus.IN_PROGRESS && 'Em Andamento'}
             {step.status === StepStatus.COMPLETED && 'Concluído'}
             {step.status === StepStatus.BLOCKED && 'Bloqueado'}
+            {step.status === StepStatus.SKIPPED && 'Pulado'}
             {step.status === StepStatus.DELAYED && 'Atrasado'}
           </Badge>
         </div>
@@ -115,13 +118,13 @@ const WorkflowStepCard: React.FC<WorkflowStepCardProps> = ({
           </div>
         )}
         
-        {(step.startDate || step.endDate) && (
+        {(step.startedAt || step.completedAt) && (
           <div className="mt-2 text-xs text-gray-500 flex justify-between">
-            {step.startDate && (
-              <span>Início: {new Date(step.startDate).toLocaleString()}</span>
+            {step.startedAt && (
+              <span>Início: {new Date(step.startedAt).toLocaleString()}</span>
             )}
-            {step.endDate && (
-              <span>Fim: {new Date(step.endDate).toLocaleString()}</span>
+            {step.completedAt && (
+              <span>Fim: {new Date(step.completedAt).toLocaleString()}</span>
             )}
           </div>
         )}
@@ -163,7 +166,7 @@ const WorkflowView: React.FC<WorkflowViewProps> = ({
             <div>
               <CardTitle>Fluxo de Trabalho #{workflow.id.substring(0, 8)}</CardTitle>
               <CardDescription>
-                {procedureNames[workflow.steps[0].type as unknown as ProcedureType] || 'Procedimento'}
+                {procedureNames[workflow.steps[0]?.type as unknown as ProcedureType] || 'Procedimento'}
                 {workflow.urgent && (
                   <Badge className="ml-2 bg-red-100 text-red-700">URGENTE</Badge>
                 )}
