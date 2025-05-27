@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useWorkflow from '../hooks/useWorkflow';
 import useWorkflowInventory from '../hooks/useWorkflowInventory';
-import { WorkflowStepType, StepStatus, WorkflowStatus } from '../types/workflow';
+import { WorkflowStepType, StepStatus, WorkflowStatus, ProcedureType } from '../types/workflow';
 import { MaterialCategory, MeasurementUnit } from '../types/inventory';
 
 // Mock do Supabase
@@ -72,14 +72,14 @@ describe('Workflow Hooks', () => {
       await act(async () => {
         await result.current.createWorkflow(
           'order-123',
-          'TOTAL_PROSTHESIS',
+          ProcedureType.TOTAL_PROSTHESIS,
           false
         );
       });
 
       expect(createWorkflowMock).toHaveBeenCalledWith(
         'order-123',
-        'TOTAL_PROSTHESIS',
+        ProcedureType.TOTAL_PROSTHESIS,
         false
       );
     });
