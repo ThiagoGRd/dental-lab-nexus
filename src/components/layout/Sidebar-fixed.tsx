@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react'; // Corrigindo import
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sidebar as SidebarComponent,
@@ -9,8 +9,7 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger
+  SidebarMenuButton
 } from "@/components/ui/sidebar-fixed";
 import { 
   Home,
@@ -115,11 +114,10 @@ export default function Sidebar() {
 
   return (
     <SidebarComponent className="bg-sidebar border-r border-sidebar-border">
-      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+      <div className="p-4 border-b border-sidebar-border">
         <h1 className="text-xl font-semibold text-sidebar-primary">
           Protech Lab Nexus
         </h1>
-        <SidebarTrigger className="md:hidden" />
       </div>
       <SidebarContent>
         <SidebarGroup>

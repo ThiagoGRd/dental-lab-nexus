@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useSidebar } from '@/components/ui/sidebar-fixed';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -31,12 +31,17 @@ type NavItem = {
   requiredRole?: string;
 };
 
-export default function SidebarOptimized() {
-  const { open, setOpen } = useSidebar();
+interface SidebarOptimizedProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+export default function SidebarOptimized({ isOpen = true, onToggle }: SidebarOptimizedProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userData, setUserData] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [open, setOpen] = useState(isOpen);
 
   // Carregar dados do usuário do localStorage
   useEffect(() => {
@@ -53,10 +58,11 @@ export default function SidebarOptimized() {
   // Detectar dispositivo móvel
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const isMobileDevice = window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
       
       // Em dispositivos móveis, o sidebar começa fechado
-      if (window.innerWidth < 768) {
+      if (isMobileDevice) {
         setOpen(false);
       }
     };
@@ -69,14 +75,25 @@ export default function SidebarOptimized() {
     
     // Limpar listener
     return () => window.removeEventListener('resize', checkMobile);
-  }, [setOpen]);
+  }, []);
+
+  // Sincronizar com prop externa
+  useEffect(() => {
+    setOpen(isOpen);
+  }, [isOpen]);
 
   // Fechar sidebar após navegação em dispositivos móveis
   useEffect(() => {
     if (isMobile) {
       setOpen(false);
     }
-  }, [location.pathname, isMobile, setOpen]);
+  }, [location.pathname, isMobile]);
+
+  const handleToggle = () => {
+    const newState = !open;
+    setOpen(newState);
+    onToggle?.();
+  };
 
   // Função para logout
   const handleLogout = async () => {
@@ -193,7 +210,7 @@ export default function SidebarOptimized() {
                 <path d="M12 5c.67 0 1.35.09 2 .26V3a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v2.26c.65-.17 1.33-.26 2-.26Z" />
                 <path d="M19 12c.34 0 .67.09 1 .18V5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v.18A7.08 7.08 0 0 1 19 12Z" />
                 <path d="M5 12c0-2.35 1.15-4.42 2.93-5.7.62-.45 1.33-.8 2.07-1.04V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v9.18c-.33-.09-.66-.18-1-.18Z" />
-                <path d="M12 22c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.03 9 9 9Z" />
+                <path d="M12 22c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03 9 9 4.03 9 9 9Z" />
                 <path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
               </svg>
             </div>
@@ -206,33 +223,19 @@ export default function SidebarOptimized() {
             )}
           </div>
 
-          {/* Botão para alternar o sidebar (visível apenas em desktop) */}
-          {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setOpen(!open)}
-              aria-label={open ? "Recolher menu" : "Expandir menu"}
-            >
-              {open ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
-          )}
-
-          {/* Botão para fechar o sidebar (visível apenas em mobile) */}
-          {isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setOpen(false)}
-              aria-label="Fechar menu"
-            >
+          {/* Botão para alternar o sidebar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleToggle}
+            aria-label={open ? "Recolher menu" : "Expandir menu"}
+          >
+            {open ? (
               <X className="h-5 w-5" />
-            </Button>
-          )}
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
         </div>
 
         {/* Conteúdo do sidebar com scroll */}

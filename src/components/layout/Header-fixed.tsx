@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar-fixed';
+import { useSidebar } from '@/components/ui/sidebar-fixed';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import { useNotifications } from '@/context/NotificationContext';
 export default function Header() {
   const { setTheme, theme } = useTheme();
   const { notifications } = useNotifications();
+  const { toggleSidebar } = useSidebar();
   const location = useLocation();
   
   // Determinar o título da página com base na rota atual
@@ -45,7 +46,15 @@ export default function Header() {
   
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-      <SidebarTrigger className="lg:hidden" />
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="lg:hidden"
+        onClick={toggleSidebar}
+      >
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle Menu</span>
+      </Button>
       
       <div className="flex-1">
         <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
@@ -93,7 +102,7 @@ export default function Header() {
                       <div className={`flex-1 ${!notification.read ? 'font-medium' : ''}`}>
                         <p className="text-sm">{notification.title || notification.content}</p>
                         <p className="text-xs text-muted-foreground">
-                          {notification.message || notification.content}
+                          {notification.content}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {new Date(notification.createdAt).toLocaleString()}
