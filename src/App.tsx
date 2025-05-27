@@ -10,6 +10,7 @@ import LayoutOptimized from "./components/layout/LayoutOptimized";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
 
 // Lazy loading otimizado para componentes de página
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -26,14 +27,14 @@ const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30 segundos
-      gcTime: 5 * 60 * 1000, // 5 minutos
-      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      gcTime: 10 * 60 * 1000, // 10 minutos
+      retry: 2,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
     },
     mutations: {
-      retry: 0,
+      retry: 1,
     },
   },
 });
@@ -41,10 +42,7 @@ const queryClient = new QueryClient({
 // Componente de loading melhorado
 const PageLoadingFallback = () => (
   <div className="flex h-screen w-full items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      <div className="text-sm font-medium text-muted-foreground">Carregando página...</div>
-    </div>
+    <LoadingSpinner size="lg" text="Carregando página..." />
   </div>
 );
 
@@ -68,11 +66,23 @@ const App = () => {
   
   return (
     <React.StrictMode>
-      <ThemeProvider defaultTheme="system" enableSystem>
+      <ThemeProvider defaultTheme="system">
         <QueryClientProvider client={queryClient}>
           <NotificationProvider>
             <TooltipProvider>
-              <Toaster position="top-right" expand={false} richColors />
+              <Toaster 
+                position="top-right" 
+                expand={false} 
+                richColors 
+                closeButton
+                toastOptions={{
+                  style: {
+                    background: 'hsl(var(--background))',
+                    color: 'hsl(var(--foreground))',
+                    border: '1px solid hsl(var(--border))',
+                  },
+                }}
+              />
               <BrowserRouter>
                 <Suspense fallback={<PageLoadingFallback />}>
                   <Routes>

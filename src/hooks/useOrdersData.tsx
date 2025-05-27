@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFetchOrders } from './useFetchOrders';
 import { useOrderFilters } from './useOrderFilters';
 import { useUpdateOrder } from './useUpdateOrder';
@@ -11,13 +11,10 @@ export function useOrdersData() {
   // Atualizar ordens locais quando fetchedOrders mudar
   useEffect(() => {
     if (fetchedOrders && Array.isArray(fetchedOrders)) {
-      // Verificar se realmente mudou para evitar atualizações desnecessárias
-      if (JSON.stringify(orders) !== JSON.stringify(fetchedOrders)) {
-        console.log('Atualizando ordens locais:', fetchedOrders.length);
-        setOrders(fetchedOrders);
-      }
+      console.log('📋 Atualizando ordens locais:', fetchedOrders.length);
+      setOrders(fetchedOrders);
     }
-  }, [fetchedOrders]); // Removido 'orders' da dependência para evitar loop
+  }, [fetchedOrders]);
   
   const {
     searchTerm,
@@ -39,7 +36,7 @@ export function useOrdersData() {
   const { handleUpdateOrder } = useUpdateOrder(orders, setOrders);
 
   // Memoizar o retorno para evitar re-renderizações
-  return useMemo(() => ({
+  const memoizedResult = useMemo(() => ({
     searchTerm,
     setSearchTerm,
     statusFilter,
@@ -57,19 +54,32 @@ export function useOrdersData() {
     handleUpdateOrder,
     handleFilter,
     error,
-    refetch
+    refetch,
+    totalOrders: orders.length,
+    pendingOrders: orders.filter(o => o.status === 'pending').length,
+    completedOrders: orders.filter(o => o.status === 'completed').length,
+    urgentOrders: orders.filter(o => o.isUrgent).length,
   }), [
     searchTerm,
+    setSearchTerm,
     statusFilter,
+    setStatusFilter,
     startDate,
+    setStartDate,
     endDate,
+    setEndDate,
     urgentOnly,
+    setUrgentOnly,
     sortByDueDate,
+    setSortByDueDate,
     loading,
     filteredOrders,
     handleUpdateOrder,
     handleFilter,
     error,
-    refetch
+    refetch,
+    orders
   ]);
+
+  return memoizedResult;
 }

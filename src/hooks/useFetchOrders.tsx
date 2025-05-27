@@ -25,6 +25,7 @@ export function useFetchOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   const fetchOrders = useCallback(async () => {
     // Cancelar requisição anterior se existir
@@ -34,18 +35,14 @@ export function useFetchOrders() {
 
     // Criar novo AbortController
     abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
 
     try {
-      console.log('Iniciando busca de ordens...');
+      console.log('🔄 Iniciando busca de ordens...');
       setLoading(true);
       setError(null);
       
-      // Verificar se foi cancelado
-      if (signal.aborted) return [];
-      
-      // 1. Buscar ordens
-      const ordersResponse = await supabase
+      // 1. Buscar ordens com dados relacionados em uma única query otimizada
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           id, 
@@ -54,52 +51,35 @@ export function useFetchOrders() {
           created_at, 
           deadline, 
           notes,
-          client_id
+          client_id,
+          clients!inner(id, name),
+          order_items(
+            id,
+            service_id,
+            notes,
+            services(id, name)
+          )
         `)
         .order('created_at', { ascending: false });
       
-      if (signal.aborted) return [];
+      if (!mountedRef.current) return [];
       
-      if (ordersResponse.error) {
-        throw new Error(`Erro ao buscar ordens: ${ordersResponse.error.message}`);
+      if (ordersError) {
+        throw new Error(`Erro ao buscar ordens: ${ordersError.message}`);
       }
       
-      const ordersData = ordersResponse.data || [];
-      console.log(`Encontradas ${ordersData.length} ordens`);
+      console.log(`📦 Encontradas ${ordersData?.length || 0} ordens`);
       
-      if (ordersData.length === 0) {
+      if (!ordersData || ordersData.length === 0) {
         setOrders([]);
         return [];
       }
       
-      // 2. Buscar dados relacionados em paralelo
-      const [clientsResponse, orderItemsResponse, servicesResponse] = await Promise.all([
-        supabase.from('clients').select('id, name'),
-        supabase.from('order_items').select('order_id, service_id, notes'),
-        supabase.from('services').select('id, name')
-      ]);
-      
-      if (signal.aborted) return [];
-      
-      // Processar dados mesmo se houver erros parciais
-      const clientsData = clientsResponse.data || [];
-      const orderItemsData = orderItemsResponse.data || [];
-      const servicesData = servicesResponse.data || [];
-      
-      // Criar mapas para lookup eficiente
-      const clientsMap = new Map(clientsData.map(c => [c.id, c]));
-      const servicesMap = new Map(servicesData.map(s => [s.id, s]));
-      const orderItemsMap = new Map();
-      
-      orderItemsData.forEach(item => {
-        orderItemsMap.set(item.order_id, item);
-      });
-
-      // Formatar ordens
-      const formattedOrders = ordersData.map(order => {
-        const client = clientsMap.get(order.client_id);
-        const orderItem = orderItemsMap.get(order.id);
-        const service = orderItem ? servicesMap.get(orderItem.service_id) : null;
+      // Formatar ordens com dados já carregados
+      const formattedOrders: Order[] = ordersData.map(order => {
+        const client = order.clients;
+        const firstOrderItem = order.order_items?.[0];
+        const service = firstOrderItem?.services;
             
         // Extrair nome do paciente das notas
         let patientName = '';
@@ -118,7 +98,7 @@ export function useFetchOrders() {
           client: client?.name || 'Cliente não encontrado',
           patientName,
           service: service?.name || 'Serviço não especificado',
-          createdAt: format(new Date(order.created_at), 'yyyy-MM-dd'),
+          createdAt: order.created_at ? format(new Date(order.created_at), 'yyyy-MM-dd') : '',
           dueDate: order.deadline ? format(new Date(order.deadline), 'yyyy-MM-dd') : '',
           status: order.status,
           isUrgent: order.priority === 'urgent',
@@ -130,36 +110,59 @@ export function useFetchOrders() {
         };
       });
 
-      console.log(`Ordens formatadas: ${formattedOrders.length}`);
-      setOrders(formattedOrders);
+      console.log(`✅ Ordens formatadas: ${formattedOrders.length}`);
+      
+      if (mountedRef.current) {
+        setOrders(formattedOrders);
+      }
+      
       return formattedOrders;
       
     } catch (error) {
-      if (signal.aborted) {
-        console.log('Busca de ordens cancelada');
-        return [];
-      }
+      if (!mountedRef.current) return [];
       
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('Erro ao buscar ordens:', error);
+      console.error('❌ Erro ao buscar ordens:', error);
       setError(errorMessage);
-      toast.error('Erro ao carregar ordens de serviço');
+      toast.error('Erro ao carregar ordens de serviço', {
+        description: 'Verifique sua conexão e tente novamente.'
+      });
       return [];
     } finally {
-      if (!signal.aborted) {
+      if (mountedRef.current) {
         setLoading(false);
       }
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     fetchOrders();
+    
+    // Setup realtime subscription para atualizações automáticas
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          console.log('🔄 Ordem atualizada, recarregando...');
+          fetchOrders();
+        }
+      )
+      .subscribe();
     
     // Cleanup na desmontagem
     return () => {
+      mountedRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      supabase.removeChannel(channel);
     };
   }, [fetchOrders]);
 
