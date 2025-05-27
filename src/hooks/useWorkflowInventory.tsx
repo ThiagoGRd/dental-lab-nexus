@@ -16,7 +16,7 @@ export const useWorkflowInventory = (orderId?: string) => {
   
   const {
     inventoryItems,
-    refreshItems: refreshInventoryItems
+    refreshInventory: refreshItems
   } = useInventory();
 
   // Avançar workflow com dedução de materiais (simplificado)
@@ -100,9 +100,9 @@ export const useWorkflowInventory = (orderId?: string) => {
   // Atualizar dados quando o workflow mudar
   useEffect(() => {
     if (workflow) {
-      refreshInventoryItems();
+      refreshItems();
     }
-  }, [workflow, refreshInventoryItems]);
+  }, [workflow, refreshItems]);
 
   return {
     workflow,

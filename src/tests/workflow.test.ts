@@ -1,8 +1,9 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import useWorkflow from '../hooks/useWorkflow';
 import useWorkflowInventory from '../hooks/useWorkflowInventory';
-import { WorkflowStepType, StepStatus } from '../types/workflow';
+import { WorkflowStepType, StepStatus, WorkflowStatus } from '../types/workflow';
 import { MaterialCategory, MeasurementUnit } from '../types/inventory';
 
 // Mock do Supabase
@@ -37,19 +38,22 @@ describe('Workflow Hooks', () => {
       const mockWorkflow = {
         id: 'test-id',
         orderId: 'order-123',
-        procedureType: 'TOTAL_PROSTHESIS',
+        templateId: 'template-total-prosthesis',
         startDate: new Date(),
         estimatedEndDate: new Date(),
-        status: 'ACTIVE',
+        status: WorkflowStatus.ACTIVE,
         urgent: false,
         currentStepIndex: 0,
+        sentToDentist: false,
         steps: [
           {
             id: 'step-1',
             type: WorkflowStepType.RECEPTION,
+            name: 'Recepção',
+            description: 'Recepção do material',
             status: StepStatus.IN_PROGRESS,
-            startDate: new Date(),
-            estimatedEndDate: new Date(),
+            estimatedDuration: 1,
+            startedAt: new Date(),
             assignedTo: 'user-1'
           }
         ]
@@ -58,7 +62,7 @@ describe('Workflow Hooks', () => {
       // Mock da função createWorkflow
       const createWorkflowMock = vi.fn().mockResolvedValue(mockWorkflow);
       
-      const { result, waitForNextUpdate } = renderHook(() => {
+      const { result } = renderHook(() => {
         const hook = useWorkflow();
         // Substituir a implementação real pela mock
         hook.createWorkflow = createWorkflowMock;
@@ -69,16 +73,14 @@ describe('Workflow Hooks', () => {
         await result.current.createWorkflow(
           'order-123',
           'TOTAL_PROSTHESIS',
-          false,
-          'user-1'
+          false
         );
       });
 
       expect(createWorkflowMock).toHaveBeenCalledWith(
         'order-123',
         'TOTAL_PROSTHESIS',
-        false,
-        'user-1'
+        false
       );
     });
 
@@ -86,25 +88,31 @@ describe('Workflow Hooks', () => {
       const mockWorkflow = {
         id: 'test-id',
         orderId: 'order-123',
-        procedureType: 'TOTAL_PROSTHESIS',
+        templateId: 'template-total-prosthesis',
         startDate: new Date(),
         estimatedEndDate: new Date(),
-        status: 'ACTIVE',
+        status: WorkflowStatus.ACTIVE,
         urgent: false,
         currentStepIndex: 0,
+        sentToDentist: false,
         steps: [
           {
             id: 'step-1',
             type: WorkflowStepType.RECEPTION,
+            name: 'Recepção',
+            description: 'Recepção do material',
             status: StepStatus.IN_PROGRESS,
-            startDate: new Date(),
-            estimatedEndDate: new Date(),
+            estimatedDuration: 1,
+            startedAt: new Date(),
             assignedTo: 'user-1'
           },
           {
             id: 'step-2',
-            type: WorkflowStepType.PRODUCTION,
+            type: WorkflowStepType.MODELING,
+            name: 'Modelagem',
+            description: 'Modelagem do material',
             status: StepStatus.PENDING,
+            estimatedDuration: 2,
             assignedTo: 'user-2'
           }
         ]
@@ -147,21 +155,23 @@ describe('Workflow Hooks', () => {
           id: 'material-1',
           name: 'Resina Acrílica',
           category: MaterialCategory.ACRYLIC,
-          currentQuantity: 500,
-          minimumQuantity: 100,
+          quantity: 500,
+          min_quantity: 100,
           unit: MeasurementUnit.GRAM,
           price: 50,
-          isActive: true
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
           id: 'material-2',
           name: 'Gesso Especial',
           category: MaterialCategory.GYPSUM,
-          currentQuantity: 5,
-          minimumQuantity: 10,
+          quantity: 5,
+          min_quantity: 10,
           unit: MeasurementUnit.KILOGRAM,
           price: 30,
-          isActive: true
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
       ];
 
@@ -169,14 +179,16 @@ describe('Workflow Hooks', () => {
       const materialsNeeded = [
         {
           materialId: 'material-1',
+          materialName: 'Resina Acrílica',
           quantity: 100,
-          unit: MeasurementUnit.GRAM,
+          unit: 'g',
           automaticDeduction: true
         },
         {
           materialId: 'material-2',
+          materialName: 'Gesso Especial',
           quantity: 2,
-          unit: MeasurementUnit.KILOGRAM,
+          unit: 'kg',
           automaticDeduction: false
         }
       ];
@@ -202,11 +214,12 @@ describe('Workflow Hooks', () => {
           id: 'material-1',
           name: 'Resina Acrílica',
           category: MaterialCategory.ACRYLIC,
-          currentQuantity: 50, // Menos que o necessário
-          minimumQuantity: 100,
+          quantity: 50, // Menos que o necessário
+          min_quantity: 100,
           unit: MeasurementUnit.GRAM,
           price: 50,
-          isActive: true
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
       ];
 
@@ -214,8 +227,9 @@ describe('Workflow Hooks', () => {
       const materialsNeeded = [
         {
           materialId: 'material-1',
+          materialName: 'Resina Acrílica',
           quantity: 100,
-          unit: MeasurementUnit.GRAM,
+          unit: 'g',
           automaticDeduction: true
         }
       ];

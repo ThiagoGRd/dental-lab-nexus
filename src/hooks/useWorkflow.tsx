@@ -6,7 +6,8 @@ import {
   StepStatus, 
   ProcedureType,
   WorkflowTemplate,
-  MaterialUsage
+  MaterialUsage,
+  WorkflowStatus
 } from '../types/workflow';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
@@ -175,7 +176,7 @@ export const useWorkflow = (orderId?: string) => {
           steps: [],
           startDate: new Date(data.created_at),
           estimatedEndDate: new Date(),
-          status: 'ACTIVE',
+          status: WorkflowStatus.ACTIVE,
           urgent: false,
           sentToDentist: false
         };
@@ -217,7 +218,7 @@ export const useWorkflow = (orderId?: string) => {
           steps: [],
           startDate: new Date(item.created_at),
           estimatedEndDate: new Date(),
-          status: 'ACTIVE',
+          status: WorkflowStatus.ACTIVE,
           urgent: false,
           sentToDentist: false
         }));
@@ -278,7 +279,7 @@ export const useWorkflow = (orderId?: string) => {
         steps: [],
         startDate: new Date(),
         estimatedEndDate: new Date(),
-        status: 'ACTIVE',
+        status: WorkflowStatus.ACTIVE,
         urgent,
         sentToDentist: false
       };
