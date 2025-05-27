@@ -1,12 +1,13 @@
+
 import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { applyInitialTheme } from "./components/theme/utils/themeUtils";
 import { NotificationProvider } from "./context/NotificationContext";
-import Layout from "./components/layout/Layout";
+import LayoutOptimized from "./components/layout/LayoutOptimized";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
@@ -27,8 +28,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000, // 1 minuto
-      gcTime: 5 * 60 * 1000, // 5 minutos (substitui cacheTime)
-      retry: 1, // Reduza o número de retentativas
+      gcTime: 5 * 60 * 1000, // 5 minutos
+      retry: 1,
     },
   },
 });
@@ -36,28 +37,26 @@ const queryClient = new QueryClient({
 // Componente de carregamento
 const LoadingFallback = () => (
   <div className="flex h-full w-full items-center justify-center p-8">
-    <div className="text-xl text-protechblue-100">Carregando...</div>
+    <div className="flex flex-col items-center gap-4">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <div className="text-lg font-medium text-primary">Carregando...</div>
+    </div>
   </div>
 );
 
 // Pre-render theme to avoid flashing
 if (typeof document !== 'undefined') {
-  // Apply initial theme immediately before React hydration
   applyInitialTheme();
 }
 
 const App = () => {
-  // Get initial theme for rendering
   const defaultTheme = applyInitialTheme();
   
-  // Adicionar classes CSS globais para resolução de problemas com temas
   useEffect(() => {
-    // Use a safe approach to add global styles
     try {
       const styleId = 'global-theme-styles';
       let style = document.getElementById(styleId) as HTMLStyleElement;
       
-      // Create the style element if it doesn't exist
       if (!style) {
         style = document.createElement('style');
         style.id = styleId;
@@ -65,7 +64,6 @@ const App = () => {
       }
       
       style.textContent = `
-        /* Ensure shadow DOM and portals respect theme */
         html.dark [data-radix-popper-content-wrapper] > div,
         html[data-theme="dark"] [data-radix-popper-content-wrapper] > div,
         .dark [data-radix-popper-content-wrapper] > div {
@@ -74,32 +72,6 @@ const App = () => {
           color: #f3f4f6 !important;
         }
         
-        /* Ensure select content elements have correct theme */
-        html.dark .select-content,
-        html[data-theme="dark"] .select-content,
-        .dark .select-content {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
-          color: #f3f4f6 !important;
-        }
-        
-        /* Force select-content to use dark theme colors */
-        .select-content[data-theme="dark"] {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
-          color: #f3f4f6 !important;
-        }
-        
-        /* Force dialog content to respect dark theme */
-        [role="dialog"][data-theme="dark"],
-        .dialog-content[data-theme="dark"],
-        .modal-content[data-theme="dark"] {
-          background-color: #1f2937 !important;
-          border-color: #374151 !important;
-          color: #f3f4f6 !important;
-        }
-        
-        /* Ensure form inputs have proper dark theme */
         html.dark input, 
         html.dark textarea, 
         html.dark select,
@@ -113,25 +85,9 @@ const App = () => {
           border-color: #4b5563 !important;
           color: #f3f4f6 !important;
         }
-        
-        /* Ensure popover items have proper theme */
-        html.dark [role="menuitem"],
-        html[data-theme="dark"] [role="menuitem"],
-        .dark [role="menuitem"] {
-          background-color: #1f2937 !important;
-          color: #f3f4f6 !important;
-        }
-        
-        /* Set theme on SVG elements inside select/popover components */
-        html.dark .select-content svg,
-        html[data-theme="dark"] .select-content svg,
-        .dark .select-content svg {
-          color: #f3f4f6 !important;
-        }
       `;
       
       return () => {
-        // Clean up styles on unmount
         if (style && style.parentNode) {
           style.parentNode.removeChild(style);
         }
@@ -155,73 +111,73 @@ const App = () => {
                     
                     <Route path="/" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <Dashboard />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/orders" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <OrdersPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/clients" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <ClientsPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/production" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <ProductionPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/inventory" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <InventoryPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/finances" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <FinancePage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/reports" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <ReportsPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/services" element={
                       <ProtectedRoute>
-                        <Layout>
+                        <LayoutOptimized>
                           <ServicesPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     
                     <Route path="/settings" element={
                       <ProtectedRoute requiredRole="admin">
-                        <Layout>
+                        <LayoutOptimized>
                           <SettingsPage />
-                        </Layout>
+                        </LayoutOptimized>
                       </ProtectedRoute>
                     } />
                     

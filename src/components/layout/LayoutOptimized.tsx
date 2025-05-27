@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarProvider } from "@/components/ui/sidebar-fixed";
 import HeaderOptimized from './HeaderOptimized';
 import SidebarOptimized from './SidebarOptimized';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ export default function LayoutOptimized({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -32,7 +33,6 @@ export default function LayoutOptimized({ children }: LayoutProps) {
         setLoading(true);
         setError(null);
         
-        // Verificar se há uma sessão ativa
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -44,7 +44,6 @@ export default function LayoutOptimized({ children }: LayoutProps) {
           return;
         }
         
-        // Verificar perfil do usuário
         try {
           const profileOps = await safeProfileOperations();
           const { profile, error: profileError } = await profileOps.getById(session.user.id);
@@ -60,7 +59,6 @@ export default function LayoutOptimized({ children }: LayoutProps) {
             return;
           }
           
-          // Armazenar dados mínimos do usuário no localStorage
           localStorage.setItem('user', JSON.stringify({
             id: session.user.id,
             name: session.user.user_metadata.name || session.user.email?.split('@')[0],
@@ -87,7 +85,6 @@ export default function LayoutOptimized({ children }: LayoutProps) {
     
     checkAuth();
     
-    // Configurar listener de estado de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
@@ -112,18 +109,19 @@ export default function LayoutOptimized({ children }: LayoutProps) {
       }
     );
     
-    // Limpar listener
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, [navigate]);
 
-  // Mostrar indicador de carregamento
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   if (loading) {
     return <LoadingIndicator />;
   }
 
-  // Mostrar mensagem de erro
   if (error) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
@@ -141,18 +139,15 @@ export default function LayoutOptimized({ children }: LayoutProps) {
     );
   }
 
-  // Renderizar layout principal
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
-        <SidebarOptimized />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <HeaderOptimized />
-          <main className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
-            {children}
-          </main>
-        </div>
+    <div className="min-h-screen flex w-full bg-background">
+      <SidebarOptimized isOpen={sidebarOpen} onToggle={handleToggleSidebar} />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <HeaderOptimized onToggleSidebar={handleToggleSidebar} />
+        <main className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
+          {children}
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }

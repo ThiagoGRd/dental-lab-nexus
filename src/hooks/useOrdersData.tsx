@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useFetchOrders } from './useFetchOrders';
 import { useOrderFilters } from './useOrderFilters';
 import { useUpdateOrder } from './useUpdateOrder';
@@ -8,12 +8,19 @@ export function useOrdersData() {
   const { loading, orders: fetchedOrders, error, refetch } = useFetchOrders();
   const [orders, setOrders] = useState<any[]>([]);
   
-  // Update orders only when fetchedOrders change
-  useEffect(() => {
-    if (fetchedOrders && Array.isArray(fetchedOrders) && fetchedOrders.length > 0) {
-      setOrders(fetchedOrders);
+  // Memoize orders update para evitar loops
+  const updateOrders = useCallback((newOrders: any[]) => {
+    if (newOrders && Array.isArray(newOrders) && newOrders.length >= 0) {
+      setOrders(prevOrders => {
+        const ordersChanged = JSON.stringify(prevOrders) !== JSON.stringify(newOrders);
+        return ordersChanged ? newOrders : prevOrders;
+      });
     }
-  }, [fetchedOrders]);
+  }, []);
+  
+  useEffect(() => {
+    updateOrders(fetchedOrders || []);
+  }, [fetchedOrders, updateOrders]);
   
   const {
     searchTerm,
@@ -34,8 +41,7 @@ export function useOrdersData() {
   
   const { handleUpdateOrder } = useUpdateOrder(orders, setOrders);
 
-  // Memoize the return value to prevent unnecessary re-renders
-  const returnValue = useMemo(() => ({
+  return useMemo(() => ({
     searchTerm,
     setSearchTerm,
     statusFilter,
@@ -56,11 +62,17 @@ export function useOrdersData() {
     refetch
   }), [
     searchTerm,
+    setSearchTerm,
     statusFilter,
+    setStatusFilter,
     startDate,
+    setStartDate,
     endDate,
+    setEndDate,
     urgentOnly,
+    setUrgentOnly,
     sortByDueDate,
+    setSortByDueDate,
     loading,
     filteredOrders,
     handleUpdateOrder,
@@ -68,6 +80,4 @@ export function useOrdersData() {
     error,
     refetch
   ]);
-
-  return returnValue;
 }
