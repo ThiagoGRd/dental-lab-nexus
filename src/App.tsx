@@ -22,6 +22,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const FinancePage = lazy(() => import("./pages/FinancePage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
+const WorkflowsPageNew = lazy(() => import("./pages/WorkflowsPageNew"));
 
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
@@ -118,6 +119,22 @@ const App = () => {
                       <ProtectedRoute>
                         <LayoutOptimized>
                           <ProductionPage />
+                        </LayoutOptimized>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/workflows" element={
+                      <ProtectedRoute>
+                        <LayoutOptimized>
+                          <WorkflowsPageNew />
+                        </LayoutOptimized>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/workflows/:id" element={
+                      <ProtectedRoute>
+                        <LayoutOptimized>
+                          <WorkflowsPageNew />
                         </LayoutOptimized>
                       </ProtectedRoute>
                     } />
