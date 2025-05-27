@@ -1,9 +1,10 @@
+
 // Arquivo de teste visual para validar componentes em diferentes tamanhos de tela
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 // Importar componentes principais
-import App from './App-fixed';
+import App from '../App';
 import '../global-styles.css';
 
 // Componente de teste visual

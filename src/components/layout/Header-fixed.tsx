@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -90,12 +91,12 @@ export default function Header() {
                       }`}
                     >
                       <div className={`flex-1 ${!notification.read ? 'font-medium' : ''}`}>
-                        <p className="text-sm">{notification.title}</p>
+                        <p className="text-sm">{notification.title || notification.content}</p>
                         <p className="text-xs text-muted-foreground">
-                          {notification.description}
+                          {notification.message || notification.content}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(notification.date).toLocaleString()}
+                          {new Date(notification.createdAt).toLocaleString()}
                         </p>
                       </div>
                     </Link>
