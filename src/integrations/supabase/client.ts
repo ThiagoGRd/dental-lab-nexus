@@ -15,3 +15,30 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Helper functions for common operations
+export const checkAuthSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    return { session, error };
+  } catch (error) {
+    return { session: null, error };
+  }
+};
+
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    return { error };
+  } catch (error) {
+    return { error };
+  }
+};
+
+export const hasError = (response: any) => {
+  return response?.error !== null && response?.error !== undefined;
+};
+
+export const safeData = (response: any, fallback: any = null) => {
+  return response?.data ?? fallback;
+};

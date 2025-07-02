@@ -4,19 +4,16 @@ import { supabase } from '../integrations/supabase/client';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
-// Tipos simplificados para funcionar apenas com a tabela 'inventory' existente
+// Interface adaptada para trabalhar com serviços como estoque
 interface InventoryItem {
   id: string;
   name: string;
   quantity: number;
-  min_quantity?: number;
-  price?: number;
-  category?: string;
-  supplier?: string;
-  unit?: string;
-  description?: string;
-  created_at: string;
-  updated_at: string;
+  unit: string;
+  minStock: number;
+  currentStock: number;
+  location: string;
+  category: string;
 }
 
 interface InventoryMovement {
@@ -45,14 +42,14 @@ export const useInventory = () => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [alerts, setAlerts] = useState<InventoryAlert[]>([]);
 
-  // Carregar todos os itens do estoque usando a tabela 'inventory' existente
+  // Carregar todos os itens do estoque usando a tabela 'services' como base
   const fetchInventoryItems = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
       const { data, error } = await supabase
-        .from('inventory')
+        .from('services')
         .select('*')
         .order('name');
         
@@ -63,7 +60,17 @@ export const useInventory = () => {
       }
       
       if (data) {
-        setInventoryItems(data as InventoryItem[]);
+        const inventoryItems = data.map(service => ({
+          id: service.id,
+          name: service.name,
+          category: 'Serviços',
+          quantity: 1,
+          unit: 'unidade',
+          minStock: 0,
+          currentStock: 1,
+          location: 'Padrão'
+        }));
+        setInventoryItems(inventoryItems);
       }
     } catch (err) {
       console.error('Erro inesperado:', err);
@@ -97,7 +104,7 @@ export const useInventory = () => {
     try {
       // Verificar itens com estoque baixo
       const lowStockItems = inventoryItems.filter(
-        item => item.min_quantity && item.quantity <= item.min_quantity
+        item => item.minStock && item.quantity <= item.minStock
       );
       
       const generatedAlerts: InventoryAlert[] = lowStockItems.map(item => ({
@@ -118,15 +125,20 @@ export const useInventory = () => {
     }
   }, [inventoryItems]);
 
-  // Adicionar novo item ao estoque
-  const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>) => {
+  // Adicionar novo item ao estoque via tabela services
+  const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id'>) => {
     setLoading(true);
     setError(null);
     
     try {
       const { data, error } = await supabase
-        .from('inventory')
-        .insert(item)
+        .from('services')
+        .insert([{
+          name: item.name,
+          description: item.category,
+          base_price: 0,
+          active: true
+        }])
         .select()
         .single();
         
@@ -137,7 +149,16 @@ export const useInventory = () => {
       }
       
       if (data) {
-        const newItem = data as InventoryItem;
+        const newItem: InventoryItem = {
+          id: data.id,
+          name: data.name,
+          category: data.description || 'Serviços',
+          quantity: 1,
+          unit: 'unidade',
+          minStock: 0,
+          currentStock: 1,
+          location: 'Padrão'
+        };
         setInventoryItems(prev => [...prev, newItem]);
         toast.success('Item adicionado ao estoque com sucesso!');
         return newItem;
@@ -153,15 +174,18 @@ export const useInventory = () => {
     }
   }, []);
 
-  // Atualizar item do estoque
+  // Atualizar item do estoque via tabela services
   const updateInventoryItem = useCallback(async (id: string, updates: Partial<InventoryItem>) => {
     setLoading(true);
     setError(null);
     
     try {
       const { error } = await supabase
-        .from('inventory')
-        .update(updates)
+        .from('services')
+        .update({
+          name: updates.name,
+          description: updates.category
+        })
         .eq('id', id);
         
       if (error) {
@@ -246,7 +270,7 @@ export const useInventory = () => {
     
     try {
       const { error } = await supabase
-        .from('inventory')
+        .from('services')
         .delete()
         .eq('id', id);
         
@@ -271,7 +295,7 @@ export const useInventory = () => {
   // Verificar estoque baixo
   const checkLowStock = useCallback(() => {
     const lowStockItems = inventoryItems.filter(
-      item => item.min_quantity && item.quantity <= item.min_quantity
+      item => item.minStock && item.quantity <= item.minStock
     );
     
     return lowStockItems;

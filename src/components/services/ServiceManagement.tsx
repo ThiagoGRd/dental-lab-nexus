@@ -113,8 +113,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
       const { service, error } = await serviceUtils.add({
         name: formData.name,
         description: formData.description,
-        price: formData.price,
-        category: formData.category,
+        base_price: parseFloat(formData.price.toString()),
         active: true
       });
 
@@ -165,8 +164,7 @@ export default function ServiceManagement({ initialServices = [], loading = fals
       const { service, error } = await serviceUtils.update(currentService.id, {
         name: formData.name,
         description: formData.description,
-        price: formData.price,
-        category: formData.category
+        base_price: parseFloat(formData.price.toString())
       });
         
       if (error) {

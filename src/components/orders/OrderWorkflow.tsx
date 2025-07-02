@@ -56,20 +56,10 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
 
       // Buscar o workflow da ordem atual
       const { data: workflowData, error: workflowError } = await supabase
-        .from('order_workflows')
-        .select(`
-          id, 
-          template_id,
-          current_step,
-          history,
-          notes,
-          workflow_templates:template_id (
-            name,
-            steps
-          )
-        `)
+        .from('workflows')
+        .select('*')
         .eq('order_id', orderId)
-        .single();
+        .maybeSingle();
 
       if (workflowError) {
         console.error('Erro ao carregar workflow:', workflowError);
@@ -86,19 +76,33 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
 
       console.log('Workflow data carregado:', workflowData);
 
-      // Formatar os dados - corrigindo o problema de tipo
-      const typedWorkflowData = workflowData as any;
-      const steps = typedWorkflowData.workflow_templates.steps as WorkflowStep[];
-      const history = typedWorkflowData.history ? (typedWorkflowData.history as any[]) : [];
+      // Mock workflow data since we don't have templates yet
+      const mockSteps: WorkflowStep[] = [
+        {
+          name: 'Análise Inicial',
+          description: 'Análise dos requisitos do projeto',
+          responsible: 'dentist'
+        },
+        {
+          name: 'Desenvolvimento',
+          description: 'Desenvolvimento da solução',
+          responsible: 'lab'
+        },
+        {
+          name: 'Revisão',
+          description: 'Revisão final do trabalho',
+          responsible: 'dentist'
+        }
+      ];
 
       setWorkflow({
-        id: typedWorkflowData.id,
-        templateId: typedWorkflowData.template_id,
-        currentStep: typedWorkflowData.current_step,
-        templateName: typedWorkflowData.workflow_templates.name,
-        steps,
-        history,
-        notes: typedWorkflowData.notes
+        id: workflowData.id,
+        templateId: 'default',
+        currentStep: workflowData.progress ? Math.floor(workflowData.progress / 33) : 0,
+        templateName: workflowData.name || 'Fluxo Padrão',
+        steps: mockSteps,
+        history: [],
+        notes: workflowData.description
       });
     } catch (error) {
       console.error('Erro ao carregar workflow:', error);

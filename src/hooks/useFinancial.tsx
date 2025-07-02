@@ -65,12 +65,12 @@ export const useFinancial = () => {
           amount: item.amount,
           description: item.description,
           date: new Date(item.created_at),
-          category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
+        category: 'Geral' as any,
           status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
           createdBy: 'system',
           createdAt: new Date(item.created_at),
           dueDate: item.due_date ? new Date(item.due_date) : undefined,
-          notes: item.notes || undefined,
+        notes: undefined,
           isInstallment: false
         }));
         
@@ -139,12 +139,12 @@ export const useFinancial = () => {
             amount: item.amount,
             description: item.description,
             date: new Date(item.created_at),
-            category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
+            category: 'Geral' as any,
             status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
             createdBy: 'system',
             createdAt: new Date(item.created_at),
             dueDate: item.due_date ? new Date(item.due_date) : undefined,
-            notes: item.notes || undefined,
+            notes: undefined,
             isInstallment: false
           };
 
@@ -207,12 +207,12 @@ export const useFinancial = () => {
         amount: data.amount,
         description: data.description,
         date: new Date(data.created_at),
-        category: (data.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
+        category: 'Geral' as any,
         status: (data.status as PaymentStatus) || PaymentStatus.PENDING,
         createdBy: 'system',
         createdAt: new Date(data.created_at),
         dueDate: data.due_date ? new Date(data.due_date) : undefined,
-        notes: data.notes || undefined,
+        notes: undefined,
         isInstallment: false
       };
       
@@ -387,12 +387,12 @@ export const useFinancial = () => {
         amount: item.amount,
         description: item.description,
         date: new Date(item.created_at),
-        category: (item.category as TransactionCategory) || TransactionCategory.OTHER_EXPENSE,
+        category: 'Geral' as any,
         status: (item.status as PaymentStatus) || PaymentStatus.PENDING,
         createdBy: 'system',
         createdAt: new Date(item.created_at),
         dueDate: item.due_date ? new Date(item.due_date) : undefined,
-        notes: item.notes || undefined,
+        notes: undefined,
         isInstallment: false
       }));
       
