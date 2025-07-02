@@ -50,10 +50,37 @@ export const useWorkflow = (orderId?: string) => {
     }
   }, [orderId, fetchWorkflow]);
 
+  const currentStep = workflow ? { 
+    id: 'current-step', 
+    name: `Etapa ${Math.floor((workflow.progress || 0) / 20) + 1}`,
+    status: 'in_progress'
+  } : null;
+
+  const advanceToNextStep = async (notes?: string) => {
+    if (!workflow) return false;
+    
+    const newProgress = Math.min((workflow.progress || 0) + 20, 100);
+    
+    const { error: updateError } = await supabase
+      .from('workflows')
+      .update({ progress: newProgress })
+      .eq('id', workflow.id);
+      
+    if (updateError) {
+      console.error('Erro ao atualizar workflow:', updateError);
+      return false;
+    }
+    
+    setWorkflow({ ...workflow, progress: newProgress });
+    return true;
+  };
+
   return {
     loading,
     error,
     workflow,
+    currentStep,
+    advanceToNextStep,
     refreshWorkflow: fetchWorkflow
   };
 };

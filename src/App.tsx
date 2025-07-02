@@ -15,9 +15,9 @@ import { LoadingSpinner } from "./components/ui/loading-spinner";
 // Lazy loading otimizado para componentes de página
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage"));
-const ClientsPage = lazy(() => import("./pages/ClientsPage"));
+const ClientsPageSimple = lazy(() => import("./pages/ClientsPageSimple"));
 const ProductionPage = lazy(() => import("./pages/ProductionPage"));
-const InventoryPage = lazy(() => import("./pages/InventoryPage"));
+const InventoryPageSimple = lazy(() => import("./pages/InventoryPageSimple"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const FinancePage = lazy(() => import("./pages/FinancePage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
@@ -110,7 +110,7 @@ const App = () => {
                     <Route path="/clients" element={
                       <ProtectedRoute>
                         <LayoutOptimized>
-                          <ClientsPage />
+                          <ClientsPageSimple />
                         </LayoutOptimized>
                       </ProtectedRoute>
                     } />
@@ -142,7 +142,7 @@ const App = () => {
                     <Route path="/inventory" element={
                       <ProtectedRoute>
                         <LayoutOptimized>
-                          <InventoryPage />
+                          <InventoryPageSimple />
                         </LayoutOptimized>
                       </ProtectedRoute>
                     } />

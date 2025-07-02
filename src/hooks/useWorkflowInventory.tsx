@@ -31,7 +31,7 @@ export const useWorkflowInventory = (orderId?: string) => {
     
     try {
       // Para agora, apenas avançar o workflow sem dedução de materiais
-      const result = await advanceToNextStep(notes, materials);
+      const result = await advanceToNextStep(notes);
       
       if (result) {
         toast.success('Etapa avançada com sucesso!');

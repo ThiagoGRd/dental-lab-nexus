@@ -86,8 +86,9 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       
+      // Using services table as temporary inventory placeholder
       const { data, error } = await supabase
-        .from('inventory')
+        .from('services')
         .select('*')
         .order('name');
       

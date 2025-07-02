@@ -110,10 +110,10 @@ export const useWorkflowOptimized = (orderId?: string) => {
     
     try {
       const { data, error } = await supabase
-        .from('order_workflows')
+        .from('workflows')
         .select('*')
         .eq('order_id', orderId)
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error('Erro ao buscar workflow:', error);
@@ -125,9 +125,9 @@ export const useWorkflowOptimized = (orderId?: string) => {
         // Simular dados de workflow baseado nos dados da tabela
         const mockWorkflow: WorkflowInstance = {
           id: data.id,
-          orderId: data.order_id,
-          templateId: data.template_id,
-          currentStepIndex: data.current_step,
+          orderId: data.order_id || orderId,
+          templateId: 'template-default',
+          currentStepIndex: Math.floor((data.progress || 0) / 20),
           steps: [],
           startDate: new Date(data.created_at),
           estimatedEndDate: new Date(),
@@ -166,9 +166,9 @@ export const useWorkflowOptimized = (orderId?: string) => {
         // Simular workflows baseado nos dados da tabela
         const workflows: WorkflowInstance[] = data.map(item => ({
           id: item.id,
-          orderId: item.order_id,
-          templateId: item.template_id,
-          currentStepIndex: item.current_step,
+          orderId: item.order_id || 'unknown',
+          templateId: 'template-default',
+          currentStepIndex: Math.floor((item.progress || 0) / 20),
           steps: [],
           startDate: new Date(item.created_at),
           estimatedEndDate: new Date(),
@@ -205,12 +205,13 @@ export const useWorkflowOptimized = (orderId?: string) => {
       }
 
       const { data, error: saveError } = await supabase
-        .from('order_workflows')
+        .from('workflows')
         .insert({
+          name: `Workflow para Ordem ${orderId}`,
+          description: `Fluxo de trabalho criado para a ordem ${orderId}`,
           order_id: orderId,
-          template_id: template.id,
-          current_step: 0,
-          notes: `Workflow criado para ${template.name}`
+          status: 'active',
+          progress: 0
         })
         .select()
         .single();
@@ -258,13 +259,15 @@ export const useWorkflowOptimized = (orderId?: string) => {
     }
     
     try {
+      const newProgress = Math.min((workflow.currentStepIndex + 1) * 20, 100);
+      
       const { error: updateError } = await supabase
-        .from('order_workflows')
+        .from('workflows')
         .update({
-          current_step: workflow.currentStepIndex + 1,
-          notes: notes || 'Avançado para próxima etapa'
+          progress: newProgress,
+          description: notes || 'Avançado para próxima etapa'
         })
-        .eq('order_id', workflow.orderId);
+        .eq('id', workflow.id);
         
       if (updateError) {
         console.error('Erro ao atualizar workflow:', updateError);
