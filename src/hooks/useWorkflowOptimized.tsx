@@ -153,7 +153,7 @@ export const useWorkflowOptimized = (orderId?: string) => {
     
     try {
       const { data, error } = await supabase
-        .from('order_workflows')
+        .from('workflows')
         .select('*');
         
       if (error) {
