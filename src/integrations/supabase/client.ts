@@ -42,3 +42,31 @@ export const hasError = (response: any) => {
 export const safeData = (response: any, fallback: any = null) => {
   return response?.data ?? fallback;
 };
+
+// Auth helper functions
+export const signInWithEmail = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { data, error };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
+export const signUpWithEmail = async (email: string, password: string, metadata?: any) => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata
+      }
+    });
+    return { data, error };
+  } catch (error) {
+    return { data: null, error };
+  }
+};

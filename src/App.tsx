@@ -22,7 +22,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const FinancePage = lazy(() => import("./pages/FinancePage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
-const WorkflowsPageNew = lazy(() => import("./pages/WorkflowsPageNew"));
+// const WorkflowsPageNew = lazy(() => import("./pages/WorkflowsPageNew"));
 
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
@@ -123,21 +123,27 @@ const App = () => {
                       </ProtectedRoute>
                     } />
                     
-                    <Route path="/workflows" element={
-                      <ProtectedRoute>
-                        <LayoutOptimized>
-                          <WorkflowsPageNew />
-                        </LayoutOptimized>
-                      </ProtectedRoute>
-                    } />
-                    
-                    <Route path="/workflows/:id" element={
-                      <ProtectedRoute>
-                        <LayoutOptimized>
-                          <WorkflowsPageNew />
-                        </LayoutOptimized>
-                      </ProtectedRoute>
-                    } />
+                     <Route path="/workflows" element={
+                       <ProtectedRoute>
+                         <LayoutOptimized>
+                           <div className="p-6">
+                             <h1 className="text-3xl font-bold">Workflows</h1>
+                             <p className="text-muted-foreground">Página em desenvolvimento</p>
+                           </div>
+                         </LayoutOptimized>
+                       </ProtectedRoute>
+                     } />
+                     
+                     <Route path="/workflows/:id" element={
+                       <ProtectedRoute>
+                         <LayoutOptimized>
+                           <div className="p-6">
+                             <h1 className="text-3xl font-bold">Workflow Detalhes</h1>
+                             <p className="text-muted-foreground">Página em desenvolvimento</p>
+                           </div>
+                         </LayoutOptimized>
+                       </ProtectedRoute>
+                     } />
                     
                     <Route path="/inventory" element={
                       <ProtectedRoute>

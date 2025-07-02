@@ -139,8 +139,7 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
 
       const result = await updateWorkflow(
         workflow.id,
-        nextStep,
-        updatedHistory
+        nextStep
       );
 
       if (hasError(result)) {
@@ -189,8 +188,7 @@ export default function OrderWorkflow({ orderId, refreshData }: WorkflowProps) {
 
       const result = await updateWorkflow(
         workflow.id,
-        prevStep,
-        updatedHistory
+        prevStep
       );
 
       if (hasError(result)) {
