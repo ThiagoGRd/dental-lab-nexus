@@ -93,7 +93,7 @@ export default function ProductionPage() {
         // Buscar serviços para associar aos itens
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
-          .select('id, name, price');
+          .select('id, name, base_price');
 
         if (servicesError) {
           console.error('Erro ao buscar serviços:', servicesError);
