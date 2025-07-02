@@ -110,7 +110,7 @@ export async function safeProfileOperations() {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', id)
+          .eq('user_id', id)
           .single();
           
         if (error) throw error;
